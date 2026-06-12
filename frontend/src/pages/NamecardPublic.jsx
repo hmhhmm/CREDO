@@ -1,10 +1,13 @@
 import { useParams, Link } from 'react-router-dom'
 import NamecardCard from '../components/NamecardCard'
+import NotFound from './NotFound'
 import { mockCandidates } from '../data/mockData'
 
 export default function NamecardPublic() {
   const { userId } = useParams()
-  const candidate = mockCandidates.find(c => c.id === userId) || mockCandidates[0]
+  const candidate = mockCandidates.find(c => c.id === userId)
+
+  if (!candidate) return <NotFound />
 
   return (
     <div className="min-h-screen bg-parchment flex flex-col items-center justify-center px-4 py-12">

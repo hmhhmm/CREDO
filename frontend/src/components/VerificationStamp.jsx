@@ -4,10 +4,10 @@ import { getConfidenceBand } from '../utils/confidenceBand'
 export default function VerificationStamp({ score, size = 'md', animate = false }) {
   const band = getConfidenceBand(score)
   const sizes = {
-    sm: { outer: 48, inner: 36, font: 'text-xs', label: 'text-[9px]' },
-    md: { outer: 72, inner: 56, font: 'text-sm', label: 'text-[10px]' },
-    lg: { outer: 96, inner: 74, font: 'text-base', label: 'text-xs' },
-    xl: { outer: 128, inner: 100, font: 'text-2xl', label: 'text-xs' },
+    sm: { outer: 48, font: 'text-xs', label: 'text-[9px]' },
+    md: { outer: 72, font: 'text-sm', label: 'text-[10px]' },
+    lg: { outer: 96, font: 'text-base', label: 'text-xs' },
+    xl: { outer: 128, font: 'text-2xl', label: 'text-xs' },
   }
   const s = sizes[size]
 
@@ -19,10 +19,15 @@ export default function VerificationStamp({ score, size = 'md', animate = false 
   }
   const col = colorMap[band.color] || colorMap.pending
 
+  // Respect prefers-reduced-motion — rotation stays, scale-in animation removed
+  const motionClass = animate ? 'motion-safe:animate-stamp' : ''
+
   return (
     <div
-      className={`flex flex-col items-center gap-1 ${animate ? 'animate-stamp' : ''}`}
+      className={`flex flex-col items-center gap-1 ${motionClass}`}
       style={{ transform: 'rotate(-4deg)', display: 'inline-flex' }}
+      role="img"
+      aria-label={`Trust score ${score} out of 100 — ${band.label}`}
     >
       <div
         style={{
@@ -43,13 +48,13 @@ export default function VerificationStamp({ score, size = 'md', animate = false 
         >
           {score}
         </span>
-        <Check size={10} color={col.text} strokeWidth={3} style={{ marginTop: 1 }} />
+        <Check size={10} color={col.text} strokeWidth={3} style={{ marginTop: 1 }} aria-hidden="true" />
       </div>
       <span
-        className={`font-mono uppercase tracking-widest ${s.label}`}
+        className={`font-mono uppercase tracking-widest ${s.label} text-center`}
         style={{ color: col.text }}
       >
-        {band.label.replace(' ', '\n')}
+        {band.label}
       </span>
     </div>
   )

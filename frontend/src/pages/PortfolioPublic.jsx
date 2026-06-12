@@ -4,15 +4,18 @@ import { Shield, Mail, GitBranch, FileText, Award } from 'lucide-react'
 import VerificationStamp from '../components/VerificationStamp'
 import ArtifactCard from '../components/ArtifactCard'
 import LedgerEntry from '../components/LedgerEntry'
+import NotFound from './NotFound'
 import { mockCandidates } from '../data/mockData'
 
 const typeIcons = { github: GitBranch, document: FileText, credential: Award }
 
 export default function PortfolioPublic() {
   const { userId } = useParams()
-  const candidate = mockCandidates.find(c => c.id === userId) || mockCandidates[0]
+  const candidate = mockCandidates.find(c => c.id === userId)
   const [contactVisible, setContactVisible] = useState(false)
   const [ledgerOpen, setLedgerOpen] = useState(false)
+
+  if (!candidate) return <NotFound />
   const verifiedArtifacts = candidate.artifacts.filter(a => a.status === 'verified')
 
   return (

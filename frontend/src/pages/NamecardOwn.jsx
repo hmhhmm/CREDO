@@ -3,10 +3,10 @@ import { Copy, Check, Pencil, Lock, ExternalLink } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import NamecardPremium from '../components/NamecardPremium'
-import { mockCurrentCandidate } from '../data/mockData'
+import { useDemo } from '../context/DemoContext'
 
 export default function NamecardOwn() {
-  const candidate = mockCurrentCandidate
+  const { liveCandidate: candidate } = useDemo()
   const [copied, setCopied] = useState(false)
   const [saveState, setSaveState] = useState('idle') // 'idle' | 'saving' | 'saved'
 

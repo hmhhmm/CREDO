@@ -1,7 +1,7 @@
 export const mockCandidates = [
   {
-    id: 'ahmad-farid',
-    name: 'Ahmad Farid',
+    id: 'ahmad-rahim',
+    name: 'Ahmad Rahim',
     field: 'Computer Science',
     university: 'Universiti Malaya',
     year: '2025',
@@ -9,8 +9,8 @@ export const mockCandidates = [
     openToWork: true,
     avatar: null,
     bio: 'Final-year CS student specialising in ML and distributed systems. Built and deployed 3 production systems.',
-    linkedinUrl: 'https://linkedin.com/in/ahmadfarid',
-    githubUrl: 'https://github.com/ahmadfarid',
+    linkedinUrl: 'https://linkedin.com/in/ahmadrahim',
+    githubUrl: 'https://github.com/ahmadrahim',
     trustScore: 87,
     verifiedSkills: [
       { name: 'Python', confidence: 94, verified: true },
@@ -136,7 +136,7 @@ export const mockCandidates = [
   },
 ]
 
-export const mockCurrentCandidate = mockCandidates[2] // Wei Chen — 0 artifacts, fresh candidate view
+export const mockCurrentCandidate = mockCandidates[0] // Ahmad Rahim — full verified profile
 
 export const mockEmployer = {
   id: 'techcorp',
@@ -219,7 +219,7 @@ export const mockSimuHireSession = {
 }
 
 export const mockReport = {
-  candidateName: 'Ahmad Farid',
+  candidateName: 'Ahmad Rahim',
   type: 'Technical',
   duration: '24 min',
   completedAt: '2025-05-28',

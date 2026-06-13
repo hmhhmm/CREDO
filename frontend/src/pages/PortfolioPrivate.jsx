@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Copy, Check, Shield, GitBranch, FileText, Award, Lock, Globe, ArrowRight } from 'lucide-react'
+import { Copy, Check, Shield, FileText, Award, Lock, Globe, ArrowRight } from 'lucide-react'
+import GitHubIcon from '../components/GitHubIcon'
 import { Link } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import VerificationStamp from '../components/VerificationStamp'
@@ -8,7 +9,7 @@ import LedgerEntry from '../components/LedgerEntry'
 import { getConfidenceBand } from '../utils/confidenceBand'
 import { useDemo } from '../context/DemoContext'
 
-const typeIcons = { github: GitBranch, document: FileText, credential: Award }
+const typeIcons = { github: GitHubIcon, document: FileText, credential: Award }
 
 export default function PortfolioPrivate() {
   const { liveCandidate: candidate } = useDemo()

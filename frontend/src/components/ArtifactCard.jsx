@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { GitBranch, FileText, Award, ChevronDown, ChevronUp, Check, Clock, X } from 'lucide-react'
+import { FileText, Award, ChevronDown, ChevronUp, Check, Clock, X } from 'lucide-react'
+import GitHubIcon from './GitHubIcon'
 import { getConfidenceBand } from '../utils/confidenceBand'
 
 const typeIcons = {
-  github: GitBranch,
+  github: GitHubIcon,
   document: FileText,
   credential: Award,
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { Shield, Mail, GitBranch, FileText, Award, X } from 'lucide-react'
+import { Shield, Mail, FileText, Award, X } from 'lucide-react'
+import GitHubIcon from '../components/GitHubIcon'
 import VerificationStamp from '../components/VerificationStamp'
 import ArtifactCard from '../components/ArtifactCard'
 import LedgerEntry from '../components/LedgerEntry'
@@ -8,7 +9,7 @@ import NotFound from './NotFound'
 import { mockCandidates } from '../data/mockData'
 import { getConfidenceBand } from '../utils/confidenceBand'
 
-const typeIcons = { github: GitBranch, document: FileText, credential: Award }
+const typeIcons = { github: GitHubIcon, document: FileText, credential: Award }
 
 export default function PortfolioPublic() {
   const { userId } = useParams()

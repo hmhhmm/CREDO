@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  GitBranch, FileText, Award, PlayCircle, ArrowRight,
+  FileText, Award, PlayCircle, ArrowRight,
   Copy, Check, ChevronRight, Lock, ExternalLink, Loader2,
 } from 'lucide-react'
+import GitHubIcon from '../components/GitHubIcon'
 import Sidebar from '../components/Sidebar'
 import VerificationStamp from '../components/VerificationStamp'
 import NamecardPremium from '../components/NamecardPremium'
@@ -54,7 +55,7 @@ function JourneyPill({ number, label, state, count, total }) {
 }
 
 const artifactDefs = [
-  { key: 'github',     icon: GitBranch, label: 'GitHub',      hint: 'Commit authenticity + code complexity' },
+  { key: 'github',     icon: GitHubIcon, label: 'GitHub',      hint: 'Commit authenticity + code complexity' },
   { key: 'document',   icon: FileText,  label: 'Document',    hint: 'AI probability + authorship consistency' },
   { key: 'credential', icon: Award,     label: 'Credential',  hint: 'Certificate OCR + issuer match' },
 ]

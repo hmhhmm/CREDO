@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { GitBranch, Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
+import GitHubIcon from '../components/GitHubIcon'
 
 export default function Login() {
   const [role, setRole] = useState('candidate')
@@ -43,7 +44,7 @@ export default function Login() {
               type="button"
               className="w-full flex items-center justify-center gap-2 border border-line rounded-card py-2.5 text-sm text-ink hover:bg-parchment-shade transition-colors font-medium mb-4"
             >
-              <GitBranch size={15} /> Continue with GitHub
+              <GitHubIcon size={15} /> Continue with GitHub
             </button>
             <div className="flex items-center gap-3 mb-4">
               <div className="flex-1 h-px bg-line" />

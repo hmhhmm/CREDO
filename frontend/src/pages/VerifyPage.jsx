@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { GitBranch, FileText, Award, Upload, Check, Loader2, X } from 'lucide-react'
+import { FileText, Award, Upload, Check, Loader2, X } from 'lucide-react'
+import GitHubIcon from '../components/GitHubIcon'
 import Sidebar from '../components/Sidebar'
 import VerificationStamp from '../components/VerificationStamp'
 import { useDemo } from '../context/DemoContext'
@@ -18,7 +19,7 @@ export default function VerifyPage() {
   const sections = [
     {
       key: 'github',
-      icon: GitBranch,
+      icon: GitHubIcon,
       label: 'GitHub Repositories',
       desc: 'We analyse commit authenticity, AST code complexity, and originality signals. Source code is read in memory only — never stored.',
       state: githubState,
@@ -181,7 +182,7 @@ export default function VerifyPage() {
                         disabled={setConsent && !consent}
                         className="flex items-center gap-2 bg-ink text-parchment px-4 py-2 rounded-card text-xs font-medium hover:bg-opacity-90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                       >
-                        {key === 'github' ? <><GitBranch size={12} /> Connect GitHub</> : key === 'document' ? <><Upload size={12} /> Upload Document</> : <><Upload size={12} /> Add Credential</>}
+                        {key === 'github' ? <><GitHubIcon size={12} /> Connect GitHub</> : key === 'document' ? <><Upload size={12} /> Upload Document</> : <><Upload size={12} /> Add Credential</>}
                       </button>
                     </div>
                   )}

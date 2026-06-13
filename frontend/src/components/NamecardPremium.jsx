@@ -4,7 +4,8 @@ import {
   motion, useMotionValue, useSpring, useTransform,
   useReducedMotion, animate as fmAnimate,
 } from 'framer-motion'
-import { GitBranch, Award, FileText, ExternalLink, RotateCcw, Check, Briefcase } from 'lucide-react'
+import { Award, FileText, ExternalLink, RotateCcw, Check, Briefcase } from 'lucide-react'
+import GitHubIcon from './GitHubIcon'
 import { getConfidenceBand } from '../utils/confidenceBand'
 
 // ─── Physics ──────────────────────────────────────────────────────────────────
@@ -143,7 +144,7 @@ function Front({ candidate, band, merkleSnippet }) {
           </p>
         </div>
         <div className="flex items-center gap-[5px]">
-          <AgentDot active={hasGH}  icon={GitBranch} hex={band.hex} label="GitHub" />
+          <AgentDot active={hasGH}  icon={GitHubIcon} hex={band.hex} label="GitHub" />
           <AgentDot active={hasCR}  icon={Award}     hex={band.hex} label="Credential" />
           <AgentDot active={hasDOC} icon={FileText}  hex={band.hex} label="Document" />
         </div>

@@ -136,7 +136,7 @@ export const mockCandidates = [
   },
 ]
 
-export const mockCurrentCandidate = mockCandidates[0]
+export const mockCurrentCandidate = mockCandidates[2] // Wei Chen — 0 artifacts, fresh candidate view
 
 export const mockEmployer = {
   id: 'techcorp',
@@ -175,6 +175,18 @@ export const mockSimuHireSession = {
   stage: 'Challenge',
   stageIndex: 2,
   timer: '22:15',
+  stakeholderPersona: 'Escalator',
+  scenarioBrief: {
+    situation: "You are a lead engineer on-call. Your team's payment service started returning 503 errors 20 minutes ago, affecting ~12% of checkout requests. The system processes RM 2.4M/hour in transactions.",
+    access: ['Application logs (last 2 hours)', 'Service architecture diagram', 'Deployment history', 'Database metrics dashboard'],
+    constraints: ['No direct database write access without DBA approval', 'Rollback requires sign-off from team lead', 'CEO is receiving updates every 5 minutes'],
+  },
+  stageIndicators: {
+    0: { adaptability: 60, communication: 62, problemSolving: 65, stressResponse: 58, systemsThinking: 63 },
+    1: { adaptability: 72, communication: 68, problemSolving: 80, stressResponse: 65, systemsThinking: 77 },
+    2: { adaptability: 80, communication: 72, problemSolving: 83, stressResponse: 74, systemsThinking: 80 },
+    3: { adaptability: 88, communication: 76, problemSolving: 85, stressResponse: 79, systemsThinking: 82 },
+  },
   conversation: [
     {
       id: 1,

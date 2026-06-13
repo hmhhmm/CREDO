@@ -10,7 +10,8 @@ export default function VerifyPage() {
   const [githubState, setGithubState] = useState(() => verifiedAgents.has('github') ? 'verified' : 'empty')
   const [docState,    setDocState]    = useState(() => verifiedAgents.has('document') ? 'verified' : 'empty')
   const [credState,   setCredState]   = useState(() => verifiedAgents.has('credential') ? 'verified' : 'empty')
-  const [githubConnected, setGithubConnected] = useState(false)
+  const [githubConnected,   setGithubConnected]   = useState(false)
+  const [githubConnecting, setGithubConnecting] = useState(false)
   const [docConsent, setDocConsent] = useState(false)
   const [credConsent, setCredConsent] = useState(false)
   const [githubConsent] = useState(true) // pre-given at OAuth
@@ -162,13 +163,25 @@ export default function VerifyPage() {
                   {state === 'empty' && (
                     <div className="mt-4 space-y-3">
                       {/* GitHub: two-step — connect first, then pick repos */}
-                      {key === 'github' && !githubConnected && (
+                      {key === 'github' && !githubConnected && !githubConnecting && (
                         <button
-                          onClick={() => setGithubConnected(true)}
+                          onClick={() => {
+                            setGithubConnecting(true)
+                            setTimeout(() => {
+                              setGithubConnecting(false)
+                              setGithubConnected(true)
+                            }, 2000)
+                          }}
                           className="flex items-center gap-2 bg-ink text-parchment px-4 py-2 rounded-card text-xs font-medium hover:bg-opacity-90 transition-colors"
                         >
                           <GitHubIcon size={12} /> Connect GitHub
                         </button>
+                      )}
+                      {key === 'github' && githubConnecting && (
+                        <div className="flex items-center gap-2 text-xs text-pending font-mono">
+                          <Loader2 size={13} className="animate-spin shrink-0" />
+                          Authenticating with GitHub…
+                        </div>
                       )}
                       {key === 'github' && githubConnected && repos && (
                         <>

@@ -10,6 +10,7 @@ export default function VerifyPage() {
   const [githubState, setGithubState] = useState(() => verifiedAgents.has('github') ? 'verified' : 'empty')
   const [docState,    setDocState]    = useState(() => verifiedAgents.has('document') ? 'verified' : 'empty')
   const [credState,   setCredState]   = useState(() => verifiedAgents.has('credential') ? 'verified' : 'empty')
+  const [githubConnected, setGithubConnected] = useState(false)
   const [docConsent, setDocConsent] = useState(false)
   const [credConsent, setCredConsent] = useState(false)
   const [githubConsent] = useState(true) // pre-given at OAuth
@@ -160,30 +161,52 @@ export default function VerifyPage() {
 
                   {state === 'empty' && (
                     <div className="mt-4 space-y-3">
-                      {key === 'github' && repos && (
-                        <div className="space-y-1.5">
-                          <p className="text-xs font-medium text-slate uppercase tracking-wider mb-2">Select repositories</p>
-                          {repos.map(r => (
-                            <label key={r} className="flex items-center gap-2 cursor-pointer">
-                              <input type="checkbox" className="rounded" defaultChecked={r === 'ml-pipeline-optimizer'} />
-                              <span className="text-xs font-mono text-ink">{r}</span>
+                      {/* GitHub: two-step — connect first, then pick repos */}
+                      {key === 'github' && !githubConnected && (
+                        <button
+                          onClick={() => setGithubConnected(true)}
+                          className="flex items-center gap-2 bg-ink text-parchment px-4 py-2 rounded-card text-xs font-medium hover:bg-opacity-90 transition-colors"
+                        >
+                          <GitHubIcon size={12} /> Connect GitHub
+                        </button>
+                      )}
+                      {key === 'github' && githubConnected && repos && (
+                        <>
+                          <div className="space-y-1.5">
+                            <p className="text-xs font-medium text-slate uppercase tracking-wider mb-2">Select repositories</p>
+                            {repos.map(r => (
+                              <label key={r} className="flex items-center gap-2 cursor-pointer">
+                                <input type="checkbox" className="rounded" defaultChecked={r === 'ml-pipeline-optimizer'} />
+                                <span className="text-xs font-mono text-ink">{r}</span>
+                              </label>
+                            ))}
+                          </div>
+                          <button
+                            onClick={() => { setState('pending'); setTimeout(() => { setState('verified'); onVerified() }, 3000) }}
+                            className="flex items-center gap-2 bg-ink text-parchment px-4 py-2 rounded-card text-xs font-medium hover:bg-opacity-90 transition-colors"
+                          >
+                            <GitHubIcon size={12} /> Run Analysis
+                          </button>
+                        </>
+                      )}
+                      {/* Document / Credential: consent → upload */}
+                      {key !== 'github' && (
+                        <>
+                          {setConsent && consentLabel && (
+                            <label className="flex items-start gap-2 cursor-pointer">
+                              <input type="checkbox" className="mt-0.5" checked={consent} onChange={e => setConsent(e.target.checked)} />
+                              <span className="text-xs text-slate leading-relaxed">{consentLabel}</span>
                             </label>
-                          ))}
-                        </div>
+                          )}
+                          <button
+                            onClick={() => { setState('pending'); setTimeout(() => { setState('verified'); onVerified() }, 3000) }}
+                            disabled={setConsent && !consent}
+                            className="flex items-center gap-2 bg-ink text-parchment px-4 py-2 rounded-card text-xs font-medium hover:bg-opacity-90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            {key === 'document' ? <><Upload size={12} /> Upload Document</> : <><Upload size={12} /> Add Credential</>}
+                          </button>
+                        </>
                       )}
-                      {setConsent && consentLabel && (
-                        <label className="flex items-start gap-2 cursor-pointer">
-                          <input type="checkbox" className="mt-0.5" checked={consent} onChange={e => setConsent(e.target.checked)} />
-                          <span className="text-xs text-slate leading-relaxed">{consentLabel}</span>
-                        </label>
-                      )}
-                      <button
-                        onClick={() => { setState('pending'); setTimeout(() => { setState('verified'); onVerified() }, 3000) }}
-                        disabled={setConsent && !consent}
-                        className="flex items-center gap-2 bg-ink text-parchment px-4 py-2 rounded-card text-xs font-medium hover:bg-opacity-90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                      >
-                        {key === 'github' ? <><GitHubIcon size={12} /> Connect GitHub</> : key === 'document' ? <><Upload size={12} /> Upload Document</> : <><Upload size={12} /> Add Credential</>}
-                      </button>
                     </div>
                   )}
                 </div>

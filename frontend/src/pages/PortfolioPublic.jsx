@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { Shield, Mail, GitBranch, FileText, Award } from 'lucide-react'
+import { Shield, Mail, GitBranch, FileText, Award, X } from 'lucide-react'
 import VerificationStamp from '../components/VerificationStamp'
 import ArtifactCard from '../components/ArtifactCard'
 import LedgerEntry from '../components/LedgerEntry'
 import NotFound from './NotFound'
 import { mockCandidates } from '../data/mockData'
+import { getConfidenceBand } from '../utils/confidenceBand'
 
 const typeIcons = { github: GitBranch, document: FileText, credential: Award }
 
@@ -38,12 +39,12 @@ export default function PortfolioPublic() {
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2 mb-8">
+        <div className="flex gap-2 mb-6">
           <button
             onClick={() => setContactVisible(!contactVisible)}
             className="flex items-center gap-2 border border-line rounded-card px-4 py-2 text-sm text-ink hover:bg-parchment-shade transition-colors font-medium"
           >
-            <Mail size={13} /> Contact
+            <Mail size={13} /> {contactVisible ? 'Hide contact' : 'Request contact'}
           </button>
           <Link
             to={`/card/${userId}`}
@@ -52,9 +53,13 @@ export default function PortfolioPublic() {
             View Namecard
           </Link>
         </div>
+
         {contactVisible && (
-          <div className="mb-6 px-4 py-3 bg-parchment-shade border border-line rounded-card">
+          <div className="mb-6 px-4 py-3 bg-parchment-shade border border-line rounded-card flex items-center justify-between">
             <p className="text-sm text-ink font-mono">{candidate.name.toLowerCase().replace(' ', '.')}@email.com</p>
+            <button onClick={() => setContactVisible(false)} className="text-slate hover:text-ink ml-3">
+              <X size={13} />
+            </button>
           </div>
         )}
 
@@ -67,7 +72,7 @@ export default function PortfolioPublic() {
           }
         </div>
 
-        {/* Timeline */}
+        {/* Timeline — verified only, correct band colors */}
         {verifiedArtifacts.length > 0 && (
           <>
             <h2 className="text-xs font-semibold text-slate uppercase tracking-wider mb-4">Career Timeline</h2>
@@ -75,6 +80,7 @@ export default function PortfolioPublic() {
               <div className="absolute left-3 top-2 bottom-2 w-px bg-line" />
               {verifiedArtifacts.map(a => {
                 const Icon = typeIcons[a.type] || FileText
+                const band = getConfidenceBand(a.confidence)
                 return (
                   <div key={a.id} className="flex items-start gap-4 mb-4 relative">
                     <div className="w-6 h-6 rounded-full bg-parchment border-2 border-line flex items-center justify-center shrink-0 z-10">
@@ -82,7 +88,15 @@ export default function PortfolioPublic() {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-ink">{a.name}</p>
-                      <p className="text-xs text-slate font-mono mt-0.5">{a.date}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs text-slate font-mono">{a.date}</span>
+                        <span
+                          className="text-xs px-1.5 py-0.5 rounded-full font-mono border"
+                          style={{ color: band.hex, borderColor: band.hex + '40', backgroundColor: band.hex + '12' }}
+                        >
+                          {a.confidence}/100
+                        </span>
+                      </div>
                     </div>
                   </div>
                 )
@@ -98,22 +112,24 @@ export default function PortfolioPublic() {
             <div className="border border-line rounded-card bg-parchment p-5 mb-8">
               <div className="flex items-center gap-3 mb-3">
                 <Shield size={16} className="text-verified" />
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <p className="text-xs text-slate uppercase tracking-wider mb-0.5">Merkle Root</p>
-                  <p className="font-mono text-xs text-ink">{candidate.merkleRoot}</p>
+                  <p className="font-mono text-xs text-ink truncate">{candidate.merkleRoot}</p>
                 </div>
               </div>
               <button onClick={() => setLedgerOpen(!ledgerOpen)} className="text-xs text-ink font-medium hover:underline">
                 {ledgerOpen ? 'Hide' : 'View'} audit trail
               </button>
               {ledgerOpen && (
-                <div className="mt-3 border-t border-line pt-3">
-                  <div className="grid grid-cols-4 gap-2 mb-2">
+                <div className="mt-3 border-t border-line pt-3 overflow-x-auto">
+                  <div className="grid grid-cols-4 gap-2 mb-2 min-w-[480px]">
                     {['Block', 'Leaf Hash', 'Prev Hash', 'Timestamp'].map(h => (
                       <span key={h} className="text-xs font-semibold text-slate uppercase tracking-wider">{h}</span>
                     ))}
                   </div>
-                  {candidate.ledger.map(entry => <LedgerEntry key={entry.blockIndex} entry={entry} />)}
+                  <div className="min-w-[480px]">
+                    {candidate.ledger.map(entry => <LedgerEntry key={entry.blockIndex} entry={entry} />)}
+                  </div>
                 </div>
               )}
             </div>
@@ -121,11 +137,16 @@ export default function PortfolioPublic() {
         )}
 
         {/* Footer */}
-        <div className="border-t border-line pt-6 text-center">
+        <div className="border-t border-line pt-6 flex items-center justify-between">
           <p className="text-xs font-mono text-slate">
-            Verified by CREDO · Integrity Hash: {candidate.merkleRoot?.slice(0, 24)}…
+            Verified by CREDO · {candidate.merkleRoot?.slice(0, 16)}…
           </p>
-          <Link to="/" className="text-xs text-slate hover:text-ink mt-1 block">credo.app</Link>
+          <Link
+            to="/register"
+            className="text-xs text-ink font-medium border border-line rounded-card px-3 py-1.5 hover:bg-parchment-shade transition-colors"
+          >
+            Build your CREDO →
+          </Link>
         </div>
       </div>
     </div>

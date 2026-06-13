@@ -1,12 +1,11 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, ShieldCheck, FolderOpen, PlayCircle, CreditCard, LogOut } from 'lucide-react'
+import { LayoutDashboard, ShieldCheck, FolderOpen, PlayCircle, LogOut } from 'lucide-react'
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/dashboard/verify', label: 'Verify', icon: ShieldCheck },
   { to: '/dashboard/portfolio', label: 'Portfolio', icon: FolderOpen },
   { to: '/simuhire/session-demo', label: 'SimuHire', icon: PlayCircle },
-  { to: '/dashboard/namecard', label: 'Namecard', icon: CreditCard },
 ]
 
 export default function Sidebar() {

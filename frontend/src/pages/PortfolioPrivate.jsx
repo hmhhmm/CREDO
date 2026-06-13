@@ -5,13 +5,13 @@ import Sidebar from '../components/Sidebar'
 import VerificationStamp from '../components/VerificationStamp'
 import ArtifactCard from '../components/ArtifactCard'
 import LedgerEntry from '../components/LedgerEntry'
-import { mockCurrentCandidate } from '../data/mockData'
 import { getConfidenceBand } from '../utils/confidenceBand'
+import { useDemo } from '../context/DemoContext'
 
 const typeIcons = { github: GitBranch, document: FileText, credential: Award }
 
 export default function PortfolioPrivate() {
-  const candidate = mockCurrentCandidate
+  const { liveCandidate: candidate } = useDemo()
   const [copied, setCopied] = useState(false)
   const [ledgerOpen, setLedgerOpen] = useState(false)
   const [visibility, setVisibility] = useState('public') // 'public' | 'private'

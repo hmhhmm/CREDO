@@ -6,9 +6,9 @@ import {
 } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import VerificationStamp from '../components/VerificationStamp'
-import NamecardCard from '../components/NamecardCard'
-import { mockCurrentCandidate } from '../data/mockData'
+import NamecardPremium from '../components/NamecardPremium'
 import { getConfidenceBand } from '../utils/confidenceBand'
+import { useDemo } from '../context/DemoContext'
 
 // ─── Journey state helpers ───────────────────────────────────────────────────
 
@@ -235,7 +235,7 @@ function SpotlightComplete({ candidate, copied, onCopy }) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function CandidateDashboard() {
-  const candidate = mockCurrentCandidate
+  const { liveCandidate: candidate, reset } = useDemo()
   const [copied, setCopied] = useState(false)
 
   const {
@@ -263,7 +263,16 @@ export default function CandidateDashboard() {
           <div className="flex items-start gap-5 mb-6 pb-6 border-b border-line">
             <VerificationStamp score={candidate.trustScore} size="lg" />
             <div className="flex-1">
-              <h1 className="font-display font-bold text-ink text-3xl mb-0.5">{candidate.name}</h1>
+              <div className="flex items-center justify-between mb-0.5">
+                <h1 className="font-display font-bold text-ink text-3xl">{candidate.name}</h1>
+                <button
+                  onClick={reset}
+                  className="text-xs text-slate border border-line rounded-card px-3 py-1.5 hover:bg-parchment-shade transition-colors font-mono shrink-0"
+                  title="Reset to fresh state for demo"
+                >
+                  ↺ Reset demo
+                </button>
+              </div>
               <p className="text-slate text-sm mb-4">
                 {candidate.field} · {candidate.university} · {candidate.year}
               </p>
@@ -394,7 +403,7 @@ export default function CandidateDashboard() {
                   </Link>
                 </div>
               </div>
-              <NamecardCard candidate={candidate} isOwn />
+              <NamecardPremium candidate={candidate} />
             </section>
           )}
 

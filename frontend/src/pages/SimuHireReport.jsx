@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Check, Lock, ArrowLeft, TrendingUp, TrendingDown } from 'lucide-react'
-import NamecardCard from '../components/NamecardCard'
-import { mockReport, mockCurrentCandidate } from '../data/mockData'
+import NamecardPremium from '../components/NamecardPremium'
+import { mockReport } from '../data/mockData'
+import { useDemo } from '../context/DemoContext'
 
 // ─── Radar chart ──────────────────────────────────────────────────────────────
 
@@ -128,8 +129,8 @@ function ShareDecision({ report, candidate, decision, onShare, onKeep }) {
         {preview ? 'Hide' : 'Preview'} what employers see on your namecard
       </button>
       {preview && (
-        <div className="mb-5 opacity-90 pointer-events-none">
-          <NamecardCard candidate={candidate} compact />
+        <div className="mb-5 opacity-90 pointer-events-none scale-90 origin-top-left">
+          <NamecardPremium candidate={candidate} />
         </div>
       )}
 
@@ -171,11 +172,10 @@ function ShareDecision({ report, candidate, decision, onShare, onKeep }) {
 
 export default function SimuHireReport() {
   const report = mockReport
-  const candidate = mockCurrentCandidate
-  const navigate = useNavigate()
+  const { liveCandidate: candidate, markSimuHireShared } = useDemo()
   const [decision, setDecision] = useState(null)
 
-  const handleShare = () => { setDecision('shared') }
+  const handleShare = () => { markSimuHireShared(); setDecision('shared') }
   const handleKeep  = () => { setDecision('private') }
 
   const sorted   = [...report.dimensions].sort((a, b) => b.score - a.score)

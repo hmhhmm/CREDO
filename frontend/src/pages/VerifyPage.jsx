@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { GitBranch, FileText, Award, Upload, Check, Loader2, X } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import VerificationStamp from '../components/VerificationStamp'
-import { mockCurrentCandidate } from '../data/mockData'
+import { useDemo } from '../context/DemoContext'
 
 export default function VerifyPage() {
-  const candidate = mockCurrentCandidate
-  const [githubState, setGithubState] = useState('verified')
-  const [docState, setDocState] = useState('pending')
-  const [credState, setCredState] = useState('empty')
+  const { trustScore, verifiedAgents, markAgentVerified } = useDemo()
+  const [githubState, setGithubState] = useState(() => verifiedAgents.has('github') ? 'verified' : 'empty')
+  const [docState,    setDocState]    = useState(() => verifiedAgents.has('document') ? 'verified' : 'empty')
+  const [credState,   setCredState]   = useState(() => verifiedAgents.has('credential') ? 'verified' : 'empty')
   const [docConsent, setDocConsent] = useState(false)
   const [credConsent, setCredConsent] = useState(false)
   const [githubConsent] = useState(true) // pre-given at OAuth
@@ -23,6 +23,7 @@ export default function VerifyPage() {
       desc: 'We analyse commit authenticity, AST code complexity, and originality signals. Source code is read in memory only — never stored.',
       state: githubState,
       setState: setGithubState,
+      onVerified: () => markAgentVerified('github'),
       consent: githubConsent,
       setConsent: null,
       consentLabel: null,
@@ -38,6 +39,7 @@ export default function VerifyPage() {
       desc: 'Upload a PDF or DOCX (max 10 MB). We check AI probability, writing complexity, and authorship consistency. The document is discarded after processing.',
       state: docState,
       setState: setDocState,
+      onVerified: () => markAgentVerified('document'),
       consent: docConsent,
       setConsent: setDocConsent,
       consentLabel: 'I consent to CREDO processing this document. It will be analysed in memory and discarded — never stored.',
@@ -53,6 +55,7 @@ export default function VerifyPage() {
       desc: 'Upload a certificate image or PDF. OCR extracts institution, your name, and date for registry matching. The image is discarded after processing.',
       state: credState,
       setState: setCredState,
+      onVerified: () => markAgentVerified('credential'),
       consent: credConsent,
       setConsent: setCredConsent,
       consentLabel: 'I consent to CREDO processing this credential image. It will be read by OCR and discarded — never stored.',
@@ -78,7 +81,7 @@ export default function VerifyPage() {
               </p>
             </div>
             <div className="shrink-0">
-              <VerificationStamp score={candidate.trustScore} size="md" />
+              <VerificationStamp score={trustScore} size="md" />
             </div>
           </div>
 
@@ -105,7 +108,7 @@ export default function VerifyPage() {
           </div>
 
           <div className="space-y-4">
-            {sections.map(({ key, icon: Icon, label, desc, state, setState, consent, setConsent, consentLabel, verifiedSummary, pendingText, pendingEta, repos, hint }) => (
+            {sections.map(({ key, icon: Icon, label, desc, state, setState, onVerified, consent, setConsent, consentLabel, verifiedSummary, pendingText, pendingEta, repos, hint }) => (
               <div key={key} className="border border-line rounded-card bg-parchment overflow-hidden">
                 <div className="p-5">
                   <div className="flex items-start gap-4">
@@ -174,7 +177,7 @@ export default function VerifyPage() {
                         </label>
                       )}
                       <button
-                        onClick={() => { setState('pending'); setTimeout(() => setState('verified'), 3000) }}
+                        onClick={() => { setState('pending'); setTimeout(() => { setState('verified'); onVerified() }, 3000) }}
                         disabled={setConsent && !consent}
                         className="flex items-center gap-2 bg-ink text-parchment px-4 py-2 rounded-card text-xs font-medium hover:bg-opacity-90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                       >

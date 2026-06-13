@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Mail, BookOpen, X } from 'lucide-react'
-import NamecardCard from '../components/NamecardCard'
+import NamecardPremium from '../components/NamecardPremium'
 import NotFound from './NotFound'
 import { mockCandidates } from '../data/mockData'
 
@@ -60,7 +60,7 @@ export default function NamecardPublic() {
           </div>
         )}
 
-        <NamecardCard candidate={candidate} />
+        <NamecardPremium candidate={candidate} />
 
         <p className="mt-6 text-xs font-mono text-slate text-center">
           credo.app/card/{candidate.id} · Last verified {lastVerified}

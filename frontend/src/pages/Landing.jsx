@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 import { ShieldCheck, IdCard, PlayCircle, ArrowRight, Check, ChevronRight } from 'lucide-react'
 import NamecardCard from '../components/NamecardCard'
-import Card3D from '../components/Card3D'
+import NamecardPremium from '../components/NamecardPremium'
 import { mockCandidates } from '../data/mockData'
 
 const ahmad = mockCandidates[0]
@@ -174,18 +174,15 @@ export default function Landing() {
         {/* Right: live namecard — 3D interactive, enters from right */}
         <motion.div
           className="shrink-0 hidden lg:block"
-          style={{ perspective: '900px' }}
           initial={reduced ? false : { opacity: 0, x: 32, scale: 0.97 }}
           animate={{ opacity: 1, x: 0, scale: 1 }}
           transition={{ duration: 0.62, ease: EXPO, delay: 0.28 }}
         >
           <div className="relative">
             <span className="absolute -top-2.5 left-3 z-10 text-xs font-mono text-slate bg-parchment border border-line rounded-full px-2.5 py-0.5 shadow-sm pointer-events-none">
-              Live example
+              Live example · click to flip
             </span>
-            <Card3D floatAmplitude={8}>
-              <NamecardCard candidate={ahmad} />
-            </Card3D>
+            <NamecardPremium candidate={ahmad} />
           </div>
         </motion.div>
       </div>

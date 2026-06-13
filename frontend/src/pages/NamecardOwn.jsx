@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Copy, Check, Pencil, Lock, ExternalLink } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
-import NamecardCard from '../components/NamecardCard'
+import NamecardPremium from '../components/NamecardPremium'
 import { mockCurrentCandidate } from '../data/mockData'
 
 export default function NamecardOwn() {
@@ -60,8 +60,8 @@ export default function NamecardOwn() {
         <div className="flex flex-col lg:flex-row gap-8 items-start">
           {/* Namecard preview */}
           <div className="flex-shrink-0">
-            <p className="text-xs font-mono text-slate mb-2 text-center">Live preview</p>
-            <NamecardCard candidate={candidate} isOwn />
+            <p className="text-xs font-mono text-slate mb-3 text-center">Live preview · click to flip</p>
+            <NamecardPremium candidate={candidate} />
           </div>
 
           {/* Edit + locked panels */}

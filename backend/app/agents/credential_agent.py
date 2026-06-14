@@ -16,8 +16,11 @@ Confidence rules (from PRD):
 Image/PDF bytes are discarded from memory immediately after OCR (PDPA compliant).
 """
 import io
+import logging
 import re
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 from rapidfuzz import fuzz
 
@@ -235,6 +238,7 @@ async def run_credential_analysis(
     from app.models.verified_artifact import VerifiedArtifact
     from app.services.ledger_service import atomic_ledger_write
 
+    logger.info("Credential agent starting: artifact=%s file=%s", artifact_id, filename)
     artifact_uuid = _uuid.UUID(artifact_id)
     ocr_text: Optional[str] = None
 
@@ -246,12 +250,14 @@ async def run_credential_analysis(
                 )
                 artifact = result.scalar_one_or_none()
                 if artifact is None:
+                    logger.warning("Credential agent: artifact %s not found, skipping", artifact_id)
                     return
 
                 # OCR extraction
                 try:
                     ocr_text = extract_ocr_text(file_bytes, filename)
                 except Exception as exc:
+                    logger.error("OCR failed for artifact %s: %s", artifact_id, exc)
                     artifact.status = "failed"
                     artifact.metadata_ = {"error": f"OCR failed: {exc}"}
                     return
@@ -260,6 +266,10 @@ async def run_credential_analysis(
                     del file_bytes
 
                 if not ocr_text or len(ocr_text.strip()) < 20:
+                    logger.warning(
+                        "Credential agent: insufficient OCR text for artifact %s "
+                        "(Tesseract installed?)", artifact_id
+                    )
                     artifact.status = "failed"
                     artifact.metadata_ = {
                         "error": "OCR returned insufficient text. "
@@ -298,11 +308,23 @@ async def run_credential_analysis(
                         confidence=float(confidence),
                         extra_metadata=metadata,
                     )
+                    logger.info(
+                        "Credential agent verified: artifact=%s confidence=%d issuer=%s name_match=%s",
+                        artifact_id, confidence, matched_issuer, name_matched,
+                    )
                 else:
                     artifact.status = "failed"
                     artifact.confidence = float(confidence)
                     artifact.metadata_ = metadata
+                    logger.info(
+                        "Credential agent failed (low confidence): artifact=%s confidence=%d "
+                        "issuer_matched=%s name_matched=%s",
+                        artifact_id, confidence, issuer_matched, name_matched,
+                    )
 
+    except Exception:
+        logger.exception("Unexpected error in Credential agent for artifact %s", artifact_id)
+        raise
     finally:
         if ocr_text is not None:
             del ocr_text

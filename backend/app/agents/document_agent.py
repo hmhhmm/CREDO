@@ -3,10 +3,10 @@ F2 Agent B — Document Agent.
 Accepts PDF or DOCX; analyses for AI generation probability, writing complexity,
 and authorship consistency.
 
-⚠ PAUSE REQUIRED: The AI text detection step calls OpenAI gpt-4o-mini.
-  Set OPENAI_API_KEY in .env before enabling _detect_ai_probability().
-  Until then, that function returns a placeholder and the endpoint is functional
-  but OPENAI_API_KEY must be set before the Grand Finale (Section 16.0).
+⚠ PAUSE REQUIRED: The AI text detection step calls Groq llama-3.1-8b-instant.
+  Set GROQ_API_KEY in .env before enabling detect_ai_probability().
+  Until then, that function raises RuntimeError and the endpoint is functional
+  but the key must be set before the Grand Finale (Section 16.0).
 
 confidence = (100 - ai_probability)×0.5 + writing_complexity×0.3 + vocabulary_diversity×0.2
 """
@@ -131,29 +131,31 @@ def check_authorship_consistency(
     }
 
 
-# ── AI text detection (⚠ requires OPENAI_API_KEY) ────────────────────────────
+# ── AI text detection (⚠ requires GROQ_API_KEY) ──────────────────────────────
 
 async def detect_ai_probability(text: str) -> tuple[float, str]:
     """
-    Send text to OpenAI gpt-4o-mini to estimate AI generation probability.
+    Send text to Groq llama-3.1-8b-instant to estimate AI generation probability.
     Returns (ai_probability 0-100, verdict).
 
-    ⚠ PAUSE: OPENAI_API_KEY must be set in .env before calling this function.
+    ⚠ PAUSE: GROQ_API_KEY must be set in .env before calling this function.
     Without the key, raises RuntimeError with a clear message.
+    Free tier: https://console.groq.com
     """
     from app.config import settings
 
-    if not settings.OPENAI_API_KEY:
+    if not settings.GROQ_API_KEY:
         raise RuntimeError(
-            "OPENAI_API_KEY is not set. "
-            "Provide it in .env before enabling the Document Agent AI detection step."
+            "GROQ_API_KEY is not set. "
+            "Provide it in .env before enabling the Document Agent AI detection step. "
+            "Get a free key at https://console.groq.com"
         )
 
-    from openai import AsyncOpenAI
+    from groq import AsyncGroq
 
-    client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+    client = AsyncGroq(api_key=settings.GROQ_API_KEY)
 
-    # Limit to first 3000 chars to control token cost
+    # Limit to first 3000 chars to control token usage
     sample = text[:3000]
 
     prompt = (
@@ -166,7 +168,7 @@ async def detect_ai_probability(text: str) -> tuple[float, str]:
     )
 
     response = await client.chat.completions.create(
-        model="gpt-4o-mini",
+        model="llama-3.1-8b-instant",
         messages=[{"role": "user", "content": prompt}],
         temperature=0,
         max_tokens=60,
@@ -257,7 +259,7 @@ async def run_document_analysis(
                 prior_avg = user.avg_sentence_variance if user else None
                 authorship = check_authorship_consistency(sentence_variance, prior_avg)
 
-                # AI text detection (requires OPENAI_API_KEY)
+                # AI text detection (requires GROQ_API_KEY)
                 try:
                     ai_probability, verdict = await detect_ai_probability(text)
                     ai_generated = ai_probability >= 70

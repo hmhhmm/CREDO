@@ -206,7 +206,7 @@ export const mockSimuHireSession = {
 export const mockReport = {
   candidateName: 'Ahmad Rahim',
   type: 'Technical',
-  duration: '24 min',
+  duration: '30 min',
   completedAt: '2025-05-28',
   overallScore: 82,
   dimensions: [

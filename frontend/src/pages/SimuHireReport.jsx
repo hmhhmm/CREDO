@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Check, Lock, ArrowLeft, TrendingUp, Minus } from 'lucide-react'
 import NamecardPremium from '../components/NamecardPremium'
 import { mockReport } from '../data/mockData'
@@ -173,6 +173,8 @@ function ShareDecision({ report, candidate, decision, onShare, onKeep }) {
 export default function SimuHireReport() {
   const report = mockReport
   const { liveCandidate: candidate, markSimuHireShared } = useDemo()
+  const { state } = useLocation()
+  const duration = state?.duration ? `${Math.floor(state.duration / 60)} min` : mockReport.duration
   const [decision, setDecision] = useState(null)
 
   const handleShare = () => { markSimuHireShared(); setDecision('shared') }
@@ -202,7 +204,7 @@ export default function SimuHireReport() {
         <div className="mb-8">
           <p className="text-xs font-mono text-slate uppercase tracking-wider mb-2">SimuHire Complete</p>
           <h1 className="font-display font-bold text-ink text-3xl mb-1">
-            {report.type} Simulation — {report.duration}
+            {report.type} Simulation — {duration}
           </h1>
           <p className="text-slate text-sm">{report.candidateName} · {report.completedAt}</p>
         </div>

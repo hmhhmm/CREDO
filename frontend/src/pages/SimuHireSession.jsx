@@ -101,7 +101,7 @@ function SetupScreen({ session, onBegin }) {
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="max-w-lg w-full">
           <div className="mb-8">
-            <p className="text-xs font-mono text-slate uppercase tracking-wider mb-2">Technical Simulation · 4 stages · ~25 min</p>
+            <p className="text-xs font-mono text-slate uppercase tracking-wider mb-2">Technical Simulation · 4 stages · ~30 min</p>
             <h1 className="font-display font-bold text-ink text-3xl mb-3">Your Scenario</h1>
             <p className="text-sm text-ink leading-relaxed bg-parchment-shade border border-line rounded-card p-4">
               {session.scenarioBrief.situation}
@@ -189,7 +189,7 @@ export default function SimuHireSession() {
   const [finalSubmitted,  setFinalSubmitted]  = useState(false)
   const [stageReplyCount, setStageReplyCount] = useState(0)
 
-  const [timeLeft, setTimeLeft] = useState(22 * 60 + 15)
+  const [timeLeft, setTimeLeft] = useState(30 * 60)
   const [cameraStream, setCameraStream] = useState(null)
   const bottomRef = useRef(null)
   const convRef   = useRef(null)
@@ -330,7 +330,7 @@ export default function SimuHireSession() {
             text: "Thank you — that's all the questions for today's simulation. You've worked through some challenging situations and I appreciated seeing your reasoning process. The Evaluator agent will now score your full transcript. Your Behavioral Traits Report will be ready in a moment.",
           }])
           setWaiting(false)
-          setTimeout(() => navigate('/simuhire/session-demo/report'), 3500)
+          setTimeout(() => navigate('/simuhire/session-demo/report', { state: { duration: 30 * 60 - timeLeft } }), 3500)
         }
       }
     }, 2000)
@@ -526,7 +526,7 @@ export default function SimuHireSession() {
               >
                 <Send size={12} /> {submitLabels[currentStage] || 'Submit'}
               </button>
-              <p className="text-xs text-slate font-mono">⌘ Enter to submit</p>
+              <p className="text-xs text-slate font-mono">Ctrl + Enter to submit</p>
             </div>
           </div>
         </div>

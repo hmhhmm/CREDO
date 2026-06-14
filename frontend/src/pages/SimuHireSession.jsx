@@ -205,22 +205,37 @@ export default function SimuHireSession() {
     setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 40)
   }
 
-  const nextResponse = "You find the form validation function calling input.phone.trim() before checking if phone exists — since the field is optional it's undefined for users who skip it. You've reproduced it in staging. What's your next step: fix it yourself, message the tech lead, or something else?"
+  // Scripted responses — keyed to candidate message count (0-indexed)
+  const scriptedResponses = {
+    0: {
+      messages: [
+        { speaker: 'interviewer', text: "Good call. The console shows: TypeError: Cannot read properties of undefined (reading 'trim'). It fires on Submit and correlates with users who leave the phone field empty. The phone field is optional. What do you do next?" },
+        { speaker: 'stakeholder', text: "Hey — I just got a message from a client saying they can't submit the form at all. Should I tell them to try again later? Do we know what's happening?" },
+      ],
+    },
+    1: {
+      messages: [
+        { speaker: 'interviewer', text: "You find the form validation calling input.phone.trim() before checking if phone exists — undefined for users who skip the optional field. You've reproduced it in staging. What's your next step: fix it yourself, message the tech lead, or something else?" },
+      ],
+    },
+  }
+
+  const defaultResponse = "Good reasoning. Walk me through your thought process on that decision — what tradeoffs are you weighing?"
 
   const stageMessages = {
-    1: "You've identified the bug and reproduced it. Now the Client Success manager is messaging you again — the client is getting impatient. Walk me through how you handle both the fix and the communication simultaneously.",
-    2: "You've written the fix and opened a PR. But your branch protection rules require tech lead approval before merge. The tech lead responds on Slack: 'Looks fine, but I can't approve until after the meeting.' The client is still waiting. What do you do?",
-    3: "The fix is merged and deployed. Submissions are working again. Your tech lead asks you to write a short incident summary. What do you include, and how do you make sure this class of bug doesn't happen again?",
+    1: "You've identified the bug and can reproduce it. The Client Success manager is messaging you again — the client is getting impatient. Walk me through how you handle both the fix and the communication simultaneously.",
+    2: "You've written the fix and opened a PR. Branch protection requires tech lead approval before merge. The tech lead responds on Slack: 'Looks fine, but I can't approve until after the meeting.' The client is still waiting. What do you do?",
+    3: "The fix is merged and deployed. Submissions are working again. Your tech lead asks for a short incident summary. What do you include, and how do you make sure this class of bug doesn't happen again?",
   }
 
   const handleSubmit = () => {
     if (!input.trim() || waiting) return
+    const candidateCount = messages.filter(m => m.speaker === 'candidate').length
     const newMsg = { id: messages.length + 1, speaker: 'candidate', text: input }
     setMessages(prev => [...prev, newMsg])
     setInput('')
     setWaiting(true)
 
-    // Advance stage after enough exchanges — threshold keeps first exchange from immediately jumping
     const willAdvance = messages.length >= 8 && currentStage < stages.length - 1
 
     setTimeout(() => {
@@ -231,11 +246,17 @@ export default function SimuHireSession() {
         setStageTransition(stages[newStage])
         setTimeout(() => setStageTransition(null), 2500)
         setMessages(prev => [...prev,
-          { id: prev.length + 1, speaker: 'system',       text: `— Stage ${newStage + 1}: ${stages[newStage]} —` },
-          { id: prev.length + 2, speaker: 'interviewer',  text: stageMessages[newStage] || nextResponse },
+          { id: prev.length + 1, speaker: 'system',      text: `— Stage ${newStage + 1}: ${stages[newStage]} —` },
+          { id: prev.length + 2, speaker: 'interviewer', text: stageMessages[newStage] || defaultResponse },
         ])
+      } else if (scriptedResponses[candidateCount]) {
+        const replies = scriptedResponses[candidateCount].messages
+        setMessages(prev => {
+          const base = prev.length
+          return [...prev, ...replies.map((r, i) => ({ id: base + i + 1, ...r }))]
+        })
       } else {
-        setMessages(prev => [...prev, { id: prev.length + 1, speaker: 'interviewer', text: nextResponse }])
+        setMessages(prev => [...prev, { id: prev.length + 1, speaker: 'interviewer', text: defaultResponse }])
       }
       setWaiting(false)
     }, 2000)

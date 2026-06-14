@@ -23,9 +23,30 @@ const speakerConfig = {
 
 const submitLabels = ['Respond to scenario', 'Diagnose and respond', 'Respond under pressure', 'Make your final call']
 
+// Scripted candidate answers for the demo auto-pilot. On-topic, hit signal
+// keywords, and span all four stages through to the report.
+const demoAnswers = [
+  "I'd reproduce it locally first and check the console logs to scope the impact before changing anything.",
+  "Looks like a null check issue — calling trim() on an undefined optional phone field. I'd confirm the root cause in staging.",
+  "I'd tell the client team we've identified it and a fix is on the way, and message the tech lead on Slack so they're in the loop.",
+  "I'll add the missing null check, write a regression test, and open a PR so the tech lead can review and approve it quickly.",
+  "Two-line Slack: found the contact-form bug — trim() on an undefined phone field. Fix plus test are in a PR, ready for review.",
+  "PR description: the root cause, the one-line null-check fix, the regression test I added, and clear rollback steps if needed.",
+  "I'd tell client success the root cause is found and the fix is in review, expected live within the hour, so they can set expectations.",
+  "Short term I can make the phone field required client-side to avoid the undefined path while the real fix ships — a safe mitigation.",
+  "Merging without approval breaks branch protection and trust; the risk isn't worth it for a one-line fix that can wait a few minutes.",
+  "Before merge I re-run the test suite, confirm CI is green, and check the diff is only the null-check change — nothing unrelated.",
+  "Incident summary: user impact, the root cause, the fix, and the timeline. I'd leave out blame and internal technical-debt details.",
+  "To prevent it recurring I'd add a lint rule for optional-field access and a code-review checklist item for null checks.",
+  "I'd tell the client plainly: a form validation issue affected some submissions, it's now fixed and verified, with steps taken to prevent it.",
+  "I'd stay calm and triage — handle the fix and the communication in parallel rather than letting the pressure rush the change.",
+  "I'd document the lesson in our runbook so the next person recognises this class of bug faster.",
+  "That covers my approach — reproduce, root-cause, fix safely, communicate clearly, and prevent recurrence.",
+]
+
 // ─── Setup screen ─────────────────────────────────────────────────────────────
 
-function SetupScreen({ session, onBegin }) {
+function SetupScreen({ session, onBegin, onWatchSample }) {
   const [consent, setConsent] = useState(false)
 
   return (
@@ -103,6 +124,13 @@ function SetupScreen({ session, onBegin }) {
           >
             Begin Simulation →
           </button>
+
+          <button
+            onClick={onWatchSample}
+            className="w-full mt-2 flex items-center justify-center gap-1.5 border border-line text-slate hover:text-ink hover:border-slate py-2.5 rounded-card text-xs font-medium transition-colors"
+          >
+            ▶ Watch sample run <span className="text-slate/70">(demo — no input needed)</span>
+          </button>
         </div>
       </div>
     </div>
@@ -138,6 +166,8 @@ export default function SimuHireSession() {
   const [timeLeft, setTimeLeft] = useState(30 * 60)
   const [cameraStream, setCameraStream] = useState(null)
   const [streaming, setStreaming] = useState(null) // { speaker, shown } | null
+  const [autoPlay, setAutoPlay] = useState(false)   // demo auto-pilot
+  const autoIndex = useRef(0)
   const streamTimer = useRef(null)
   const bottomRef = useRef(null)
   const convRef   = useRef(null)
@@ -277,14 +307,15 @@ export default function SimuHireSession() {
     }, 40)
   }
 
-  const handleSubmit = () => {
-    if (!input.trim() || waiting || finalSubmitted) return
+  // Core submit — shared by the manual textarea (real product) and the demo
+  // auto-pilot. `text` is the candidate's response, wherever it came from.
+  const submitText = (text) => {
+    if (!text.trim() || waiting || finalSubmitted || streaming) return
     const candidateCount = messages.filter(m => m.speaker === 'candidate').length
-    const newMsg = { id: messages.length + 1, speaker: 'candidate', text: input }
+    const newMsg = { id: messages.length + 1, speaker: 'candidate', text }
     setMessages(prev => [...prev, newMsg])
-    setInput('')
     const shownIds = new Set(shownSignals.map(s => s.id))
-    const fired = matchSignals(input, shownIds, currentStage)
+    const fired = matchSignals(text, shownIds, currentStage)
     if (fired.length) {
       setShownSignals(prev => [...prev, ...fired.map(s => ({ id: s.id, label: s.label, dim: s.dim }))])
     }
@@ -332,8 +363,39 @@ export default function SimuHireSession() {
     }, 2000)
   }
 
+  const handleSubmit = () => {
+    if (!input.trim()) return
+    const text = input
+    setInput('')
+    submitText(text)
+  }
+
+  // Demo auto-pilot: when active and the session is idle, type and submit the
+  // next scripted candidate answer, walking the whole run to the report
+  // hands-free. The manual flow above is untouched — this only runs on opt-in.
+  useEffect(() => {
+    if (!autoPlay || sessionState !== 'active' || waiting || streaming || finalSubmitted) return
+    if (autoIndex.current >= demoAnswers.length) { setAutoPlay(false); return }
+    const text = demoAnswers[autoIndex.current]
+    const show = setTimeout(() => setInput(text), 500)
+    const send = setTimeout(() => { autoIndex.current += 1; setInput(''); submitText(text) }, 1300)
+    return () => { clearTimeout(show); clearTimeout(send) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoPlay, sessionState, waiting, streaming, finalSubmitted])
+
+  const startAutoPlay = () => {
+    autoIndex.current = messages.filter(m => m.speaker === 'candidate').length
+    setAutoPlay(true)
+  }
+
   if (sessionState === 'setup') {
-    return <SetupScreen session={session} onBegin={() => setSessionState('active')} />
+    return (
+      <SetupScreen
+        session={session}
+        onBegin={() => setSessionState('active')}
+        onWatchSample={() => { autoIndex.current = 0; setSessionState('active'); setAutoPlay(true) }}
+      />
+    )
   }
 
   return (
@@ -410,12 +472,29 @@ export default function SimuHireSession() {
           <Clock size={13} /> {formatTime(timeLeft)}
         </div>
         <button
+          onClick={() => (autoPlay ? setAutoPlay(false) : startAutoPlay())}
+          className={`text-xs rounded-card px-3 py-1.5 font-medium shrink-0 transition-colors ${
+            autoPlay ? 'bg-verified text-parchment' : 'border border-line text-slate hover:text-ink hover:bg-parchment-shade'
+          }`}
+          title="Demo auto-pilot — types answers for you"
+        >
+          {autoPlay ? '⏸ Stop sample' : '▶ Auto-play'}
+        </button>
+        <button
           onClick={() => setShowEndConfirm(true)}
           className="text-xs border border-line rounded-card px-3 py-1.5 text-ink hover:bg-parchment-shade transition-colors font-medium shrink-0"
         >
           End
         </button>
       </div>
+
+      {/* Auto-pilot banner */}
+      {autoPlay && (
+        <div className="bg-verified/10 border-b border-verified/30 px-4 py-1.5 flex items-center justify-center gap-2 shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-verified animate-pulse" />
+          <span className="text-xs text-verified font-medium">Sample run — auto-playing. Click “Stop sample” to take over.</span>
+        </div>
+      )}
 
       {/* Scenario brief — collapsible */}
       <div className="border-b border-line bg-parchment-shade shrink-0">

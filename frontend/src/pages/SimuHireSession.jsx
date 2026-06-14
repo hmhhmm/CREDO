@@ -137,6 +137,8 @@ export default function SimuHireSession() {
 
   const [timeLeft, setTimeLeft] = useState(30 * 60)
   const [cameraStream, setCameraStream] = useState(null)
+  const [streaming, setStreaming] = useState(null) // { speaker, shown } | null
+  const streamTimer = useRef(null)
   const bottomRef = useRef(null)
   const convRef   = useRef(null)
   const videoRef  = useRef(null)
@@ -195,7 +197,7 @@ export default function SimuHireSession() {
 
   useEffect(() => {
     if (atBottom) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, atBottom])
+  }, [messages, atBottom, streaming])
 
   const handleScroll = () => {
     const el = convRef.current
@@ -246,6 +248,35 @@ export default function SimuHireSession() {
     3: "The fix is merged and deployed. Submissions are working again. Your tech lead asks for a short incident summary to share with the team. What do you include? And what process change would you propose to prevent this class of bug from reaching production again?",
   }
 
+  useEffect(() => () => clearInterval(streamTimer.current), [])
+
+  const prefersReducedMotion = () =>
+    typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
+  // Reveal an interviewer/stakeholder reply word-by-word, then commit it to
+  // `messages`. Reduced-motion users get the full text immediately.
+  const streamReply = (speaker, full, onDone) => {
+    if (prefersReducedMotion()) {
+      setMessages(prev => [...prev, { id: prev.length + 1, speaker, text: full }])
+      onDone?.()
+      return
+    }
+    const words = full.split(' ')
+    let i = 0
+    setStreaming({ speaker, shown: '' })
+    streamTimer.current = setInterval(() => {
+      i += 1
+      if (i >= words.length) {
+        clearInterval(streamTimer.current)
+        setStreaming(null)
+        setMessages(prev => [...prev, { id: prev.length + 1, speaker, text: full }])
+        onDone?.()
+      } else {
+        setStreaming({ speaker, shown: words.slice(0, i).join(' ') })
+      }
+    }, 40)
+  }
+
   const handleSubmit = () => {
     if (!input.trim() || waiting || finalSubmitted) return
     const candidateCount = messages.filter(m => m.speaker === 'candidate').length
@@ -261,20 +292,20 @@ export default function SimuHireSession() {
 
     setTimeout(() => {
       if (scriptedResponses[candidateCount]) {
-        // Early scripted exchanges (first 3 candidate messages)
+        // Early scripted exchanges — stream each reply in sequence
         const replies = scriptedResponses[candidateCount].messages
-        setMessages(prev => {
-          const base = prev.length
-          return [...prev, ...replies.map((r, i) => ({ id: base + i + 1, ...r }))]
-        })
-        setWaiting(false)
+        const playNext = (idx) => {
+          if (idx >= replies.length) { setWaiting(false); return }
+          streamReply(replies[idx].speaker, replies[idx].text, () => playNext(idx + 1))
+        }
+        playNext(0)
       } else {
         const pool = stageResponses[currentStage] || []
         if (stageReplyCount < pool.length) {
           // Ask the next follow-up question in this stage sequentially
-          setMessages(prev => [...prev, { id: prev.length + 1, speaker: 'interviewer', text: pool[stageReplyCount] }])
+          const q = pool[stageReplyCount]
           setStageReplyCount(r => r + 1)
-          setWaiting(false)
+          streamReply('interviewer', q, () => setWaiting(false))
         } else if (currentStage < stages.length - 1) {
           // All questions for this stage done — advance to next stage
           const newStage = currentStage + 1
@@ -283,19 +314,19 @@ export default function SimuHireSession() {
           setStageTransition(stages[newStage])
           setTimeout(() => setStageTransition(null), 2500)
           setMessages(prev => [...prev,
-            { id: prev.length + 1, speaker: 'system',      text: `— Stage ${newStage + 1}: ${stages[newStage]} —` },
-            { id: prev.length + 2, speaker: 'interviewer', text: stageMessages[newStage] },
+            { id: prev.length + 1, speaker: 'system', text: `— Stage ${newStage + 1}: ${stages[newStage]} —` },
           ])
-          setWaiting(false)
+          streamReply('interviewer', stageMessages[newStage], () => setWaiting(false))
         } else {
           // All stages done — close the session
           setFinalSubmitted(true)
-          setMessages(prev => [...prev, {
-            id: prev.length + 1, speaker: 'interviewer',
-            text: "Thank you — that's all the questions for today's simulation. You've worked through some challenging situations and I appreciated seeing your reasoning process. The Evaluator agent will now score your full transcript. Your Behavioral Traits Report will be ready in a moment.",
-          }])
-          setWaiting(false)
-          setTimeout(() => navigate('/simuhire/session-demo/report', { state: { duration: 30 * 60 - timeLeft } }), 3500)
+          streamReply('interviewer',
+            "Thank you — that's all the questions for today's simulation. You've worked through some challenging situations and I appreciated seeing your reasoning process. The Evaluator agent will now score your full transcript. Your Behavioral Traits Report will be ready in a moment.",
+            () => {
+              setWaiting(false)
+              setTimeout(() => navigate('/simuhire/session-demo/report', { state: { duration: 30 * 60 - timeLeft } }), 3500)
+            },
+          )
         }
       }
     }, 2000)
@@ -435,7 +466,7 @@ export default function SimuHireSession() {
                 </div>
               )
             })}
-            {waiting && (
+            {waiting && !streaming && (
               <div className="rounded-card p-3 bg-parchment-shade border-l-2 border-verified">
                 <p className="text-xs font-semibold text-verified mb-1">Scenario Master</p>
                 <div className="flex gap-1 mt-1">
@@ -443,6 +474,16 @@ export default function SimuHireSession() {
                     <span key={d} className="w-1.5 h-1.5 rounded-full bg-slate animate-bounce" style={{ animationDelay: `${d}ms` }} />
                   ))}
                 </div>
+              </div>
+            )}
+            {streaming && (
+              <div className={`rounded-card p-3 ${speakerConfig[streaming.speaker].bg} ${speakerConfig[streaming.speaker].border}`}>
+                <p className={`text-xs font-semibold mb-1 ${speakerConfig[streaming.speaker].color}`}>
+                  {streaming.speaker === 'stakeholder'
+                    ? `Stakeholder · ${session.stakeholderPersona}`
+                    : speakerConfig[streaming.speaker].label}
+                </p>
+                <p className="text-sm text-ink leading-relaxed">{streaming.shown}<span className="animate-pulse">▋</span></p>
               </div>
             )}
             <div ref={bottomRef} />

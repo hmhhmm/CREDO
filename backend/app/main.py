@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.logging_config import setup_logging
-from app.routers import auth, candidates, employers, jobs, ledger, namecard, portfolio, verify
+from app.routers import auth, candidates, employers, jobs, ledger, namecard, portfolio, simuhire, verify
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("CREDO backend starting up (v0.3.0)")
+    logger.info("CREDO backend starting up (v0.4.0)")
     yield
     logger.info("CREDO backend shutting down")
 
@@ -23,7 +23,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="CREDO Backend API",
     description="Verified Career Identity Platform — Prove. Present. Perform.",
-    version="0.3.0",
+    version="0.4.0",
     lifespan=lifespan,
 )
 
@@ -70,9 +70,10 @@ app.include_router(verify.router)       # F2 verification + consent
 app.include_router(ledger.router)       # F4 audit trail + integrity check
 app.include_router(portfolio.router)    # F3 portfolio (private + public)
 app.include_router(namecard.router)     # F5 smart namecard
-# Week 3+: simuhire, analytics
+app.include_router(simuhire.router)    # F6 SimuHire session flow + audio
+# Week 4+: analytics
 
 
 @app.get("/health")
 async def health() -> dict:
-    return {"status": "ok", "version": "0.3.0"}
+    return {"status": "ok", "version": "0.4.0"}

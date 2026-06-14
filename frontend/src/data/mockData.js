@@ -193,21 +193,6 @@ export const mockSimuHireSession = {
       speaker: 'interviewer',
       text: "Welcome to your Technical SimuHire. I'm your Scenario Master. You're a junior developer at a startup. Users are reporting the contact form Submit button isn't responding — they click it and nothing happens, no error shows. It's affecting about 20% of submissions. Your tech lead just entered a 2-hour meeting. Where do you start?",
     },
-    {
-      id: 2,
-      speaker: 'candidate',
-      text: "I'd open the browser console first and look for JavaScript errors. Since it's only 20% of users, I'd also check if there's a pattern — maybe it's browser-specific, or related to how users are filling in the form.",
-    },
-    {
-      id: 3,
-      speaker: 'interviewer',
-      text: "Good call. The console shows: TypeError: Cannot read properties of undefined (reading 'trim'). It fires on Submit and correlates with users who leave the phone field empty. The phone field is optional. What do you do next?",
-    },
-    {
-      id: 4,
-      speaker: 'stakeholder',
-      text: "Hey — I just got a message from a client saying they can't submit the form at all. Should I tell them to try again later? Do we know what's happening?",
-    },
   ],
   liveIndicators: {
     adaptability: 0,

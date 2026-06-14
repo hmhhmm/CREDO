@@ -45,12 +45,12 @@
 | Task | Week | Status | Blocked by |
 |---|---|---|---|
 | Implement consent_log write helper: records consent_type + ip_hash on every consent event | 1 | done | — |
-| Add per-artifact consent checkpoint middleware: blocks F2 upload endpoints if consent not logged for that artifact_type | 2 | todo | — |
-| Add per-session consent checkpoint: blocks SimuHire session creation if session consent not logged | 3 | todo | — |
-| Enforce in-memory-only file handling for all uploads: FastAPI `UploadFile` read into bytes, never written to disk (Python equivalent of Multer `memoryStorage`) | 2 | todo | — |
-| Implement raw content discard: document text and certificate image bytes zeroed/deleted from memory immediately after agent processing | 2 | todo | — |
-| Implement GitHub source code discard: code bytes analysed in memory per file, never persisted to DB or disk | 2 | todo | — |
-| Add portfolio visibility toggle: `users.portfolio_public` field + endpoint to update it | 3 | todo | — |
+| Add per-artifact consent checkpoint middleware: blocks F2 upload endpoints if consent not logged for that artifact_type | 2 | done | — |
+| Add per-session consent checkpoint: blocks SimuHire session creation if session consent not logged | 3 | done | — |
+| Enforce in-memory-only file handling for all uploads: FastAPI `UploadFile` read into bytes, never written to disk (Python equivalent of Multer `memoryStorage`) | 2 | done | — |
+| Implement raw content discard: document text and certificate image bytes zeroed/deleted from memory immediately after agent processing | 2 | done | — |
+| Implement GitHub source code discard: code bytes analysed in memory per file, never persisted to DB or disk | 2 | done | — |
+| Add portfolio visibility toggle: `users.portfolio_public` field + endpoint to update it | 3 | done | — |
 | Implement account deletion endpoint: cascade-delete all user data within 30-day SLA, log deletion event | 4 | todo | — |
 | Encrypt GitHub OAuth tokens at rest using Fernet symmetric encryption (`cryptography` library) | 1 | done | — |
 
@@ -312,61 +312,60 @@
 
 | Task | Week | Status | Blocked by |
 |---|---|---|---|
-| Implement session creation endpoint (`POST /simuhire/sessions`): validate candidate role, write consent_log, insert simuhire_sessions row (status='active', employer_id=null), return session_id | 3 | todo | — |
-| Implement 7-day retake cooldown check: before creating session, verify `retake_available_at` is null or in the past for this simulation_type | 3 | todo | — |
-| Implement Scenario Master agent: Claude claude-sonnet-4-6 call with stage-aware system prompt (Setup→Challenge→Escalation→Resolution); enforces ≤120 words/response | 3 | todo | — |
-| Implement stage progression logic: track current stage in session; Scenario Master advances stage based on conversation length/content | 3 | todo | — |
-| Implement Stakeholder agent: Claude claude-sonnet-4-6 call with persona system prompt (Scope Creeper / Sceptic / Escalator); triggered 1–2 times per session at appropriate stages; ≤80 words/response | 3 | todo | — |
-| Implement message routing endpoint (`POST /simuhire/sessions/:id/message`): append candidate message to conversation history, call Scenario Master, conditionally call Stakeholder, return both responses | 3 | todo | — |
-| Append all responses to `simuhire_sessions.conversation` (JSONB) with speaker label (interviewer/stakeholder/candidate) | 3 | todo | — |
-| Implement session end endpoint (`POST /simuhire/sessions/:id/end`): set status='completed', trigger Evaluator → Feedback pipeline | 3 | todo | — |
-| Implement Evaluator agent: Claude claude-sonnet-4-6 call on full transcript at session end only; returns JSON with per-dimension scores (Adaptability, Communication, Problem-Solving, Stress Response, Systems Thinking, 0–100 each) + one evidence quote per dimension | 3 | todo | — |
-| Implement Feedback agent: Claude claude-sonnet-4-6 call with Evaluator's JSON (scores + quotes) as input; returns Behavioral Traits Report (overall score, 5×{score, strength ≤25w, growth ≤25w}, 3 key observations ≤25w) | 3 | todo | — |
-| Verify Feedback Agent does not re-read raw transcript: system prompt explicitly prohibits using anything outside the Evaluator's supplied quotes | 3 | todo | — |
-| Store Evaluator scores in `simuhire_sessions.evaluator_scores` and Feedback report in `simuhire_sessions.report` | 3 | todo | — |
-| Compute overall score: weighted average of 5 dimension scores (equal weights per PRD); store in `simuhire_sessions.overall_score` | 3 | todo | — |
-| On session complete: atomically write SimuHire result to verified_artifacts + credential_ledger via F4 helper | 3 | todo | F4 atomic transaction helper |
-| Implement share decision endpoint (`POST /simuhire/sessions/:id/share`): set `candidate_shared=true/false`; if true, namecard badge becomes visible | 3 | todo | — |
-| Implement report retrieval endpoint (`GET /simuhire/sessions/:id/report`): return full Behavioral Traits Report; candidate-only until shared | 3 | todo | — |
-| Set `retake_available_at = completed_at + 7 days` on session completion | 3 | todo | — |
+| Implement session creation endpoint (`POST /simuhire/sessions`): validate candidate role, write consent_log, insert simuhire_sessions row (status='active', employer_id=null), return session_id | 3 | done | — |
+| Implement 7-day retake cooldown check: before creating session, verify `retake_available_at` is null or in the past for this simulation_type | 3 | done | — |
+| Implement Scenario Master agent: Claude claude-sonnet-4-6 call with stage-aware system prompt (Setup→Challenge→Escalation→Resolution); enforces ≤120 words/response | 3 | done | — |
+| Implement stage progression logic: track current stage in session; Scenario Master advances stage based on conversation length/content | 3 | done | — |
+| Implement Stakeholder agent: Claude claude-sonnet-4-6 call with persona system prompt (Scope Creeper / Sceptic / Escalator); triggered 1–2 times per session at appropriate stages; ≤80 words/response | 3 | done | — |
+| Implement message routing endpoint (`POST /simuhire/sessions/:id/message`): append candidate message to conversation history, call Scenario Master, conditionally call Stakeholder, return both responses | 3 | done | — |
+| Append all responses to `simuhire_sessions.conversation` (JSONB) with speaker label (interviewer/stakeholder/candidate) | 3 | done | — |
+| Implement session end endpoint (`POST /simuhire/sessions/:id/end`): set status='completed', trigger Evaluator → Feedback pipeline | 3 | done | — |
+| Implement Evaluator agent: Claude claude-sonnet-4-6 call on full transcript at session end only; returns JSON with per-dimension scores (Adaptability, Communication, Problem-Solving, Stress Response, Systems Thinking, 0–100 each) + one evidence quote per dimension | 3 | done | — |
+| Implement Feedback agent: Claude claude-sonnet-4-6 call with Evaluator's JSON (scores + quotes) as input; returns Behavioral Traits Report (overall score, 5×{score, strength ≤25w, growth ≤25w}, 3 key observations ≤25w) | 3 | done | — |
+| Verify Feedback Agent does not re-read raw transcript: system prompt explicitly prohibits using anything outside the Evaluator's supplied quotes | 3 | done | — |
+| Store Evaluator scores in `simuhire_sessions.evaluator_scores` and Feedback report in `simuhire_sessions.report` | 3 | done | — |
+| Compute overall score: weighted average of 5 dimension scores (equal weights per PRD); store in `simuhire_sessions.overall_score` | 3 | done | — |
+| On session complete: atomically write SimuHire result to verified_artifacts + credential_ledger via F4 helper | 3 | done | F4 atomic transaction helper |
+| Implement share decision endpoint (`POST /simuhire/sessions/:id/share`): set `candidate_shared=true/false`; if true, namecard badge becomes visible | 3 | done | — |
+| Implement report retrieval endpoint (`GET /simuhire/sessions/:id/report`): return full Behavioral Traits Report; candidate-only until shared | 3 | done | — |
+| Set `retake_available_at = completed_at + 7 days` on session completion | 3 | done | — |
 | Implement best-score retention: if candidate retakes and new overall_score < previous, namecard badge shows the prior higher score | 4 | todo | — |
 
 ### F6 — Audio Input & Transcription (Section 16.1.1)
 
-> This subsection must be designed and built alongside the core session flow — retrofitting it after text-only is built risks reworking the conversation state model (per Section 16.4).  
-> **Python substitution**: OpenAI Whisper API (`openai.audio.transcriptions.create`) for speech-to-text.
+> **Python substitution**: Groq Whisper API (`whisper-large-v3-turbo`) for speech-to-text (replaces OpenAI Whisper).
 
 | Task | Week | Status | Blocked by |
 |---|---|---|---|
-| Design conversation history schema to record input_mode per message: `{speaker, text, input_mode: 'text'|'audio', timestamp}` | 3 | todo | — |
-| Implement audio upload endpoint (`POST /simuhire/sessions/:id/audio`): accept audio blob (webm/mp4/wav), read into memory | 3 | todo | — |
-| Implement transcription step: send audio bytes to OpenAI Whisper API (`whisper-1`), receive transcript text | 3 | todo | — |
-| Pipe transcribed text into the same message routing logic as a typed response (Scenario Master + Stakeholder pipeline) | 3 | todo | — |
-| Record both the transcript text and input_mode='audio' in conversation history | 3 | todo | — |
-| Implement mixed-mode session state: candidate can switch between text and audio within the same session without resetting stage or corrupting history | 3 | todo | — |
-| Implement transcription error handling: if Whisper returns empty or confidence-too-low result, return 422 with user-facing message | 3 | todo | — |
-| Verify Evaluator and Feedback agents receive identical transcript text regardless of input_mode (audio vs text path must produce same downstream format) | 3 | todo | — |
-| Discard raw audio bytes after transcription (never persist to disk or DB) | 3 | todo | — |
+| Design conversation history schema to record input_mode per message: `{speaker, text, input_mode: 'text'|'audio', timestamp}` | 3 | done | — |
+| Implement audio upload endpoint (`POST /simuhire/sessions/:id/audio`): accept audio blob (webm/mp4/wav), read into memory | 3 | done | — |
+| Implement transcription step: send audio bytes to Groq Whisper (`whisper-large-v3-turbo`), receive transcript text | 3 | done | — |
+| Pipe transcribed text into the same message routing logic as a typed response (Scenario Master + Stakeholder pipeline) | 3 | done | — |
+| Record both the transcript text and input_mode='audio' in conversation history | 3 | done | — |
+| Implement mixed-mode session state: candidate can switch between text and audio within the same session without resetting stage or corrupting history | 3 | done | — |
+| Implement transcription error handling: if Whisper returns empty or confidence-too-low result, return 422 with user-facing message | 3 | done | — |
+| Verify Evaluator and Feedback agents receive identical transcript text regardless of input_mode (audio vs text path must produce same downstream format) | 3 | done | — |
+| Discard raw audio bytes after transcription (never persist to disk or DB) | 3 | done | — |
 
 ### F6 Tests
 
 | Task | Week | Status | Blocked by |
 |---|---|---|---|
-| Unit test: Evaluator output JSON schema validation (all 5 dimensions present, each has score 0–100 and evidence quote) | 3 | todo | — |
-| Unit test: Feedback Agent report schema validation (5 dimensions × {score, strength, growth}, overall_score, 3 key_observations) | 3 | todo | — |
-| Unit test: overall score calculation (equal-weighted average of 5 dimension scores) | 3 | todo | — |
-| Unit test: retake cooldown check blocks new session when retake_available_at is in the future | 3 | todo | — |
+| Unit test: Evaluator output JSON schema validation (all 5 dimensions present, each has score 0–100 and evidence quote) | 3 | done | — |
+| Unit test: Feedback Agent report schema validation (5 dimensions × {score, strength, growth}, overall_score, 3 key_observations) | 3 | done | — |
+| Unit test: overall score calculation (equal-weighted average of 5 dimension scores) | 3 | done | — |
+| Unit test: retake cooldown check blocks new session when retake_available_at is in the future | 3 | done | — |
 | Unit test: best-score retention — second session with lower score does not overwrite namecard badge score | 4 | todo | — |
-| Integration test: full text-mode session — session create → 4+ message exchanges → end → Evaluator scores → Feedback report → ledger write | 3 | todo | F4 atomic transaction helper |
-| Integration test: full audio-mode session — audio upload → Whisper transcription → agent pipeline → report equivalent to text path | 3 | todo | — |
-| Integration test: mixed-mode session — alternate text and audio messages within one session without stage reset | 3 | todo | — |
-| Integration test: share=true → namecard badge visible in GET /namecard/:userId; share=false → badge absent | 3 | todo | F5 namecard endpoint |
-| Integration test: retake blocked within 7 days of last completed session | 3 | todo | — |
-| Regression test: Evaluator called exactly once per session (not per message) | 3 | todo | — |
-| Regression test: Feedback Agent report contains zero phrases traceable to transcript content not present in Evaluator's evidence quotes (spot-check against fixture transcript) | 3 | todo | — |
-| Regression test: SimuHire session completion atomically writes verified_artifacts + credential_ledger (roll back both on failure) | 3 | todo | F4 atomic transaction helper |
-| Regression test: transcription errors (empty Whisper response) return 422 and do not corrupt conversation history | 3 | todo | — |
-| Regression test: audio bytes are absent from all DB tables and disk after transcription completes | 3 | todo | — |
+| Integration test: full text-mode session — session create → 4+ message exchanges → end → Evaluator scores → Feedback report → ledger write | 3 | done | F4 atomic transaction helper |
+| Integration test: full audio-mode session — audio upload → Whisper transcription → agent pipeline → report equivalent to text path | 3 | done | — |
+| Integration test: mixed-mode session — alternate text and audio messages within one session without stage reset | 3 | done | — |
+| Integration test: share=true → namecard badge visible in GET /namecard/:userId; share=false → badge absent | 3 | done | F5 namecard endpoint |
+| Integration test: retake blocked within 7 days of last completed session | 3 | done | — |
+| Regression test: Evaluator called exactly once per session (not per message) | 3 | done | — |
+| Regression test: Feedback Agent report contains zero phrases traceable to transcript content not present in Evaluator's evidence quotes (spot-check against fixture transcript) | 3 | done | — |
+| Regression test: SimuHire session completion atomically writes verified_artifacts + credential_ledger (roll back both on failure) | 3 | done | F4 atomic transaction helper |
+| Regression test: transcription errors (empty Whisper response) return 422 and do not corrupt conversation history | 3 | done | — |
+| Regression test: audio bytes are absent from all DB tables and disk after transcription completes | 3 | done | — |
 | Regression test: score accuracy spot-check — for a fixture transcript where candidate addresses stakeholder follow-up directly, Communication score must not be lower than for a fixture where candidate ignores it | 4 | todo | — |
 
 ---

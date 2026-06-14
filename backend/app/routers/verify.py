@@ -8,10 +8,13 @@ F2 — Verification endpoints.
   POST /verify/credential            — trigger Credential Agent ARQ job
 """
 import hashlib
+import logging
 import uuid
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, status
+
+logger = logging.getLogger(__name__)
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -132,9 +135,12 @@ async def trigger_github_verification(
         )
         await pool.aclose()
         job_id = job.job_id if job else None
-    except Exception:
-        # If Redis is unavailable, still create artifact as pending — caller retries
-        pass
+    except Exception as exc:
+        logger.exception("Failed to enqueue GitHub analysis job for artifact %s", artifact.id)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Verification queue unavailable: {exc}",
+        )
 
     return VerifyTriggerResponse(
         artifact_id=artifact.id,
@@ -225,8 +231,12 @@ async def trigger_document_verification(
         )
         await pool.aclose()
         job_id = job.job_id if job else None
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.exception("Failed to enqueue Document analysis job for artifact %s", artifact.id)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Verification queue unavailable: {exc}",
+        )
     finally:
         # PDPA: discard file bytes from this scope regardless of job outcome
         del file_bytes
@@ -298,8 +308,12 @@ async def trigger_credential_verification(
         )
         await pool.aclose()
         job_id = job.job_id if job else None
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.exception("Failed to enqueue Credential analysis job for artifact %s", artifact.id)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Verification queue unavailable: {exc}",
+        )
     finally:
         del file_bytes
 

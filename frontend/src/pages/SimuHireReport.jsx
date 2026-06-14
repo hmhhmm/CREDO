@@ -174,7 +174,7 @@ export default function SimuHireReport() {
   const report = mockReport
   const { liveCandidate: candidate, markSimuHireShared } = useDemo()
   const { state } = useLocation()
-  const duration = state?.duration ? `${Math.floor(state.duration / 60)} min` : mockReport.duration
+  const duration = state?.duration != null ? `${Math.floor(state.duration / 60)} min` : mockReport.duration
   const [decision, setDecision] = useState(null)
 
   const handleShare = () => { markSimuHireShared(); setDecision('shared') }

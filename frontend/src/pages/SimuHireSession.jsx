@@ -450,7 +450,8 @@ export default function SimuHireSession() {
         <div className="flex flex-col flex-1 overflow-hidden border-r border-line relative">
 
           {/* Conversation */}
-          <div ref={convRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div ref={convRef} onScroll={handleScroll} className="flex-1 overflow-y-auto">
+            <div className="min-h-full flex flex-col justify-end gap-3 p-4 max-w-[720px] mx-auto w-full">
             {messages.map(msg => {
               const cfg = speakerConfig[msg.speaker]
               if (msg.speaker === 'system') {
@@ -487,6 +488,7 @@ export default function SimuHireSession() {
               </div>
             )}
             <div ref={bottomRef} />
+            </div>
           </div>
 
           {/* Scroll-to-bottom — anchored above the input area */}

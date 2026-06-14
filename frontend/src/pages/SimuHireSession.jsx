@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Send, Code2, Clock, X, ChevronDown, ChevronUp, AlertTriangle, BookOpen } from 'lucide-react'
 import { mockSimuHireSession } from '../data/mockData'
-import RadarChart from '../components/RadarChart'
+import SessionSidePanel from '../components/SessionSidePanel'
+import { matchSignals, SIGNAL_WEIGHT, dimLabels } from '../data/simuHireSignals'
 
 const stages = ['Setup', 'Challenge', 'Escalation', 'Resolution']
 
@@ -18,14 +19,6 @@ const speakerConfig = {
   stakeholder:  { label: null, bg: 'bg-[#FFFBEB]', border: 'border-l-2 border-pending', color: 'text-pending' },
   candidate:    { label: 'You', bg: 'bg-parchment border border-line', border: '', color: 'text-slate' },
   system:       { label: '', bg: '', border: '', color: '' },
-}
-
-const dimLabels = {
-  adaptability:    'Adaptability',
-  communication:   'Communication',
-  problemSolving:  'Problem-Solving',
-  stressResponse:  'Stress Response',
-  systemsThinking: 'Systems Thinking',
 }
 
 const submitLabels = ['Respond to scenario', 'Diagnose and respond', 'Respond under pressure', 'Make your final call']
@@ -128,13 +121,19 @@ export default function SimuHireSession() {
   const [codeMode,        setCodeMode]        = useState(false)
   const [waiting,         setWaiting]         = useState(false)
   const [currentStage,    setCurrentStage]    = useState(session.stageIndex - 1)
-  const [indicators,      setIndicators]      = useState(session.stageIndicators[0])
+  const [shownSignals, setShownSignals] = useState([])
   const [showEndConfirm,  setShowEndConfirm]  = useState(false)
   const [stageTransition, setStageTransition] = useState(null)
   const [briefOpen,       setBriefOpen]       = useState(false)
   const [atBottom,        setAtBottom]        = useState(true)
   const [finalSubmitted,  setFinalSubmitted]  = useState(false)
   const [stageReplyCount, setStageReplyCount] = useState(0)
+
+  const indicators = useMemo(() => {
+    const base = { adaptability: 0, communication: 0, problemSolving: 0, stressResponse: 0, systemsThinking: 0 }
+    for (const s of shownSignals) base[s.dim] = Math.min(100, base[s.dim] + SIGNAL_WEIGHT)
+    return base
+  }, [shownSignals])
 
   const [timeLeft, setTimeLeft] = useState(30 * 60)
   const [cameraStream, setCameraStream] = useState(null)
@@ -253,6 +252,11 @@ export default function SimuHireSession() {
     const newMsg = { id: messages.length + 1, speaker: 'candidate', text: input }
     setMessages(prev => [...prev, newMsg])
     setInput('')
+    const shownIds = new Set(shownSignals.map(s => s.id))
+    const fired = matchSignals(input, shownIds, currentStage)
+    if (fired.length) {
+      setShownSignals(prev => [...prev, ...fired.map(s => ({ id: s.id, label: s.label, dim: s.dim }))])
+    }
     setWaiting(true)
 
     setTimeout(() => {
@@ -276,7 +280,6 @@ export default function SimuHireSession() {
           const newStage = currentStage + 1
           setCurrentStage(newStage)
           setStageReplyCount(0)
-          setIndicators(session.stageIndicators[newStage])
           setStageTransition(stages[newStage])
           setTimeout(() => setStageTransition(null), 2500)
           setMessages(prev => [...prev,
@@ -493,44 +496,13 @@ export default function SimuHireSession() {
           </div>
         </div>
 
-        {/* Right: live indicators */}
-        <div className="w-64 shrink-0 flex flex-col">
-          {/* Camera feed */}
-          <div className="p-3 border-b border-line">
-            <div className="w-full rounded-card overflow-hidden bg-[#1a1a1a] aspect-video">
-              <video
-                ref={videoRef}
-                autoPlay
-                muted
-                playsInline
-                className="w-full h-full object-cover"
-                style={{ transform: 'scaleX(-1)', display: cameraStream ? 'block' : 'none' }}
-              />
-            </div>
-            
-          </div>
-          <div className="p-3 border-b border-line">
-            <p className="text-xs font-semibold text-slate uppercase tracking-wider">Live Indicators</p>
-            <p className="text-xs text-slate mt-0.5">Updates each stage.</p>
-          </div>
-          <div className="flex-1 p-4 flex flex-col items-center overflow-y-auto">
-            <RadarChart dims={indicators} size={200} />
-            <div className="w-full mt-4 space-y-2.5">
-              {Object.entries(indicators).map(([k, v]) => (
-                <div key={k} className="flex items-center gap-2">
-                  <span className="text-xs text-slate w-16 shrink-0 truncate">{dimLabels[k]}</span>
-                  <div className="flex-1 h-1.5 bg-line rounded-full overflow-hidden">
-                    <div className="h-full bg-verified rounded-full transition-all duration-700" style={{ width: `${v}%` }} />
-                  </div>
-                  <span className="text-xs font-mono text-ink w-6 text-right shrink-0">{v}</span>
-                </div>
-              ))}
-            </div>
-            <p className="text-xs text-slate mt-5 text-center leading-relaxed italic">
-              Indicative only — Evaluator scores the full transcript at the end.
-            </p>
-          </div>
-        </div>
+        {/* Right: camera + signals + indicators */}
+        <SessionSidePanel
+          videoRef={videoRef}
+          cameraStream={cameraStream}
+          signals={shownSignals}
+          indicators={indicators}
+        />
 
       </div>
     </div>

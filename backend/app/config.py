@@ -26,8 +26,8 @@ class Settings(BaseSettings):
     GITHUB_REDIRECT_URI: str = "http://localhost:8000/auth/github/callback"
 
     # AI APIs (Week 2+)
-    OPENAI_API_KEY: str = ""
-    ANTHROPIC_API_KEY: str = ""
+    GROQ_API_KEY: str = ""       # Document Agent AI detection + Whisper transcription
+    ANTHROPIC_API_KEY: str = ""  # SimuHire agents (claude-sonnet-4-6)
 
     # App
     FRONTEND_URL: str = "http://localhost:5173"

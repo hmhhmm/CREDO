@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Check, Lock, ArrowLeft, TrendingUp, Minus } from 'lucide-react'
 import NamecardPremium from '../components/NamecardPremium'
@@ -172,10 +172,12 @@ function ShareDecision({ report, candidate, decision, onShare, onKeep }) {
 
 export default function SimuHireReport() {
   const report = mockReport
-  const { liveCandidate: candidate, markSimuHireShared } = useDemo()
+  const { liveCandidate: candidate, markSimuHireDone, markSimuHireShared } = useDemo()
   const { state } = useLocation()
   const duration = state?.duration ? `${Math.floor(state.duration / 60)} min` : mockReport.duration
   const [decision, setDecision] = useState(null)
+
+  useEffect(() => { markSimuHireDone() }, [markSimuHireDone])
 
   const handleShare = () => { markSimuHireShared(); setDecision('shared') }
   const handleKeep  = () => { setDecision('private') }

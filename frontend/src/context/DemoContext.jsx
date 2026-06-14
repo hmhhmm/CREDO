@@ -24,6 +24,10 @@ export function DemoProvider({ children }) {
     setVerifiedAgents(prev => new Set([...prev, agent]))
   }, [])
 
+  const markSimuHireDone = useCallback(() => {
+    setSimuHireDone(true)
+  }, [])
+
   const markSimuHireShared = useCallback(() => {
     setSimuHireDone(true)
     setSimuHireShared(true)
@@ -63,6 +67,7 @@ export function DemoProvider({ children }) {
       simuHireDone,
       simuHireShared,
       markAgentVerified,
+      markSimuHireDone,
       markSimuHireShared,
       reset,
     }}>

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Check, Lock, ArrowLeft, TrendingUp, TrendingDown } from 'lucide-react'
+import { Check, Lock, ArrowLeft, TrendingUp, Minus } from 'lucide-react'
 import NamecardPremium from '../components/NamecardPremium'
 import { mockReport } from '../data/mockData'
 import { useDemo } from '../context/DemoContext'
@@ -225,8 +225,8 @@ export default function SimuHireReport() {
             {scoreDelta >= 8 && (
               <div className="border border-pending/30 bg-[#FFFBEB] rounded-card px-3 py-2">
                 <div className="flex items-center gap-1 mb-0.5">
-                  <TrendingDown size={10} className="text-pending" />
-                  <p className="text-xs font-semibold text-pending uppercase tracking-wider">Growth area</p>
+                  <Minus size={10} className="text-pending" />
+                  <p className="text-xs font-semibold text-pending uppercase tracking-wider">Weakness</p>
                 </div>
                 <p className="text-xs font-medium text-ink">{lowDim.name}</p>
                 <p className="text-xs font-mono text-slate">{lowDim.score}/100</p>
@@ -281,7 +281,7 @@ export default function SimuHireReport() {
                   <p className="text-xs text-ink leading-relaxed">{d.strength}</p>
                 </div>
                 <div className="flex gap-2">
-                  <span className="shrink-0 text-xs text-pending font-mono mt-0.5 w-3">↑</span>
+                  <span className="shrink-0 text-xs text-pending font-mono mt-0.5 w-3">–</span>
                   <p className="text-xs text-slate leading-relaxed">{d.growth}</p>
                 </div>
               </div>

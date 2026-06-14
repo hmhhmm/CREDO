@@ -181,6 +181,8 @@ export default function SimuHireSession() {
   const [stageTransition, setStageTransition] = useState(null)
   const [briefOpen,       setBriefOpen]       = useState(false)
   const [atBottom,        setAtBottom]        = useState(true)
+  const [finalSubmitted,  setFinalSubmitted]  = useState(false)
+  const [stageReplyCount, setStageReplyCount] = useState(0)
 
   const [timeLeft, setTimeLeft] = useState(22 * 60 + 15)
   const bottomRef = useRef(null)
@@ -210,55 +212,92 @@ export default function SimuHireSession() {
     0: {
       messages: [
         { speaker: 'interviewer', text: "Good call. The console shows: TypeError: Cannot read properties of undefined (reading 'trim'). It fires on Submit and correlates with users who leave the phone field empty. The phone field is optional. What do you do next?" },
-        { speaker: 'stakeholder', text: "Hey — I just got a message from a client saying they can't submit the form at all. Should I tell them to try again later? Do we know what's happening?" },
       ],
     },
     1: {
+      messages: [
+        { speaker: 'stakeholder', text: "Hey — I just got a message from a client saying they can't submit the form at all. Should I tell them to try again later? Do we know what's happening?" },
+      ],
+    },
+    2: {
       messages: [
         { speaker: 'interviewer', text: "You find the form validation calling input.phone.trim() before checking if phone exists — undefined for users who skip the optional field. You've reproduced it in staging. What's your next step: fix it yourself, message the tech lead, or something else?" },
       ],
     },
   }
 
-  const defaultResponse = "Good reasoning. Walk me through your thought process on that decision — what tradeoffs are you weighing?"
+  const stageResponses = {
+    1: [
+      "How would you communicate your current status to the tech lead in two sentences on Slack?",
+      "What would you write in the PR description to make it easy for the tech lead to review and approve quickly?",
+      "What would you tell the client-facing team right now so they can manage the client's expectation?",
+    ],
+    2: [
+      "Is there any way to partially mitigate the issue for users right now without a full deployment?",
+      "What's the risk if you merge without the tech lead's approval just this once?",
+      "The tech lead finally approves — what do you check before you hit merge?",
+    ],
+    3: [
+      "What do you include in the incident summary, and what do you leave out?",
+      "How do you make sure this class of null-check bug doesn't slip through code review again?",
+      "The client wants a written explanation of what happened. How do you frame it without exposing internal technical debt?",
+    ],
+  }
 
   const stageMessages = {
-    1: "You've identified the bug and can reproduce it. The Client Success manager is messaging you again — the client is getting impatient. Walk me through how you handle both the fix and the communication simultaneously.",
-    2: "You've written the fix and opened a PR. Branch protection requires tech lead approval before merge. The tech lead responds on Slack: 'Looks fine, but I can't approve until after the meeting.' The client is still waiting. What do you do?",
-    3: "The fix is merged and deployed. Submissions are working again. Your tech lead asks for a short incident summary. What do you include, and how do you make sure this class of bug doesn't happen again?",
+    1: "You've identified the bug and can reproduce it in staging. The Client Success manager is now messaging you — the client is getting impatient. Walk me through how you handle both the fix and the communication simultaneously. What does your fix look like, and how do you make sure it doesn't break anything else?",
+    2: "You've written the fix and opened a PR. Branch protection requires tech lead approval before merge. The tech lead responds on Slack: 'Looks fine, but I can't approve until after the meeting.' The client is still waiting. What do you do right now? And if the tech lead stays unavailable for another hour, what's your escalation path?",
+    3: "The fix is merged and deployed. Submissions are working again. Your tech lead asks for a short incident summary to share with the team. What do you include? And what process change would you propose to prevent this class of bug from reaching production again?",
   }
 
   const handleSubmit = () => {
-    if (!input.trim() || waiting) return
+    if (!input.trim() || waiting || finalSubmitted) return
     const candidateCount = messages.filter(m => m.speaker === 'candidate').length
     const newMsg = { id: messages.length + 1, speaker: 'candidate', text: input }
     setMessages(prev => [...prev, newMsg])
     setInput('')
     setWaiting(true)
 
-    const willAdvance = messages.length >= 8 && currentStage < stages.length - 1
-
     setTimeout(() => {
-      if (willAdvance) {
-        const newStage = currentStage + 1
-        setCurrentStage(newStage)
-        setIndicators(session.stageIndicators[newStage])
-        setStageTransition(stages[newStage])
-        setTimeout(() => setStageTransition(null), 2500)
-        setMessages(prev => [...prev,
-          { id: prev.length + 1, speaker: 'system',      text: `— Stage ${newStage + 1}: ${stages[newStage]} —` },
-          { id: prev.length + 2, speaker: 'interviewer', text: stageMessages[newStage] || defaultResponse },
-        ])
-      } else if (scriptedResponses[candidateCount]) {
+      if (scriptedResponses[candidateCount]) {
+        // Early scripted exchanges (first 3 candidate messages)
         const replies = scriptedResponses[candidateCount].messages
         setMessages(prev => {
           const base = prev.length
           return [...prev, ...replies.map((r, i) => ({ id: base + i + 1, ...r }))]
         })
+        setWaiting(false)
       } else {
-        setMessages(prev => [...prev, { id: prev.length + 1, speaker: 'interviewer', text: defaultResponse }])
+        const pool = stageResponses[currentStage] || []
+        if (stageReplyCount < pool.length) {
+          // Ask the next follow-up question in this stage sequentially
+          setMessages(prev => [...prev, { id: prev.length + 1, speaker: 'interviewer', text: pool[stageReplyCount] }])
+          setStageReplyCount(r => r + 1)
+          setWaiting(false)
+        } else if (currentStage < stages.length - 1) {
+          // All questions for this stage done — advance to next stage
+          const newStage = currentStage + 1
+          setCurrentStage(newStage)
+          setStageReplyCount(0)
+          setIndicators(session.stageIndicators[newStage])
+          setStageTransition(stages[newStage])
+          setTimeout(() => setStageTransition(null), 2500)
+          setMessages(prev => [...prev,
+            { id: prev.length + 1, speaker: 'system',      text: `— Stage ${newStage + 1}: ${stages[newStage]} —` },
+            { id: prev.length + 2, speaker: 'interviewer', text: stageMessages[newStage] },
+          ])
+          setWaiting(false)
+        } else {
+          // All stages done — close the session
+          setFinalSubmitted(true)
+          setMessages(prev => [...prev, {
+            id: prev.length + 1, speaker: 'interviewer',
+            text: "Thank you — that's all the questions for today's simulation. You've worked through some challenging situations and I appreciated seeing your reasoning process. The Evaluator agent will now score your full transcript. Your Behavioral Traits Report will be ready in a moment.",
+          }])
+          setWaiting(false)
+          setTimeout(() => navigate('/simuhire/session-demo/report'), 3500)
+        }
       }
-      setWaiting(false)
     }, 2000)
   }
 

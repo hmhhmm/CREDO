@@ -10,10 +10,13 @@ Checks:
 Final confidence = commit_score×0.4 + ast_score×0.4 + orig_bonus×0.2
 """
 import ast as python_ast
+import logging
 import re
 import uuid
 from datetime import datetime, timezone
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 # tree-sitter is optional; falls back to keyword-count heuristic if unavailable
 try:
@@ -229,6 +232,7 @@ async def run_github_analysis(ctx: dict, artifact_id: str, repo_full_name: str) 
     from app.services.ledger_service import atomic_ledger_write
     from app.utils.crypto import decrypt_token
 
+    logger.info("GitHub agent starting: artifact=%s repo=%s", artifact_id, repo_full_name)
     artifact_uuid = uuid.UUID(artifact_id)
 
     async with ctx["session_factory"]() as db:
@@ -253,6 +257,7 @@ async def run_github_analysis(ctx: dict, artifact_id: str, repo_full_name: str) 
                 from app.config import settings
                 token = decrypt_token(user.github_token) if settings.FERNET_KEY else user.github_token
             except Exception:
+                logger.exception("Token decryption failed for artifact %s", artifact_id)
                 artifact.status = "failed"
                 artifact.metadata_ = {"error": "Token decryption failed"}
                 return
@@ -332,15 +337,27 @@ async def run_github_analysis(ctx: dict, artifact_id: str, repo_full_name: str) 
                         confidence=confidence,
                         extra_metadata=metadata,
                     )
-                    # artifact.status set to 'verified' inside atomic_ledger_write
+                    logger.info(
+                        "GitHub agent verified: artifact=%s repo=%s confidence=%.1f",
+                        artifact_id, repo_full_name, confidence,
+                    )
                 else:
                     artifact.status = "failed"
                     artifact.confidence = confidence
                     artifact.metadata_ = metadata
+                    logger.info(
+                        "GitHub agent failed (low confidence): artifact=%s repo=%s confidence=%.1f",
+                        artifact_id, repo_full_name, confidence,
+                    )
 
             except GithubException as exc:
+                logger.error(
+                    "GitHub API error for artifact %s — %s %s",
+                    artifact_id, exc.status, exc.data,
+                )
                 artifact.status = "failed"
                 artifact.metadata_ = {"error": f"GitHub API error: {exc.status} {exc.data}"}
             except Exception as exc:
+                logger.exception("Unexpected error in GitHub agent for artifact %s", artifact_id)
                 artifact.status = "failed"
                 artifact.metadata_ = {"error": str(exc)}

@@ -10,9 +10,12 @@ and authorship consistency.
 
 confidence = (100 - ai_probability)×0.5 + writing_complexity×0.3 + vocabulary_diversity×0.2
 """
+import logging
 import math
 import re
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 
 # ── Text extraction ───────────────────────────────────────────────────────────
@@ -219,6 +222,7 @@ async def run_document_analysis(
     from app.models.verified_artifact import VerifiedArtifact
     from app.services.ledger_service import atomic_ledger_write
 
+    logger.info("Document agent starting: artifact=%s file=%s", artifact_id, filename)
     artifact_uuid = _uuid.UUID(artifact_id)
     text: Optional[str] = None
 
@@ -230,6 +234,7 @@ async def run_document_analysis(
                 )
                 artifact = result.scalar_one_or_none()
                 if artifact is None:
+                    logger.warning("Document agent: artifact %s not found, skipping", artifact_id)
                     return
 
                 user_result = await db.execute(
@@ -241,11 +246,15 @@ async def run_document_analysis(
                 try:
                     text = extract_text(file_bytes, filename)
                 except Exception as exc:
+                    logger.error("Text extraction failed for artifact %s: %s", artifact_id, exc)
                     artifact.status = "failed"
                     artifact.metadata_ = {"error": f"Text extraction failed: {exc}"}
                     return
 
                 if not text or len(text.strip()) < 100:
+                    logger.warning(
+                        "Document agent: artifact %s too short or unreadable", artifact_id
+                    )
                     artifact.status = "failed"
                     artifact.metadata_ = {"error": "Document too short or unreadable"}
                     return
@@ -264,6 +273,7 @@ async def run_document_analysis(
                     ai_probability, verdict = await detect_ai_probability(text)
                     ai_generated = ai_probability >= 70
                 except RuntimeError as exc:
+                    logger.error("AI detection failed for artifact %s: %s", artifact_id, exc)
                     artifact.status = "failed"
                     artifact.metadata_ = {"error": str(exc)}
                     return
@@ -290,11 +300,19 @@ async def run_document_analysis(
                         confidence=confidence,
                         extra_metadata=metadata,
                     )
+                    logger.info(
+                        "Document agent verified: artifact=%s confidence=%.1f ai_prob=%.0f verdict=%s",
+                        artifact_id, confidence, ai_probability, verdict,
+                    )
                 else:
                     artifact.status = "failed"
                     artifact.confidence = confidence
                     artifact.ai_generated = ai_generated
                     artifact.metadata_ = metadata
+                    logger.info(
+                        "Document agent failed (low confidence): artifact=%s confidence=%.1f ai_prob=%.0f verdict=%s",
+                        artifact_id, confidence, ai_probability, verdict,
+                    )
 
                 # Update user's avg_sentence_variance for authorship consistency check on next doc
                 if user and confidence >= 60:
@@ -305,6 +323,9 @@ async def run_document_analysis(
                             user.avg_sentence_variance + sentence_variance
                         ) / 2
 
+    except Exception:
+        logger.exception("Unexpected error in Document agent for artifact %s", artifact_id)
+        raise
     finally:
         # PDPA: discard extracted text from memory
         if text is not None:

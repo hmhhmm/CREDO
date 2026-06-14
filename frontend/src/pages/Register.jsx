@@ -55,6 +55,7 @@ export default function Register() {
               <>
                 <button
                   type="button"
+                  onClick={() => navigate('/dashboard')}
                   className="w-full flex items-center justify-center gap-2 border border-line rounded-card py-2.5 text-sm text-ink hover:bg-parchment-shade transition-colors font-medium"
                 >
                   <GitHubIcon size={15} /> Continue with GitHub

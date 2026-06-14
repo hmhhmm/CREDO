@@ -1,0 +1,48 @@
+# Core
+fastapi>=0.111.0
+uvicorn[standard]>=0.30.0
+
+# Database
+sqlalchemy[asyncio]>=2.0.30
+asyncpg>=0.29.0
+alembic>=1.13.0
+
+# Validation & settings
+pydantic[email]>=2.7.0
+pydantic-settings>=2.3.0
+
+# Auth
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+cryptography>=42.0.0  # Fernet token encryption
+
+# HTTP client (GitHub OAuth exchange, external API calls)
+httpx>=0.27.0
+
+# Task queue
+arq>=0.25.0
+redis>=5.0.0
+
+# File uploads
+python-multipart>=0.0.9
+
+# Testing
+pytest>=8.2.0
+pytest-asyncio>=0.23.0
+anyio[trio]>=4.4.0
+
+# ── Week 2+ (verification agents) ────────────────────────────────────────────
+PyGithub>=2.3.0               # GitHub REST API (replaces Octokit)
+openai>=1.30.0                # Document Agent AI detection + Whisper transcription
+anthropic>=0.28.0             # SimuHire agents (claude-sonnet-4-6)
+pdfplumber>=0.11.0            # PDF text extraction (replaces pdf-parse)
+python-docx>=1.1.0            # DOCX extraction (replaces mammoth)
+pytesseract>=0.3.13           # OCR (replaces tesseract.js) — requires system Tesseract
+Pillow>=10.3.0                # Image handling for pytesseract
+rapidfuzz>=3.9.0              # Fuzzy matching (replaces fastest-levenshtein)
+tree-sitter>=0.22.0           # AST parsing (replaces Acorn) — JS/TS/Python grammars
+tree-sitter-languages>=1.10.2 # Pre-built tree-sitter language grammars bundle
+
+# ── Week 3+ (namecard, analytics) ────────────────────────────────────────────
+qrcode[pil]>=7.4.2            # QR code generation
+apscheduler>=3.10.4           # Nightly analytics cron jobs

@@ -14,6 +14,7 @@ pydantic-settings>=2.3.0
 # Auth
 python-jose[cryptography]>=3.3.0
 passlib[bcrypt]>=1.7.4
+bcrypt<4.0.0                  # passlib detect_wrap_bug() crashes on bcrypt>=4.x (strict 72-byte enforcement)
 cryptography>=42.0.0  # Fernet token encryption
 
 # HTTP client (GitHub OAuth exchange, external API calls)
@@ -40,8 +41,8 @@ python-docx>=1.1.0            # DOCX extraction (replaces mammoth)
 pytesseract>=0.3.13           # OCR (replaces tesseract.js) — requires system Tesseract
 Pillow>=10.3.0                # Image handling for pytesseract
 rapidfuzz>=3.9.0              # Fuzzy matching (replaces fastest-levenshtein)
-tree-sitter>=0.22.0           # AST parsing (replaces Acorn) — JS/TS/Python grammars
-tree-sitter-languages>=1.10.2 # Pre-built tree-sitter language grammars bundle
+tree-sitter>=0.22.0           # AST parsing — JS/TS/Python grammars (optional, Python 3.13 safe)
+# tree-sitter-languages dropped: no cp313 wheel exists; github_agent falls back to keyword heuristic
 
 # ── Week 3+ (namecard, analytics) ────────────────────────────────────────────
 qrcode[pil]>=7.4.2            # QR code generation

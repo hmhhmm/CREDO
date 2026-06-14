@@ -21,37 +21,31 @@ from app.models import (
 
 @pytest.mark.unit
 def test_user_model_defaults():
-    u = User(name="Test", email="t@test.com", role="candidate")
-    assert u.role == "candidate"
-    assert u.open_to_work is False
-    assert u.portfolio_public is False
+    # SQLAlchemy mapped_column `default=` applies at INSERT time, not on Python instantiation.
+    # We verify the column schema carries the correct INSERT-time defaults.
+    cols = User.__table__.c
+    assert cols["open_to_work"].default.arg is False
+    assert cols["portfolio_public"].default.arg is False
 
 
 @pytest.mark.unit
 def test_verified_artifact_default_status():
-    a = VerifiedArtifact(
-        user_id=uuid.uuid4(),
-        artifact_type="github",
-        artifact_name="repo",
-    )
-    assert a.status == "pending"
+    cols = VerifiedArtifact.__table__.c
+    assert cols["status"].default.arg == "pending"
 
 
 @pytest.mark.unit
 def test_simuhire_session_defaults():
-    s = SimuhireSession(
-        candidate_id=uuid.uuid4(),
-        simulation_type="technical",
-    )
-    assert s.status == "active"
-    assert s.candidate_shared is False
+    cols = SimuhireSession.__table__.c
+    assert cols["status"].default.arg == "active"
+    assert cols["candidate_shared"].default.arg is False
 
 
 @pytest.mark.unit
 def test_job_listing_defaults():
-    j = JobListing(employer_id=uuid.uuid4(), title="SWE", company="Acme")
-    assert j.require_verified is False
-    assert j.require_simuhire is False
+    cols = JobListing.__table__.c
+    assert cols["require_verified"].default.arg is False
+    assert cols["require_simuhire"].default.arg is False
 
 
 @pytest.mark.unit

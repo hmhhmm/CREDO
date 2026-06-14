@@ -77,3 +77,24 @@ app.include_router(simuhire.router)    # F6 SimuHire session flow + audio
 @app.get("/health")
 async def health() -> dict:
     return {"status": "ok", "version": "0.4.0"}
+
+
+@app.get("/health/ai")
+async def health_ai() -> dict:
+    """Live smoke-test: makes a real Groq API call with a minimal prompt.
+    Used by pytest -m live to confirm the API key is valid and the model responds.
+    """
+    if not settings.GROQ_API_KEY:
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"detail": "GROQ_API_KEY is not configured"},
+        )
+    from groq import AsyncGroq
+    client = AsyncGroq(api_key=settings.GROQ_API_KEY)
+    completion = await client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        max_tokens=16,
+        messages=[{"role": "user", "content": "ping"}],
+    )
+    response_text = completion.choices[0].message.content
+    return {"response": response_text}

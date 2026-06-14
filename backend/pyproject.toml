@@ -5,6 +5,7 @@ filterwarnings = ["ignore::DeprecationWarning"]
 markers = [
     "integration: requires a live PostgreSQL database (set TEST_DATABASE_URL)",
     "unit: pure logic tests, no DB required",
+    "live: makes real external API calls (requires ANTHROPIC_API_KEY set in .env)",
 ]
 
 [tool.ruff]

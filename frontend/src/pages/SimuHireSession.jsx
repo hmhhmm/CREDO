@@ -144,6 +144,11 @@ function SetupScreen({ session, onBegin }) {
             </p>
           </div>
 
+          <p className="text-xs text-slate leading-relaxed mb-3 flex items-center gap-1.5">
+            
+            Camera access will be requested when the simulation begins. Video is will be recorded for integrity monitoring purposes.
+          </p>
+
           <label className="flex items-start gap-2 cursor-pointer mb-5">
             <input type="checkbox" checked={consent} onChange={e => setConsent(e.target.checked)} className="mt-0.5 rounded" />
             <span className="text-xs text-slate leading-relaxed">
@@ -185,13 +190,43 @@ export default function SimuHireSession() {
   const [stageReplyCount, setStageReplyCount] = useState(0)
 
   const [timeLeft, setTimeLeft] = useState(22 * 60 + 15)
+  const [cameraStream, setCameraStream] = useState(null)
   const bottomRef = useRef(null)
   const convRef   = useRef(null)
+  const videoRef  = useRef(null)
 
   useEffect(() => {
     if (sessionState !== 'active') return
     const id = setInterval(() => setTimeLeft(t => Math.max(0, t - 1)), 1000)
     return () => clearInterval(id)
+  }, [sessionState])
+
+  useEffect(() => {
+    if (sessionState !== 'active') return
+    let stream = null
+    navigator.mediaDevices?.getUserMedia({ video: true, audio: false })
+      .then(s => {
+        stream = s
+        setCameraStream(s)
+        if (videoRef.current) videoRef.current.srcObject = s
+      })
+      .catch(() => {})
+    return () => { stream?.getTracks().forEach(t => t.stop()) }
+  }, [sessionState])
+
+  useEffect(() => {
+    if (videoRef.current && cameraStream) videoRef.current.srcObject = cameraStream
+  }, [cameraStream])
+
+  useEffect(() => {
+    if (sessionState !== 'active') return
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        setMessages(prev => [...prev, { id: prev.length + 1, speaker: 'system', text: '— Candidate switched tabs —' }])
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
   }, [sessionState])
 
   const formatTime  = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
@@ -498,6 +533,20 @@ export default function SimuHireSession() {
 
         {/* Right: live indicators */}
         <div className="w-64 shrink-0 flex flex-col">
+          {/* Camera feed */}
+          <div className="p-3 border-b border-line">
+            <div className="w-full rounded-card overflow-hidden bg-[#1a1a1a] aspect-video">
+              <video
+                ref={videoRef}
+                autoPlay
+                muted
+                playsInline
+                className="w-full h-full object-cover"
+                style={{ transform: 'scaleX(-1)', display: cameraStream ? 'block' : 'none' }}
+              />
+            </div>
+            
+          </div>
           <div className="p-3 border-b border-line">
             <p className="text-xs font-semibold text-slate uppercase tracking-wider">Live Indicators</p>
             <p className="text-xs text-slate mt-0.5">Updates each stage.</p>

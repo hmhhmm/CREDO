@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { Send, Code2, Clock, X, ChevronDown, ChevronUp, ArrowLeft, AlertTriangle, BookOpen } from 'lucide-react'
-import BehavioralBar from '../components/BehavioralBar'
+import { Send, Code2, Clock, X, ChevronDown, ChevronUp, AlertTriangle, BookOpen } from 'lucide-react'
 import { mockSimuHireSession } from '../data/mockData'
 
 const stages = ['Setup', 'Challenge', 'Escalation', 'Resolution']
@@ -21,22 +20,21 @@ const speakerConfig = {
 }
 
 const dimLabels = {
-  adaptability:   'Adaptability',
-  communication:  'Communication',
-  problemSolving: 'Problem-Solving',
-  stressResponse: 'Stress Response',
-  systemsThinking:'Systems Thinking',
+  adaptability:    'Adaptability',
+  communication:   'Communication',
+  problemSolving:  'Problem-Solving',
+  stressResponse:  'Stress Response',
+  systemsThinking: 'Systems Thinking',
 }
 
 const submitLabels = ['Respond to scenario', 'Diagnose and respond', 'Respond under pressure', 'Make your final call']
 
 // ─── Radar chart ──────────────────────────────────────────────────────────────
 
-function RadarChart({ dims }) {
-  const size = 160
+function RadarChart({ dims, size = 160 }) {
   const cx = size / 2
   const cy = size / 2
-  const r = 56
+  const r  = size * 0.35
   const keys = Object.keys(dims)
   const n = keys.length
 
@@ -55,7 +53,10 @@ function RadarChart({ dims }) {
 
   const dataPoly = keys.map((k, i) => pt(i, dims[k]).join(',')).join(' ')
 
-  const shortLabel = { adaptability: 'Adapt', communication: 'Comm', problemSolving: 'Problem', stressResponse: 'Stress', systemsThinking: 'Systems' }
+  const shortLabel = {
+    adaptability: 'Adapt', communication: 'Comm',
+    problemSolving: 'Problem', stressResponse: 'Stress', systemsThinking: 'Systems',
+  }
 
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="overflow-visible">
@@ -69,11 +70,11 @@ function RadarChart({ dims }) {
       <polygon points={dataPoly} fill="#1F7A5C" fillOpacity="0.15" stroke="#1F7A5C" strokeWidth="1.5" />
       {keys.map((k, i) => {
         const angle = (i * 2 * Math.PI / n) - Math.PI / 2
-        const lr = r + 18
+        const lr = r + size * 0.12
         const [lx, ly] = [cx + lr * Math.cos(angle), cy + lr * Math.sin(angle)]
         return (
           <text key={k} x={lx} y={ly} textAnchor="middle" dominantBaseline="middle"
-            fontSize="7.5" fill="#6B7785" fontFamily="IBM Plex Mono, monospace">
+            fontSize={size * 0.048} fill="#6B7785" fontFamily="IBM Plex Mono, monospace">
             {shortLabel[k]}
           </text>
         )
@@ -90,8 +91,8 @@ function SetupScreen({ session, onBegin }) {
   return (
     <div className="min-h-screen bg-parchment flex flex-col">
       <nav className="border-b border-line px-6 py-3 flex items-center justify-between">
-        <Link to="/dashboard" className="flex items-center gap-1.5 text-sm text-slate hover:text-ink transition-colors">
-          <ArrowLeft size={14} /> Dashboard
+        <Link to="/dashboard" className="text-sm text-slate hover:text-ink transition-colors">
+          ← Dashboard
         </Link>
         <span className="font-display font-bold text-ink text-sm">CREDO SimuHire</span>
         <span className="text-xs text-slate">{session.type} Simulation</span>
@@ -167,24 +168,23 @@ function SetupScreen({ session, onBegin }) {
 
 export default function SimuHireSession() {
   const navigate = useNavigate()
-  const session = mockSimuHireSession
+  const session  = mockSimuHireSession
 
-  const [sessionState, setSessionState] = useState('setup') // 'setup' | 'active'
-  const [messages, setMessages] = useState(session.conversation)
-  const [input, setInput] = useState('')
-  const [codeMode, setCodeMode] = useState(false)
-  const [waiting, setWaiting] = useState(false)
-  const [currentStage, setCurrentStage] = useState(session.stageIndex - 1)
-  const [indicators, setIndicators] = useState(session.stageIndicators[session.stageIndex - 1])
-  const [showEndConfirm, setShowEndConfirm] = useState(false)
-  const [stageTransition, setStageTransition] = useState(null) // stage name or null
-  const [briefOpen, setBriefOpen] = useState(false)
-  const [atBottom, setAtBottom] = useState(true)
+  const [sessionState,    setSessionState]    = useState('setup')
+  const [messages,        setMessages]        = useState(session.conversation)
+  const [input,           setInput]           = useState('')
+  const [codeMode,        setCodeMode]        = useState(false)
+  const [waiting,         setWaiting]         = useState(false)
+  const [currentStage,    setCurrentStage]    = useState(session.stageIndex - 1)
+  const [indicators,      setIndicators]      = useState(session.stageIndicators[session.stageIndex - 1])
+  const [showEndConfirm,  setShowEndConfirm]  = useState(false)
+  const [stageTransition, setStageTransition] = useState(null)
+  const [briefOpen,       setBriefOpen]       = useState(false)
+  const [atBottom,        setAtBottom]        = useState(true)
 
-  // Live timer — start from where the mock session left off
   const [timeLeft, setTimeLeft] = useState(22 * 60 + 15)
   const bottomRef = useRef(null)
-  const convRef = useRef(null)
+  const convRef   = useRef(null)
 
   useEffect(() => {
     if (sessionState !== 'active') return
@@ -192,8 +192,8 @@ export default function SimuHireSession() {
     return () => clearInterval(id)
   }, [sessionState])
 
-  const formatTime = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
-  const timerUrgent = timeLeft < 5 * 60 // < 5 min
+  const formatTime  = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
+  const timerUrgent = timeLeft < 5 * 60
 
   useEffect(() => {
     if (atBottom) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -205,7 +205,12 @@ export default function SimuHireSession() {
     setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 40)
   }
 
-  const lastNonCandidateMsg = [...messages].reverse().find(m => m.speaker !== 'candidate' && m.speaker !== 'system')
+  const nextResponse = "The connection pool exhaustion theory is sound. You find that the pool is indeed maxed out — all 50 connections held by slow queries caused by a missing index added in the same deploy. How do you prioritize: immediate rollback, hotfix, or connection pool reduction?"
+
+  const stageMessages = {
+    2: "The situation is escalating. The CTO has joined the incident channel and the Stakeholder is demanding a rollback. Before you act — walk me through your decision framework for this choice.",
+    3: "You've stabilized the service. The stakeholder wants a post-mortem scheduled immediately and assurances it won't happen again. How do you close this out?",
+  }
 
   const handleSubmit = () => {
     if (!input.trim() || waiting) return
@@ -214,8 +219,8 @@ export default function SimuHireSession() {
     setInput('')
     setWaiting(true)
 
-    const nextStage = currentStage < stages.length - 1 ? currentStage + 1 : currentStage
-    const willAdvance = messages.length >= 5 && currentStage < stages.length - 1
+    // Advance stage after enough exchanges — threshold keeps first exchange from immediately jumping
+    const willAdvance = messages.length >= 8 && currentStage < stages.length - 1
 
     setTimeout(() => {
       if (willAdvance) {
@@ -225,21 +230,14 @@ export default function SimuHireSession() {
         setStageTransition(stages[newStage])
         setTimeout(() => setStageTransition(null), 2500)
         setMessages(prev => [...prev,
-          { id: prev.length + 1, speaker: 'system', text: `— Stage ${newStage + 1}: ${stages[newStage]} —` },
-          { id: prev.length + 2, speaker: 'interviewer', text: stageMessages[newStage] || nextResponse },
+          { id: prev.length + 1, speaker: 'system',       text: `— Stage ${newStage + 1}: ${stages[newStage]} —` },
+          { id: prev.length + 2, speaker: 'interviewer',  text: stageMessages[newStage] || nextResponse },
         ])
       } else {
         setMessages(prev => [...prev, { id: prev.length + 1, speaker: 'interviewer', text: nextResponse }])
       }
       setWaiting(false)
     }, 2000)
-  }
-
-  const nextResponse = "The connection pool exhaustion theory is sound. You find that the pool is indeed maxed out — all 50 connections held by slow queries caused by a missing index added in the same deploy. How do you prioritize: immediate rollback, hotfix, or connection pool reduction?"
-
-  const stageMessages = {
-    2: "The situation is escalating. The CTO has joined the incident channel and the Stakeholder is demanding a rollback. Before you act — walk me through your decision framework for this choice.",
-    3: "You've stabilized the service. The stakeholder wants a post-mortem scheduled immediately and assurances it won't happen again. How do you close this out?",
   }
 
   if (sessionState === 'setup') {
@@ -262,13 +260,15 @@ export default function SimuHireSession() {
         </div>
       )}
 
-      {/* End confirmation */}
+      {/* End confirmation modal */}
       {showEndConfirm && (
         <div className="fixed inset-0 bg-ink/40 flex items-center justify-center z-50 p-4">
           <div className="bg-parchment border border-line rounded-card p-6 max-w-sm w-full shadow-xl">
             <div className="flex items-start justify-between mb-3">
               <h2 className="font-display font-bold text-ink text-lg">End simulation?</h2>
-              <button onClick={() => setShowEndConfirm(false)} className="text-slate hover:text-ink"><X size={16} /></button>
+              <button onClick={() => setShowEndConfirm(false)} className="text-slate hover:text-ink">
+                <X size={16} />
+              </button>
             </div>
             <p className="text-sm text-slate mb-5 leading-relaxed">
               The Evaluator agent will score your transcript so far. You cannot return to this session once it ends.
@@ -292,13 +292,7 @@ export default function SimuHireSession() {
       )}
 
       {/* Header */}
-      <div className="border-b border-line px-4 py-2.5 flex items-center gap-3 bg-parchment shrink-0">
-        <button
-          onClick={() => setShowEndConfirm(true)}
-          className="flex items-center gap-1 text-slate hover:text-ink transition-colors shrink-0"
-        >
-          <ArrowLeft size={14} />
-        </button>
+      <div className="border-b border-line px-4 py-2.5 flex items-center gap-4 bg-parchment shrink-0">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span className="font-display font-bold text-ink text-sm">SimuHire</span>
@@ -311,7 +305,9 @@ export default function SimuHireSession() {
             {stages.map((s, i) => (
               <div
                 key={s}
-                className={`h-1 rounded-full transition-all duration-700 ${i < currentStage ? 'bg-ink/50' : i === currentStage ? 'bg-ink' : 'bg-line'}`}
+                className={`h-1 rounded-full transition-all duration-700 ${
+                  i < currentStage ? 'bg-ink/50' : i === currentStage ? 'bg-ink' : 'bg-line'
+                }`}
                 style={{ width: i === currentStage ? 40 : 24 }}
               />
             ))}
@@ -329,7 +325,7 @@ export default function SimuHireSession() {
         </button>
       </div>
 
-      {/* Scenario brief collapsible */}
+      {/* Scenario brief — collapsible */}
       <div className="border-b border-line bg-parchment-shade shrink-0">
         <button
           onClick={() => setBriefOpen(!briefOpen)}
@@ -341,7 +337,7 @@ export default function SimuHireSession() {
         {briefOpen && (
           <div className="px-4 pb-3 space-y-2">
             <p className="text-xs text-ink leading-relaxed">{session.scenarioBrief.situation}</p>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-6">
               <div>
                 <p className="text-xs font-medium text-slate mb-1">Access</p>
                 {session.scenarioBrief.access.map(a => <p key={a} className="text-xs text-slate">· {a}</p>)}
@@ -355,18 +351,18 @@ export default function SimuHireSession() {
         )}
       </div>
 
-      {/* Three panels */}
+      {/* Body */}
       <div className="flex flex-1 overflow-hidden">
 
-        {/* Left: conversation */}
-        <div className="flex-1 flex flex-col overflow-hidden border-r border-line" style={{ minWidth: 0 }}>
+        {/* Left: conversation + input */}
+        <div className="flex flex-col flex-1 overflow-hidden border-r border-line relative">
+
+          {/* Conversation */}
           <div ref={convRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-4 space-y-3">
             {messages.map(msg => {
               const cfg = speakerConfig[msg.speaker]
               if (msg.speaker === 'system') {
-                return (
-                  <div key={msg.id} className="text-center text-xs text-slate py-1 font-mono">{msg.text}</div>
-                )
+                return <div key={msg.id} className="text-center text-xs text-slate py-1 font-mono">{msg.text}</div>
               }
               const speakerLabel = msg.speaker === 'stakeholder'
                 ? `Stakeholder · ${session.stakeholderPersona}`
@@ -390,83 +386,76 @@ export default function SimuHireSession() {
             )}
             <div ref={bottomRef} />
           </div>
+
+          {/* Scroll-to-bottom — anchored above the input area */}
           {!atBottom && (
-            <div className="absolute bottom-20 left-1/4 transform -translate-x-1/2">
+            <div className="absolute bottom-[160px] left-1/2 -translate-x-1/2 z-10">
               <button
                 onClick={() => { setAtBottom(true); bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }}
-                className="text-xs bg-ink text-parchment px-3 py-1 rounded-full shadow font-medium"
+                className="text-xs bg-ink text-parchment px-3 py-1 rounded-full shadow-md font-medium"
               >
                 ↓ Latest
               </button>
             </div>
           )}
-        </div>
 
-        {/* Center: input */}
-        <div className="w-72 shrink-0 flex flex-col border-r border-line">
-          {/* Last message context */}
-          {lastNonCandidateMsg && (
-            <div className="p-3 border-b border-line bg-parchment-shade">
-              <p className={`text-xs font-semibold mb-1 ${speakerConfig[lastNonCandidateMsg.speaker]?.color}`}>
-                {lastNonCandidateMsg.speaker === 'stakeholder'
-                  ? `Stakeholder · ${session.stakeholderPersona}`
-                  : speakerConfig[lastNonCandidateMsg.speaker]?.label}
-              </p>
-              <p className="text-xs text-ink leading-relaxed line-clamp-3">{lastNonCandidateMsg.text}</p>
-            </div>
-          )}
-
-          <div className="flex-1 p-3 flex flex-col gap-2">
-            <div className="flex items-center justify-between">
+          {/* Input area */}
+          <div className="border-t border-line p-3 shrink-0">
+            <div className="flex items-center justify-between mb-2">
               <button
                 onClick={() => setCodeMode(!codeMode)}
-                className={`flex items-center gap-1 text-xs px-2 py-1 rounded-card border transition-colors ${codeMode ? 'border-ink bg-ink text-parchment' : 'border-line text-slate hover:text-ink'}`}
+                className={`flex items-center gap-1 text-xs px-2 py-1 rounded-card border transition-colors ${
+                  codeMode ? 'border-ink bg-ink text-parchment' : 'border-line text-slate hover:text-ink'
+                }`}
               >
                 <Code2 size={10} /> Code block
               </button>
-              <span className={`text-xs font-mono ${input.length < 40 && input.length > 0 ? 'text-pending' : 'text-slate'}`}>
-                {input.length} {input.length > 0 && input.length < 40 ? '— consider elaborating' : ''}
-              </span>
+              {input.length > 0 && (
+                <span className="text-xs font-mono text-slate">{input.length} chars</span>
+              )}
             </div>
             <textarea
               value={input}
               onChange={e => setInput(e.target.value)}
               placeholder="Think out loud — reasoning matters more than conclusions…"
-              className={`flex-1 resize-none border border-line rounded-card p-3 text-sm bg-parchment text-ink focus:outline-none focus:border-ink placeholder-slate ${codeMode ? 'font-mono text-xs' : ''}`}
+              rows={4}
+              className={`w-full resize-none border border-line rounded-card p-3 text-sm bg-parchment text-ink focus:outline-none focus:border-ink placeholder-slate ${codeMode ? 'font-mono text-xs' : ''}`}
               onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSubmit() }}
             />
-            <button
-              onClick={handleSubmit}
-              disabled={!input.trim() || waiting}
-              className="flex items-center justify-center gap-2 bg-ink text-parchment py-2.5 rounded-card text-sm font-medium hover:bg-opacity-90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <Send size={12} /> {submitLabels[currentStage] || 'Submit'}
-            </button>
-            <p className="text-xs text-slate text-center font-mono">⌘ Enter to submit</p>
+            <div className="flex items-center gap-3 mt-2">
+              <button
+                onClick={handleSubmit}
+                disabled={!input.trim() || waiting}
+                className="flex items-center gap-2 bg-ink text-parchment px-5 py-2 rounded-card text-sm font-medium hover:bg-opacity-90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Send size={12} /> {submitLabels[currentStage] || 'Submit'}
+              </button>
+              <p className="text-xs text-slate font-mono">⌘ Enter to submit</p>
+            </div>
           </div>
         </div>
 
         {/* Right: live indicators */}
-        <div className="w-56 shrink-0 flex flex-col">
+        <div className="w-64 shrink-0 flex flex-col">
           <div className="p-3 border-b border-line">
             <p className="text-xs font-semibold text-slate uppercase tracking-wider">Live Indicators</p>
             <p className="text-xs text-slate mt-0.5">Updates each stage.</p>
           </div>
-          <div className="flex-1 p-3 flex flex-col items-center">
-            <RadarChart dims={indicators} />
-            <div className="w-full mt-2 space-y-1.5">
+          <div className="flex-1 p-4 flex flex-col items-center overflow-y-auto">
+            <RadarChart dims={indicators} size={200} />
+            <div className="w-full mt-4 space-y-2.5">
               {Object.entries(indicators).map(([k, v]) => (
                 <div key={k} className="flex items-center gap-2">
-                  <span className="text-xs text-slate w-16 shrink-0 truncate">{dimLabels[k].split('-')[0]}</span>
-                  <div className="flex-1 h-1 bg-line rounded-full overflow-hidden">
+                  <span className="text-xs text-slate w-16 shrink-0 truncate">{dimLabels[k]}</span>
+                  <div className="flex-1 h-1.5 bg-line rounded-full overflow-hidden">
                     <div className="h-full bg-verified rounded-full transition-all duration-700" style={{ width: `${v}%` }} />
                   </div>
-                  <span className="text-xs font-mono text-ink w-6 text-right">{v}</span>
+                  <span className="text-xs font-mono text-ink w-6 text-right shrink-0">{v}</span>
                 </div>
               ))}
             </div>
-            <p className="text-xs text-slate mt-3 text-center leading-relaxed italic">
-              Indicative — Evaluator scores the full transcript at end.
+            <p className="text-xs text-slate mt-5 text-center leading-relaxed italic">
+              Indicative only — Evaluator scores the full transcript at the end.
             </p>
           </div>
         </div>

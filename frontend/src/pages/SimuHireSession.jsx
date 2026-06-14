@@ -176,7 +176,7 @@ export default function SimuHireSession() {
   const [codeMode,        setCodeMode]        = useState(false)
   const [waiting,         setWaiting]         = useState(false)
   const [currentStage,    setCurrentStage]    = useState(session.stageIndex - 1)
-  const [indicators,      setIndicators]      = useState(session.stageIndicators[session.stageIndex - 1])
+  const [indicators,      setIndicators]      = useState(session.stageIndicators[0])
   const [showEndConfirm,  setShowEndConfirm]  = useState(false)
   const [stageTransition, setStageTransition] = useState(null)
   const [briefOpen,       setBriefOpen]       = useState(false)
@@ -205,11 +205,12 @@ export default function SimuHireSession() {
     setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 40)
   }
 
-  const nextResponse = "The connection pool exhaustion theory is sound. You find that the pool is indeed maxed out — all 50 connections held by slow queries caused by a missing index added in the same deploy. How do you prioritize: immediate rollback, hotfix, or connection pool reduction?"
+  const nextResponse = "You find the form validation function calling input.phone.trim() before checking if phone exists — since the field is optional it's undefined for users who skip it. You've reproduced it in staging. What's your next step: fix it yourself, message the tech lead, or something else?"
 
   const stageMessages = {
-    2: "The situation is escalating. The CTO has joined the incident channel and the Stakeholder is demanding a rollback. Before you act — walk me through your decision framework for this choice.",
-    3: "You've stabilized the service. The stakeholder wants a post-mortem scheduled immediately and assurances it won't happen again. How do you close this out?",
+    1: "You've identified the bug and reproduced it. Now the Client Success manager is messaging you again — the client is getting impatient. Walk me through how you handle both the fix and the communication simultaneously.",
+    2: "You've written the fix and opened a PR. But your branch protection rules require tech lead approval before merge. The tech lead responds on Slack: 'Looks fine, but I can't approve until after the meeting.' The client is still waiting. What do you do?",
+    3: "The fix is merged and deployed. Submissions are working again. Your tech lead asks you to write a short incident summary. What do you include, and how do you make sure this class of bug doesn't happen again?",
   }
 
   const handleSubmit = () => {

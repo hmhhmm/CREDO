@@ -146,7 +146,7 @@ function SetupScreen({ session, onBegin }) {
 
           <p className="text-xs text-slate leading-relaxed mb-3 flex items-center gap-1.5">
             
-            Camera access will be requested when the simulation begins. Video is will be recorded for integrity monitoring purposes.
+            Camera access will be requested when the simulation begins. Video will be recorded for integrity monitoring purposes.
           </p>
 
           <label className="flex items-start gap-2 cursor-pointer mb-5">
@@ -200,6 +200,21 @@ export default function SimuHireSession() {
     const id = setInterval(() => setTimeLeft(t => Math.max(0, t - 1)), 1000)
     return () => clearInterval(id)
   }, [sessionState])
+
+  // Time's up — close the session and send the candidate to their report.
+  // endedRef guards against double-entry; finalSubmitted is intentionally NOT a dep,
+  // otherwise setting it would re-run this effect and its cleanup would cancel the navigate.
+  const endedRef = useRef(false)
+  useEffect(() => {
+    if (sessionState !== 'active' || timeLeft > 0 || endedRef.current) return
+    endedRef.current = true
+    setFinalSubmitted(true)
+    setMessages(prev => [...prev, {
+      id: prev.length + 1, speaker: 'system', text: '— Time is up. Submitting your transcript for evaluation. —',
+    }])
+    const t = setTimeout(() => navigate('/simuhire/session-demo/report', { state: { duration: 30 * 60 } }), 2500)
+    return () => clearTimeout(t)
+  }, [sessionState, timeLeft, navigate])
 
   useEffect(() => {
     if (sessionState !== 'active') return
@@ -371,7 +386,7 @@ export default function SimuHireSession() {
             </p>
             <div className="flex gap-2">
               <button
-                onClick={() => navigate('/simuhire/session-demo/report')}
+                onClick={() => navigate('/simuhire/session-demo/report', { state: { duration: 30 * 60 - timeLeft } })}
                 className="flex-1 text-center bg-ink text-parchment text-sm font-medium py-2 rounded-card hover:bg-opacity-90 transition-colors"
               >
                 End and see report

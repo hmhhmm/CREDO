@@ -30,7 +30,7 @@ export default function PortfolioPrivate() {
     <div className="flex min-h-screen bg-parchment">
       <Sidebar />
       <main className="flex-1 p-8 overflow-auto">
-        <div className="max-w-2xl">
+        <div className="max-w-5xl mx-auto w-full">
 
           {/* Header */}
           <div className="flex items-start justify-between mb-8">
@@ -79,6 +79,10 @@ export default function PortfolioPrivate() {
               </button>
             )}
           </div>
+
+          {/* Two columns on desktop: evidence stream (left) + ledger rail (right) */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          <div className="lg:col-span-2">
 
           {/* Verified Artifacts */}
           <div className="flex items-center justify-between mb-3">
@@ -148,7 +152,10 @@ export default function PortfolioPrivate() {
               </div>
             </>
           )}
+          </div>
 
+          {/* Ledger rail */}
+          <div className="lg:col-span-1 lg:sticky lg:top-8">
           {/* Credential Ledger */}
           <h2 className="text-xs font-semibold text-slate uppercase tracking-wider mb-3">Credential Ledger</h2>
           <div className="border border-line rounded-card bg-parchment p-5">
@@ -181,6 +188,8 @@ export default function PortfolioPrivate() {
                 </div>
               </div>
             )}
+          </div>
+          </div>
           </div>
         </div>
       </main>

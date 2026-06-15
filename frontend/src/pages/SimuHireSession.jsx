@@ -1,7 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { Send, Code2, Clock, X, ChevronDown, ChevronUp, AlertTriangle, BookOpen } from 'lucide-react'
+import { Send, Code2, Clock, X, ChevronDown, ChevronUp, AlertTriangle, BookOpen, Play, Pause } from 'lucide-react'
 import { mockSimuHireSession } from '../data/mockData'
+import { getConfidenceBand } from '../utils/confidenceBand'
+
+// Live indicators climb toward these as the candidate responds — roughly the
+// scores the Evaluator lands on in the report, so the radar previews the result.
+const INDICATOR_CAPS  = { adaptability: 86, communication: 75, problemSolving: 84, stressResponse: 78, systemsThinking: 88 }
+const INDICATOR_STEPS = { adaptability: 12, communication: 10, problemSolving: 13, stressResponse: 11, systemsThinking: 12 }
+const INDICATOR_START = { adaptability: 12, communication: 10, problemSolving: 14, stressResponse: 8,  systemsThinking: 11 }
 
 const stages = ['Setup', 'Challenge', 'Escalation', 'Resolution']
 
@@ -28,6 +35,27 @@ const dimLabels = {
 }
 
 const submitLabels = ['Respond to scenario', 'Diagnose and respond', 'Respond under pressure', 'Make your final call']
+
+// Scripted candidate answers for the demo auto-pilot. On-topic, span all four
+// stages through to the report so the whole run plays hands-free.
+const demoAnswers = [
+  "I'd reproduce it locally first and check the console logs to scope the impact before changing anything.",
+  "Looks like a null check issue — calling trim() on an undefined optional phone field. I'd confirm the root cause in staging.",
+  "I'd tell the client team we've identified it and a fix is on the way, and message the tech lead on Slack so they're in the loop.",
+  "I'll add the missing null check, write a regression test, and open a PR so the tech lead can review and approve it quickly.",
+  "Two-line Slack: found the contact-form bug — trim() on an undefined phone field. Fix plus test are in a PR, ready for review.",
+  "PR description: the root cause, the one-line null-check fix, the regression test I added, and clear rollback steps if needed.",
+  "I'd tell client success the root cause is found and the fix is in review, expected live within the hour, so they can set expectations.",
+  "Short term I can make the phone field required client-side to avoid the undefined path while the real fix ships — a safe mitigation.",
+  "Merging without approval breaks branch protection and trust; the risk isn't worth it for a one-line fix that can wait a few minutes.",
+  "Before merge I re-run the test suite, confirm CI is green, and check the diff is only the null-check change — nothing unrelated.",
+  "Incident summary: user impact, the root cause, the fix, and the timeline. I'd leave out blame and internal technical-debt details.",
+  "To prevent it recurring I'd add a lint rule for optional-field access and a code-review checklist item for null checks.",
+  "I'd tell the client plainly: a form validation issue affected some submissions, it's now fixed and verified, with steps taken to prevent it.",
+  "I'd stay calm and triage — handle the fix and the communication in parallel rather than letting the pressure rush the change.",
+  "I'd document the lesson in our runbook so the next person recognises this class of bug faster.",
+  "That covers my approach — reproduce, root-cause, fix safely, communicate clearly, and prevent recurrence.",
+]
 
 // ─── Radar chart ──────────────────────────────────────────────────────────────
 
@@ -85,7 +113,7 @@ function RadarChart({ dims, size = 160 }) {
 
 // ─── Setup screen ─────────────────────────────────────────────────────────────
 
-function SetupScreen({ session, onBegin }) {
+function SetupScreen({ session, onBegin, onWatchSample }) {
   const [consent, setConsent] = useState(false)
 
   return (
@@ -145,8 +173,7 @@ function SetupScreen({ session, onBegin }) {
           </div>
 
           <p className="text-xs text-slate leading-relaxed mb-3 flex items-center gap-1.5">
-            
-            Camera access will be requested when the simulation begins. Video is will be recorded for integrity monitoring purposes.
+            Camera access will be requested when the simulation begins. Video will be recorded for integrity monitoring purposes.
           </p>
 
           <label className="flex items-start gap-2 cursor-pointer mb-5">
@@ -162,6 +189,13 @@ function SetupScreen({ session, onBegin }) {
             className="w-full bg-ink text-parchment py-3 rounded-card text-sm font-semibold hover:bg-opacity-90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Begin Simulation →
+          </button>
+
+          <button
+            onClick={onWatchSample}
+            className="w-full mt-2 flex items-center justify-center gap-1.5 border border-line text-slate hover:text-ink hover:border-slate py-2.5 rounded-card text-xs font-medium transition-colors"
+          >
+            <Play size={11} /> Watch sample run <span className="text-slate/70">(demo — no input needed)</span>
           </button>
         </div>
       </div>
@@ -181,16 +215,20 @@ export default function SimuHireSession() {
   const [codeMode,        setCodeMode]        = useState(false)
   const [waiting,         setWaiting]         = useState(false)
   const [currentStage,    setCurrentStage]    = useState(session.stageIndex - 1)
-  const [indicators,      setIndicators]      = useState(session.stageIndicators[0])
+  const [indicators,      setIndicators]      = useState(INDICATOR_START)
   const [showEndConfirm,  setShowEndConfirm]  = useState(false)
   const [stageTransition, setStageTransition] = useState(null)
   const [briefOpen,       setBriefOpen]       = useState(false)
   const [atBottom,        setAtBottom]        = useState(true)
   const [finalSubmitted,  setFinalSubmitted]  = useState(false)
   const [stageReplyCount, setStageReplyCount] = useState(0)
+  const [streaming,       setStreaming]       = useState(null) // { speaker, shown } | null
+  const [autoPlay,        setAutoPlay]        = useState(false) // demo auto-pilot
 
   const [timeLeft, setTimeLeft] = useState(30 * 60)
   const [cameraStream, setCameraStream] = useState(null)
+  const autoIndex   = useRef(0)
+  const streamTimer = useRef(null)
   const bottomRef = useRef(null)
   const convRef   = useRef(null)
   const videoRef  = useRef(null)
@@ -234,7 +272,7 @@ export default function SimuHireSession() {
 
   useEffect(() => {
     if (atBottom) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, atBottom])
+  }, [messages, atBottom, streaming])
 
   const handleScroll = () => {
     const el = convRef.current
@@ -285,59 +323,125 @@ export default function SimuHireSession() {
     3: "The fix is merged and deployed. Submissions are working again. Your tech lead asks for a short incident summary to share with the team. What do you include? And what process change would you propose to prevent this class of bug from reaching production again?",
   }
 
-  const handleSubmit = () => {
-    if (!input.trim() || waiting || finalSubmitted) return
+  useEffect(() => () => clearInterval(streamTimer.current), [])
+
+  const prefersReducedMotion = () =>
+    typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
+  // Reveal an interviewer/stakeholder reply word-by-word, then commit it to
+  // `messages`. Reduced-motion users get the full text immediately.
+  const streamReply = (speaker, full, onDone) => {
+    if (prefersReducedMotion()) {
+      setMessages(prev => [...prev, { id: prev.length + 1, speaker, text: full }])
+      onDone?.()
+      return
+    }
+    const words = full.split(' ')
+    let i = 0
+    setStreaming({ speaker, shown: '' })
+    streamTimer.current = setInterval(() => {
+      i += 1
+      if (i >= words.length) {
+        clearInterval(streamTimer.current)
+        setStreaming(null)
+        setMessages(prev => [...prev, { id: prev.length + 1, speaker, text: full }])
+        onDone?.()
+      } else {
+        setStreaming({ speaker, shown: words.slice(0, i).join(' ') })
+      }
+    }, 40)
+  }
+
+  // Core submit — shared by the manual textarea (real product) and the demo
+  // auto-pilot. `text` is the candidate's response, wherever it came from.
+  const submitText = (text) => {
+    if (!text.trim() || waiting || finalSubmitted || streaming) return
     const candidateCount = messages.filter(m => m.speaker === 'candidate').length
-    const newMsg = { id: messages.length + 1, speaker: 'candidate', text: input }
+    const newMsg = { id: messages.length + 1, speaker: 'candidate', text }
     setMessages(prev => [...prev, newMsg])
-    setInput('')
+    // Each response nudges the live indicators up toward the report scores.
+    setIndicators(prev => {
+      const next = {}
+      for (const k of Object.keys(prev)) next[k] = Math.min(INDICATOR_CAPS[k], prev[k] + INDICATOR_STEPS[k])
+      return next
+    })
     setWaiting(true)
 
     setTimeout(() => {
       if (scriptedResponses[candidateCount]) {
-        // Early scripted exchanges (first 3 candidate messages)
+        // Early scripted exchanges — stream each reply in sequence
         const replies = scriptedResponses[candidateCount].messages
-        setMessages(prev => {
-          const base = prev.length
-          return [...prev, ...replies.map((r, i) => ({ id: base + i + 1, ...r }))]
-        })
-        setWaiting(false)
+        const playNext = (idx) => {
+          if (idx >= replies.length) { setWaiting(false); return }
+          streamReply(replies[idx].speaker, replies[idx].text, () => playNext(idx + 1))
+        }
+        playNext(0)
       } else {
         const pool = stageResponses[currentStage] || []
         if (stageReplyCount < pool.length) {
           // Ask the next follow-up question in this stage sequentially
-          setMessages(prev => [...prev, { id: prev.length + 1, speaker: 'interviewer', text: pool[stageReplyCount] }])
+          const q = pool[stageReplyCount]
           setStageReplyCount(r => r + 1)
-          setWaiting(false)
+          streamReply('interviewer', q, () => setWaiting(false))
         } else if (currentStage < stages.length - 1) {
           // All questions for this stage done — advance to next stage
           const newStage = currentStage + 1
           setCurrentStage(newStage)
           setStageReplyCount(0)
-          setIndicators(session.stageIndicators[newStage])
           setStageTransition(stages[newStage])
           setTimeout(() => setStageTransition(null), 2500)
           setMessages(prev => [...prev,
-            { id: prev.length + 1, speaker: 'system',      text: `— Stage ${newStage + 1}: ${stages[newStage]} —` },
-            { id: prev.length + 2, speaker: 'interviewer', text: stageMessages[newStage] },
+            { id: prev.length + 1, speaker: 'system', text: `— Stage ${newStage + 1}: ${stages[newStage]} —` },
           ])
-          setWaiting(false)
+          streamReply('interviewer', stageMessages[newStage], () => setWaiting(false))
         } else {
           // All stages done — close the session
           setFinalSubmitted(true)
-          setMessages(prev => [...prev, {
-            id: prev.length + 1, speaker: 'interviewer',
-            text: "Thank you — that's all the questions for today's simulation. You've worked through some challenging situations and I appreciated seeing your reasoning process. The Evaluator agent will now score your full transcript. Your Behavioral Traits Report will be ready in a moment.",
-          }])
-          setWaiting(false)
-          setTimeout(() => navigate('/simuhire/session-demo/report', { state: { duration: 30 * 60 - timeLeft } }), 3500)
+          streamReply('interviewer',
+            "Thank you — that's all the questions for today's simulation. You've worked through some challenging situations and I appreciated seeing your reasoning process. The Evaluator agent will now score your full transcript. Your Behavioral Traits Report will be ready in a moment.",
+            () => {
+              setWaiting(false)
+              setTimeout(() => navigate('/simuhire/session-demo/report', { state: { duration: 30 * 60 - timeLeft } }), 3500)
+            },
+          )
         }
       }
     }, 2000)
   }
 
+  const handleSubmit = () => {
+    if (!input.trim()) return
+    const text = input
+    setInput('')
+    submitText(text)
+  }
+
+  // Demo auto-pilot: when active and the session is idle, type and submit the
+  // next scripted candidate answer, walking the whole run to the report
+  // hands-free. The manual flow above is untouched — this only runs on opt-in.
+  useEffect(() => {
+    if (!autoPlay || sessionState !== 'active' || waiting || streaming || finalSubmitted) return
+    if (autoIndex.current >= demoAnswers.length) { setAutoPlay(false); return }
+    const text = demoAnswers[autoIndex.current]
+    const show = setTimeout(() => setInput(text), 500)
+    const send = setTimeout(() => { autoIndex.current += 1; setInput(''); submitText(text) }, 1300)
+    return () => { clearTimeout(show); clearTimeout(send) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoPlay, sessionState, waiting, streaming, finalSubmitted])
+
+  const startAutoPlay = () => {
+    autoIndex.current = messages.filter(m => m.speaker === 'candidate').length
+    setAutoPlay(true)
+  }
+
   if (sessionState === 'setup') {
-    return <SetupScreen session={session} onBegin={() => setSessionState('active')} />
+    return (
+      <SetupScreen
+        session={session}
+        onBegin={() => setSessionState('active')}
+        onWatchSample={() => { autoIndex.current = 0; setSessionState('active'); setAutoPlay(true) }}
+      />
+    )
   }
 
   return (
@@ -396,6 +500,11 @@ export default function SimuHireSession() {
             <span className="text-xs font-mono text-parchment bg-ink px-2 py-0.5 rounded-full shrink-0">
               {stages[currentStage]}
             </span>
+            {autoPlay && (
+              <span className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-verified shrink-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-verified animate-pulse" /> Demo
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1.5">
             {stages.map((s, i) => (
@@ -413,6 +522,15 @@ export default function SimuHireSession() {
         <div className={`flex items-center gap-1.5 font-mono text-sm shrink-0 ${timerUrgent ? 'text-alert' : 'text-slate'}`}>
           <Clock size={13} /> {formatTime(timeLeft)}
         </div>
+        <button
+          onClick={() => (autoPlay ? setAutoPlay(false) : startAutoPlay())}
+          className={`flex items-center gap-1.5 text-xs rounded-card px-3 py-1.5 font-medium shrink-0 transition-colors ${
+            autoPlay ? 'bg-verified text-parchment' : 'border border-line text-slate hover:text-ink hover:bg-parchment-shade'
+          }`}
+          title="Demo auto-pilot — types answers for you"
+        >
+          {autoPlay ? <><Pause size={11} /> Stop sample</> : <><Play size={11} /> Auto-play</>}
+        </button>
         <button
           onClick={() => setShowEndConfirm(true)}
           className="text-xs border border-line rounded-card px-3 py-1.5 text-ink hover:bg-parchment-shade transition-colors font-medium shrink-0"
@@ -454,33 +572,52 @@ export default function SimuHireSession() {
         <div className="flex flex-col flex-1 overflow-hidden border-r border-line relative">
 
           {/* Conversation */}
-          <div ref={convRef} onScroll={handleScroll} className="flex-1 overflow-y-auto p-4 space-y-3">
-            {messages.map(msg => {
-              const cfg = speakerConfig[msg.speaker]
-              if (msg.speaker === 'system') {
-                return <div key={msg.id} className="text-center text-xs text-slate py-1 font-mono">{msg.text}</div>
-              }
-              const speakerLabel = msg.speaker === 'stakeholder'
-                ? `Stakeholder · ${session.stakeholderPersona}`
-                : cfg.label
-              return (
-                <div key={msg.id} className={`rounded-card p-3 ${cfg.bg} ${cfg.border}`}>
-                  <p className={`text-xs font-semibold mb-1 ${cfg.color}`}>{speakerLabel}</p>
-                  <p className="text-sm text-ink leading-relaxed">{msg.text}</p>
+          <div ref={convRef} onScroll={handleScroll} className="flex-1 overflow-y-auto">
+            <div className="min-h-full flex flex-col justify-end gap-3 p-4 max-w-3xl mx-auto w-full">
+              {messages.map((msg, idx) => {
+                const cfg = speakerConfig[msg.speaker]
+                if (msg.speaker === 'system') {
+                  return <div key={idx} className="text-center text-xs text-slate py-1 font-mono">{msg.text}</div>
+                }
+                const isCandidate = msg.speaker === 'candidate'
+                const speakerLabel = msg.speaker === 'stakeholder'
+                  ? `Stakeholder · ${session.stakeholderPersona}`
+                  : cfg.label
+                return (
+                  <div key={idx} className={`flex ${isCandidate ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`rounded-card p-3 max-w-[88%] ${cfg.bg} ${cfg.border}`}>
+                      <p className={`text-xs font-semibold mb-1 ${cfg.color}`}>{speakerLabel}</p>
+                      <p className="text-sm text-ink leading-relaxed">{msg.text}</p>
+                    </div>
+                  </div>
+                )
+              })}
+              {waiting && !streaming && (
+                <div className="flex justify-start">
+                  <div className="rounded-card p-3 bg-parchment-shade border-l-2 border-verified">
+                    <p className="text-xs font-semibold text-verified mb-1">Scenario Master</p>
+                    <div className="flex gap-1 mt-1">
+                      {[0, 150, 300].map(d => (
+                        <span key={d} className="w-1.5 h-1.5 rounded-full bg-slate animate-bounce" style={{ animationDelay: `${d}ms` }} />
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              )
-            })}
-            {waiting && (
-              <div className="rounded-card p-3 bg-parchment-shade border-l-2 border-verified">
-                <p className="text-xs font-semibold text-verified mb-1">Scenario Master</p>
-                <div className="flex gap-1 mt-1">
-                  {[0, 150, 300].map(d => (
-                    <span key={d} className="w-1.5 h-1.5 rounded-full bg-slate animate-bounce" style={{ animationDelay: `${d}ms` }} />
-                  ))}
+              )}
+              {streaming && (
+                <div className="flex justify-start">
+                  <div className={`rounded-card p-3 max-w-[88%] ${speakerConfig[streaming.speaker].bg} ${speakerConfig[streaming.speaker].border}`}>
+                    <p className={`text-xs font-semibold mb-1 ${speakerConfig[streaming.speaker].color}`}>
+                      {streaming.speaker === 'stakeholder'
+                        ? `Stakeholder · ${session.stakeholderPersona}`
+                        : speakerConfig[streaming.speaker].label}
+                    </p>
+                    <p className="text-sm text-ink leading-relaxed">{streaming.shown}<span className="animate-pulse">▋</span></p>
+                  </div>
                 </div>
-              </div>
-            )}
-            <div ref={bottomRef} />
+              )}
+              <div ref={bottomRef} />
+            </div>
           </div>
 
           {/* Scroll-to-bottom — anchored above the input area */}
@@ -497,6 +634,7 @@ export default function SimuHireSession() {
 
           {/* Input area */}
           <div className="border-t border-line p-3 shrink-0">
+           <div className="max-w-3xl mx-auto w-full">
             <div className="flex items-center justify-between mb-2">
               <button
                 onClick={() => setCodeMode(!codeMode)}
@@ -515,24 +653,26 @@ export default function SimuHireSession() {
               onChange={e => setInput(e.target.value)}
               placeholder="Think out loud — reasoning matters more than conclusions…"
               rows={4}
-              className={`w-full resize-none border border-line rounded-card p-3 text-sm bg-parchment text-ink focus:outline-none focus:border-ink placeholder-slate ${codeMode ? 'font-mono text-xs' : ''}`}
+              disabled={autoPlay}
+              className={`w-full resize-none border border-line rounded-card p-3 text-sm bg-parchment text-ink focus:outline-none focus:border-ink placeholder-slate disabled:opacity-60 ${codeMode ? 'font-mono text-xs' : ''}`}
               onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSubmit() }}
             />
             <div className="flex items-center gap-3 mt-2">
               <button
                 onClick={handleSubmit}
-                disabled={!input.trim() || waiting}
+                disabled={!input.trim() || waiting || autoPlay}
                 className="flex items-center gap-2 bg-ink text-parchment px-5 py-2 rounded-card text-sm font-medium hover:bg-opacity-90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Send size={12} /> {submitLabels[currentStage] || 'Submit'}
               </button>
               <p className="text-xs text-slate font-mono">Ctrl + Enter to submit</p>
             </div>
+           </div>
           </div>
         </div>
 
         {/* Right: live indicators */}
-        <div className="w-64 shrink-0 flex flex-col">
+        <div className="w-80 shrink-0 flex flex-col">
           {/* Camera feed */}
           <div className="p-3 border-b border-line">
             <div className="w-full rounded-card overflow-hidden bg-[#1a1a1a] aspect-video">
@@ -545,24 +685,29 @@ export default function SimuHireSession() {
                 style={{ transform: 'scaleX(-1)', display: cameraStream ? 'block' : 'none' }}
               />
             </div>
-            
           </div>
           <div className="p-3 border-b border-line">
             <p className="text-xs font-semibold text-slate uppercase tracking-wider">Live Indicators</p>
-            <p className="text-xs text-slate mt-0.5">Updates each stage.</p>
+            <p className="text-xs text-slate mt-0.5">Updates as you respond.</p>
           </div>
           <div className="flex-1 p-4 flex flex-col items-center overflow-y-auto">
             <RadarChart dims={indicators} size={200} />
             <div className="w-full mt-4 space-y-2.5">
-              {Object.entries(indicators).map(([k, v]) => (
-                <div key={k} className="flex items-center gap-2">
-                  <span className="text-xs text-slate w-16 shrink-0 truncate">{dimLabels[k]}</span>
-                  <div className="flex-1 h-1.5 bg-line rounded-full overflow-hidden">
-                    <div className="h-full bg-verified rounded-full transition-all duration-700" style={{ width: `${v}%` }} />
+              {Object.entries(indicators).map(([k, v]) => {
+                const band = getConfidenceBand(v)
+                return (
+                  <div key={k} className="flex items-center gap-2.5">
+                    <span className="text-xs text-slate w-24 shrink-0">{dimLabels[k]}</span>
+                    <div className="flex-1 h-3 bg-line/70 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-700"
+                        style={{ width: `${v}%`, background: `linear-gradient(90deg, ${band.hex}D9 0%, ${band.hex} 100%)` }}
+                      />
+                    </div>
+                    <span className="text-xs font-mono w-6 text-right shrink-0" style={{ color: band.hex }}>{v}</span>
                   </div>
-                  <span className="text-xs font-mono text-ink w-6 text-right shrink-0">{v}</span>
-                </div>
-              ))}
+                )
+              })}
             </div>
             <p className="text-xs text-slate mt-5 text-center leading-relaxed italic">
               Indicative only — Evaluator scores the full transcript at the end.

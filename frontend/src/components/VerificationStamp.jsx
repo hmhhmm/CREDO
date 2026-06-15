@@ -13,7 +13,7 @@ export default function VerificationStamp({ score, size = 'md', animate = false 
 
   const colorMap = {
     verified: { border: '#1F7A5C', text: '#1F7A5C', bg: '#F0FAF6' },
-    blue: { border: '#2563EB', text: '#2563EB', bg: '#EFF6FF' },
+    blue: { border: '#2F6E8F', text: '#2F6E8F', bg: '#ECF3F6' },
     pending: { border: '#D9A441', text: '#D9A441', bg: '#FFFBEB' },
     alert: { border: '#C4503A', text: '#C4503A', bg: '#FEF2F0' },
   }

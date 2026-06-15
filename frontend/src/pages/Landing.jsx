@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
-import { ShieldCheck, IdCard, PlayCircle, ArrowRight, Check, ChevronRight } from 'lucide-react'
+import { ShieldCheck, IdCard, PlayCircle, ArrowRight, Check, ChevronRight, RotateCw } from 'lucide-react'
 import NamecardCard from '../components/NamecardCard'
 import NamecardPremium from '../components/NamecardPremium'
 import { mockCandidates } from '../data/mockData'
@@ -178,11 +178,17 @@ export default function Landing() {
           animate={{ opacity: 1, x: 0, scale: 1 }}
           transition={{ duration: 0.62, ease: EXPO, delay: 0.28 }}
         >
-          <div className="relative">
-            <span className="absolute -top-2.5 left-3 z-10 text-xs font-mono text-slate bg-parchment border border-line rounded-full px-2.5 py-0.5 shadow-sm pointer-events-none">
-              Live example · click to flip
-            </span>
+          <div className="flex flex-col items-center gap-3">
             <NamecardPremium candidate={ahmad} />
+            <motion.span
+              className="flex items-center gap-1.5 text-[11px] font-mono uppercase tracking-[0.18em] text-slate/60 pointer-events-none"
+              initial={reduced ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, ease: EXPO, delay: 1.1 }}
+            >
+              <RotateCw size={11} className="opacity-70" />
+              Interactive — click to flip
+            </motion.span>
           </div>
         </motion.div>
       </div>

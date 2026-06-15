@@ -9,10 +9,10 @@ export default function BehavioralBar({ label, value, small = false }) {
         <span className={`${small ? 'text-xs' : 'text-sm'} text-ink font-medium`}>{label}</span>
         <span className="text-xs font-mono" style={{ color: band.hex }}>{value}</span>
       </div>
-      <div className="h-1.5 bg-line rounded-full overflow-hidden">
+      <div className={`${small ? 'h-1.5' : 'h-2'} bg-line/70 rounded-full overflow-hidden`}>
         <div
           className="h-full rounded-full transition-all duration-1000"
-          style={{ width: `${value}%`, backgroundColor: band.hex }}
+          style={{ width: `${value}%`, background: `linear-gradient(90deg, ${band.hex}D9 0%, ${band.hex} 100%)` }}
         />
       </div>
     </div>

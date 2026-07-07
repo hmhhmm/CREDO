@@ -1,0 +1,27 @@
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+backend/.venv/
+*.egg-info/
+
+# Node / Expo
+node_modules/
+.expo/
+dist/
+web-build/
+
+# iOS
+credo-mobile/ios/Pods/
+credo-mobile/ios/build/
+credo-mobile/ios/.xcode.env.local
+
+# Android
+credo-mobile/android/build/
+credo-mobile/android/app/build/
+credo-mobile/android/.gradle/
+
+# Env
+.env
+.env.local

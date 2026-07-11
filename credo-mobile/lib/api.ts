@@ -1,5 +1,6 @@
 import { API_BASE_URL, MOCK_MODE } from "./config";
 import { tokenStore } from "./tokenStore";
+import type { EmploymentType, JobStatus } from "../data/types";
 
 export class ApiError extends Error {
   status: number;
@@ -119,8 +120,6 @@ export const candidatesApi = {
 };
 
 // ── Jobs (Employer) ───────────────────────────────────────────────────────────
-import type { EmploymentType, JobStatus } from "../data/types";
-
 export interface JobListingResponse {
   id: string;
   title: string;

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   View, Text, TextInput, Pressable, ScrollView,
-  ActivityIndicator, KeyboardAvoidingView, Platform, StyleSheet, Alert,
+  ActivityIndicator, KeyboardAvoidingView, Platform, StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Plus, X } from "lucide-react-native";
@@ -83,10 +83,10 @@ export default function JobCreateScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={styles.flex1}>
       <ScreenBackground />
       <SafeAreaView style={styles.container} edges={["bottom"]}>
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <KeyboardAvoidingView style={styles.flex1} behavior={Platform.OS === "ios" ? "padding" : undefined}>
           <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
             {/* Job title */}
@@ -186,7 +186,7 @@ export default function JobCreateScreen({ navigation }: Props) {
             <View style={styles.field}>
               <Text style={styles.label}>Required skills <Text style={styles.required}>*</Text></Text>
               <View style={styles.skillBuilder}>
-                <GlassCard radius={14} style={{ flex: 1 }}>
+                <GlassCard radius={14} style={styles.flex1}>
                   <TextInput
                     style={styles.input}
                     placeholder="Skill name"
@@ -247,6 +247,7 @@ export default function JobCreateScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
+  flex1: { flex: 1 },
   container: { flex: 1 },
   scroll: { padding: 20, paddingBottom: 48, gap: 20 },
 

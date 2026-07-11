@@ -1,13 +1,18 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Check, TrendingUp } from "lucide-react-native";
+import { useFocusEffect } from "@react-navigation/native";
+import { Check, TrendingUp, X } from "lucide-react-native";
+import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import { getConfidenceBand } from "../../utils/confidenceBand";
 import { discoverCandidates, type DiscoverCandidate } from "../../data/employerData";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
+import type { EmployerTabsParamList } from "../../navigation/EmployerTabs";
+
+type Props = BottomTabScreenProps<EmployerTabsParamList, "Discover">;
 
 function CandidateCard({ c }: { c: DiscoverCandidate }) {
   const band = getConfidenceBand(c.trustScore);
@@ -52,15 +57,36 @@ function CandidateCard({ c }: { c: DiscoverCandidate }) {
   );
 }
 
-export default function DiscoverScreen() {
+export default function DiscoverScreen({ route }: Props) {
+  const paramSkills = route.params?.filterSkills ?? [];
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [activeSkills, setActiveSkills] = useState<string[]>(paramSkills);
+
+  useFocusEffect(
+    useCallback(() => {
+      const incoming = route.params?.filterSkills ?? [];
+      if (incoming.length > 0) {
+        setActiveSkills(incoming);
+      }
+    }, [route.params?.filterSkills])
+  );
+
+  const removeSkill = (skill: string) => setActiveSkills((prev) => prev.filter((s) => s !== skill));
 
   const list = useMemo(
     () =>
       discoverCandidates
         .filter((c) => !verifiedOnly || c.verifiedSkills.length > 0)
+        .filter((c) =>
+          activeSkills.length === 0
+            ? true
+            : activeSkills.some((sk) =>
+                c.verifiedSkills.some((vs) => vs.name.toLowerCase() === sk.toLowerCase()) ||
+                (c.claimedSkills ?? []).some((cs) => cs.toLowerCase() === sk.toLowerCase())
+              )
+        )
         .sort((a, b) => b.trustScore - a.trustScore),
-    [verifiedOnly]
+    [verifiedOnly, activeSkills]
   );
 
   return (
@@ -79,10 +105,25 @@ export default function DiscoverScreen() {
           </View>
           <Text style={styles.subheading}>Filtered by verified skill confidence — not keyword guessing.</Text>
 
+          {/* Active skill filters from job listing */}
+          {activeSkills.length > 0 && (
+            <View style={styles.activeFilters}>
+              {activeSkills.map((sk) => (
+                <Pressable key={sk} style={styles.activeChip} onPress={() => removeSkill(sk)}>
+                  <Text style={styles.activeChipText}>{sk}</Text>
+                  <X size={10} color={colors.ink} strokeWidth={2.5} />
+                </Pressable>
+              ))}
+            </View>
+          )}
+
           <View style={{ gap: 12, marginTop: 4 }}>
             {list.map((c) => (
               <CandidateCard key={c.id} c={c} />
             ))}
+            {list.length === 0 && (
+              <Text style={styles.empty}>No candidates match the current filters.</Text>
+            )}
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -116,4 +157,13 @@ const styles = StyleSheet.create({
 
   trajRow: { flexDirection: "row", alignItems: "center", gap: 7, borderTopWidth: 1, borderTopColor: "rgba(16,25,43,0.08)", paddingTop: 10 },
   trajText: { flex: 1, fontFamily: fonts.sans, fontSize: 11.5, color: colors.slate, lineHeight: 16 },
+
+  activeFilters: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  activeChip: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: "rgba(16,25,43,0.08)", borderRadius: 100,
+    paddingVertical: 5, paddingHorizontal: 10,
+  },
+  activeChipText: { fontFamily: fonts.mono, fontSize: 11, color: colors.ink },
+  empty: { fontFamily: fonts.sans, fontSize: 13, color: colors.slate, textAlign: "center", marginTop: 20 },
 });

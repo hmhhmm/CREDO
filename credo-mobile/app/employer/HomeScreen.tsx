@@ -1,11 +1,18 @@
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { AlertTriangle, Clock, TrendingUp, LogOut } from "lucide-react-native";
+import { AlertTriangle, Clock, TrendingUp, LogOut, Briefcase } from "lucide-react-native";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
+import ActionCard from "../../components/shared/ActionCard";
 import { employer, dashboardStats, signals, type SignalLevel } from "../../data/employerData";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
+import type { EmployerHomeStackParamList } from "../../navigation/EmployerHomeStack";
+
+type Props = NativeStackScreenProps<EmployerHomeStackParamList, "EmployerHome"> & {
+  onSwitchRole: () => void;
+};
 
 const LEVEL_META: Record<SignalLevel, { color: string; Icon: typeof AlertTriangle }> = {
   critical: { color: colors.alert, Icon: AlertTriangle },
@@ -13,7 +20,7 @@ const LEVEL_META: Record<SignalLevel, { color: string; Icon: typeof AlertTriangl
   good: { color: colors.verified, Icon: TrendingUp },
 };
 
-export default function EmployerHomeScreen({ onSwitchRole }: { onSwitchRole: () => void }) {
+export default function EmployerHomeScreen({ navigation, onSwitchRole }: Props) {
   return (
     <View style={{ flex: 1 }}>
       <ScreenBackground />
@@ -42,7 +49,15 @@ export default function EmployerHomeScreen({ onSwitchRole }: { onSwitchRole: () 
             ))}
           </View>
 
-          {/* Signals — E5 / E7 / E8 */}
+          {/* My Roles quick action */}
+          <ActionCard
+            title="My Roles"
+            subtitle="Post and manage job listings"
+            icon={<Briefcase size={18} color={colors.ink} />}
+            onPress={() => navigation.navigate("JobList")}
+          />
+
+          {/* Live signals */}
           <Text style={styles.sectionLabel}>Live signals</Text>
           <View style={{ gap: 12 }}>
             {signals.map((sig) => {

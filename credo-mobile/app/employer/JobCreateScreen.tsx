@@ -54,6 +54,11 @@ export default function JobCreateScreen({ navigation }: Props) {
     if (!title.trim()) e.title = "Job title is required.";
     if (!location.trim()) e.location = "Location is required.";
     if (skills.length === 0) e.skills = "Add at least one required skill.";
+    const parsedMin = parseInt(salaryMin, 10);
+    const parsedMax = parseInt(salaryMax, 10);
+    if (!Number.isNaN(parsedMin) && !Number.isNaN(parsedMax) && parsedMin > parsedMax) {
+      e.salary = "Min salary cannot exceed max salary";
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -62,13 +67,15 @@ export default function JobCreateScreen({ navigation }: Props) {
     if (!validate()) return;
     setSubmitting(true);
     setSubmitError(null);
+    const parsedMin = parseInt(salaryMin, 10);
+    const parsedMax = parseInt(salaryMax, 10);
     try {
       await jobsApi.create({
         title: title.trim(),
         location: location.trim(),
         employment_type: employmentType,
-        salary_min: salaryMin ? parseInt(salaryMin, 10) : null,
-        salary_max: salaryMax ? parseInt(salaryMax, 10) : null,
+        salary_min: Number.isNaN(parsedMin) ? null : parsedMin,
+        salary_max: Number.isNaN(parsedMax) ? null : parsedMax,
         description: description.trim(),
         required_skills: skills.map((s) => ({ name: s.name, verified_only: s.verifiedOnly })),
       });
@@ -163,6 +170,7 @@ export default function JobCreateScreen({ navigation }: Props) {
                   />
                 </GlassCard>
               </View>
+              {errors.salary && <Text style={styles.fieldError}>{errors.salary}</Text>}
             </View>
 
             {/* Description */}

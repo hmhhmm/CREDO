@@ -77,9 +77,13 @@ export default function JobDetailScreen({ route, navigation }: Props) {
                 <Text style={styles.dot}>·</Text>
                 <Text style={styles.meta}>{TYPE_LABEL[job.employment_type] ?? job.employment_type}</Text>
               </View>
-              {job.salary_min != null && job.salary_max != null && (
+              {(job.salary_min != null || job.salary_max != null) && (
                 <Text style={styles.salary}>
-                  RM {job.salary_min.toLocaleString()} – {job.salary_max.toLocaleString()} / mo
+                  {job.salary_min != null && job.salary_max != null
+                    ? `RM ${job.salary_min.toLocaleString()} – ${job.salary_max.toLocaleString()} / mo`
+                    : job.salary_min != null
+                    ? `From RM ${job.salary_min.toLocaleString()} / mo`
+                    : `Up to RM ${job.salary_max!.toLocaleString()} / mo`}
                 </Text>
               )}
               <View style={[styles.statusBadge, { backgroundColor: isOpen ? "rgba(31,122,92,0.1)" : "rgba(16,25,43,0.06)" }]}>

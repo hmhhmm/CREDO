@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { View, Text, ScrollView, Pressable, ActivityIndicator, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
@@ -42,9 +42,13 @@ function JobCard({ job, onPress }: { job: JobListingResponse; onPress: () => voi
             </View>
           </View>
 
-          {job.salary_min != null && job.salary_max != null && (
+          {(job.salary_min != null || job.salary_max != null) && (
             <Text style={styles.salary}>
-              RM {job.salary_min.toLocaleString()} – {job.salary_max.toLocaleString()} / mo
+              {job.salary_min != null && job.salary_max != null
+                ? `RM ${job.salary_min.toLocaleString()} – ${job.salary_max.toLocaleString()} / mo`
+                : job.salary_min != null
+                ? `From RM ${job.salary_min.toLocaleString()} / mo`
+                : `Up to RM ${job.salary_max!.toLocaleString()} / mo`}
             </Text>
           )}
 
@@ -85,7 +89,6 @@ export default function JobListScreen({ navigation }: Props) {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   return (

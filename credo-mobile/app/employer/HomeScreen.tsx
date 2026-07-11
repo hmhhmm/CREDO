@@ -49,9 +49,9 @@ export default function EmployerHomeScreen({ navigation, onSwitchRole }: Props) 
             ))}
           </View>
 
-          {/* My Roles quick action */}
+          {/* Job Posting quick action */}
           <ActionCard
-            title="My Roles"
+            title="Job Posting"
             subtitle="Post and manage job listings"
             icon={<Briefcase size={18} color={colors.ink} />}
             onPress={() => navigation.navigate("JobList")}

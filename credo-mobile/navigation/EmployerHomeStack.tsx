@@ -21,7 +21,7 @@ export default function EmployerHomeStack({ onSwitchRole }: { onSwitchRole: () =
       <Stack.Screen name="EmployerHome" options={{ headerShown: false }}>
         {(props) => <EmployerHomeScreen {...props} onSwitchRole={onSwitchRole} />}
       </Stack.Screen>
-      <Stack.Screen name="JobList" component={JobListScreen} options={{ title: "My Roles" }} />
+      <Stack.Screen name="JobList" component={JobListScreen} options={{ title: "Job Posting" }} />
       <Stack.Screen name="JobDetail" component={JobDetailScreen} options={{ title: "Role Details" }} />
       <Stack.Screen name="JobCreate" component={JobCreateScreen} options={{ title: "Post a Role" }} />
     </Stack.Navigator>

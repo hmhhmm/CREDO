@@ -18,9 +18,9 @@ export default function EmployerTabs({ onSwitchRole }: { onSwitchRole: () => voi
       tabBar={(props) => <SegmentedTabBar {...props} icons={ICONS} labels={LABELS} />}
     >
       <Tab.Screen name="Home">{() => <EmployerHomeScreen onSwitchRole={onSwitchRole} />}</Tab.Screen>
+      <Tab.Screen name="FairMode" component={FairModeScreen} />
       <Tab.Screen name="Discover" component={DiscoverScreen} />
       <Tab.Screen name="Pipeline" component={PipelineScreen} />
-      <Tab.Screen name="FairMode" component={FairModeScreen} />
     </Tab.Navigator>
   );
 }

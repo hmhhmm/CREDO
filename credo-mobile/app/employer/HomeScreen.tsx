@@ -80,7 +80,7 @@ export default function EmployerHomeScreen({ navigation, onSwitchRole }: Props) 
                       <Text style={styles.signalChevron}>{expanded ? "▲" : "▼"}</Text>
                     </View>
                     <Text style={styles.signalTitle}>{sig.title}</Text>
-                    {expanded && sig.person && <Text style={styles.signalPerson}>{sig.person}</Text>}
+                    {sig.person && <Text style={styles.signalPerson}>{sig.person}</Text>}
                     {expanded && <Text style={styles.signalBody}>{sig.body}</Text>}
                   </Pressable>
                 </GlassCard>

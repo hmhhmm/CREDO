@@ -19,6 +19,8 @@ import type {
   EndSessionResponse,
   ReportResponse,
   SimulationType,
+  JobListingResponse,
+  JobCreatePayload,
 } from "./api";
 
 const delay = <T>(value: T, ms = 350): Promise<T> => new Promise((r) => setTimeout(() => r(value), ms));
@@ -197,6 +199,55 @@ const mockCandidateList: CandidateSummary[] = [
   },
 ];
 
+let mockJobs: JobListingResponse[] = [
+  {
+    id: "job-1",
+    title: "Junior ML Engineer",
+    location: "Kuala Lumpur",
+    employment_type: "full-time",
+    salary_min: 4500,
+    salary_max: 6000,
+    description: "Join our data team building production ML pipelines. You'll own model deployment, monitoring, and iteration cycles.",
+    required_skills: [
+      { name: "Python", verified_only: true },
+      { name: "Machine Learning", verified_only: true },
+      { name: "Docker", verified_only: false },
+    ],
+    status: "open",
+    created_at: "2026-07-01T09:00:00Z",
+  },
+  {
+    id: "job-2",
+    title: "Frontend Engineer",
+    location: "Remote",
+    employment_type: "full-time",
+    salary_min: 4000,
+    salary_max: 5500,
+    description: "Build and maintain our customer-facing web application. Strong component design and accessibility awareness required.",
+    required_skills: [
+      { name: "React", verified_only: true },
+      { name: "TypeScript", verified_only: true },
+    ],
+    status: "open",
+    created_at: "2026-07-03T10:30:00Z",
+  },
+  {
+    id: "job-3",
+    title: "Data Analyst Intern",
+    location: "Petaling Jaya",
+    employment_type: "internship",
+    salary_min: 1200,
+    salary_max: 1800,
+    description: "6-month internship supporting the analytics team with dashboards and ad-hoc analysis.",
+    required_skills: [
+      { name: "SQL", verified_only: true },
+      { name: "Excel", verified_only: false },
+    ],
+    status: "closed",
+    created_at: "2026-06-15T08:00:00Z",
+  },
+];
+
 // SimuHire — a fully scripted session so the whole flow works offline.
 const SIMUHIRE_SCRIPT: { interviewer: string; stakeholder?: string; stage: string }[] = [
   {
@@ -308,4 +359,30 @@ export const mockApi = {
       completed_at: new Date().toISOString(),
     }),
   simuhireShare: (_sessionId: string, shared: boolean) => delay({ session_id: "sess-mock", candidate_shared: shared }),
+
+  jobsList: (): Promise<JobListingResponse[]> => delay([...mockJobs]),
+
+  jobsCreate: (payload: JobCreatePayload): Promise<JobListingResponse> => {
+    const newJob: JobListingResponse = {
+      id: `job-${Date.now()}`,
+      title: payload.title,
+      location: payload.location,
+      employment_type: payload.employment_type,
+      salary_min: payload.salary_min,
+      salary_max: payload.salary_max,
+      description: payload.description,
+      required_skills: payload.required_skills,
+      status: "open",
+      created_at: new Date().toISOString(),
+    };
+    mockJobs = [newJob, ...mockJobs];
+    return delay(newJob);
+  },
+
+  jobsClose: (id: string): Promise<JobListingResponse> => {
+    mockJobs = mockJobs.map((j) => (j.id === id ? { ...j, status: "closed" } : j));
+    const updated = mockJobs.find((j) => j.id === id);
+    if (!updated) throw new Error("Job not found");
+    return delay(updated);
+  },
 };

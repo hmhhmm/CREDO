@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, Pressable, StyleSheet, Alert } from "react-native";
+import { View, Text, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ScanLine, Check, Send, X } from "lucide-react-native";
 import ScreenBackground from "../../components/shared/ScreenBackground";
@@ -16,6 +16,7 @@ const scanned = discoverCandidates[0];
 
 export default function FairModeScreen() {
   const [result, setResult] = useState<typeof scanned | null>(null);
+  const [invited, setInvited] = useState(false);
   const band = result ? getConfidenceBand(result.trustScore) : null;
 
   return (
@@ -73,11 +74,18 @@ export default function FairModeScreen() {
                 </View>
               </View>
             </GlassCard>
-            <Pressable style={styles.inviteBtn} onPress={() => Alert.alert("Invite sent", `SimuHire invite sent to ${result.name} (demo)`)}>
-              <Send size={15} color={colors.parchment} />
-              <Text style={styles.inviteText}>Send SimuHire invite</Text>
-            </Pressable>
-            <Pressable style={styles.resetBtn} onPress={() => setResult(null)}>
+            {!invited ? (
+              <Pressable style={styles.inviteBtn} onPress={() => setInvited(true)}>
+                <Send size={15} color={colors.parchment} />
+                <Text style={styles.inviteText}>Send SimuHire invite</Text>
+              </Pressable>
+            ) : (
+              <View style={styles.inviteSent}>
+                <Check size={14} color={colors.verified} strokeWidth={3} />
+                <Text style={styles.inviteSentText}>SimuHire invite sent</Text>
+              </View>
+            )}
+            <Pressable style={styles.resetBtn} onPress={() => { setResult(null); setInvited(false); }}>
               <X size={13} color={colors.slate} />
               <Text style={styles.resetText}>Scan another</Text>
             </Pressable>
@@ -144,6 +152,16 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
   },
   inviteText: { fontFamily: fonts.sansSemiBold, fontSize: 14, color: colors.parchment },
+  inviteSent: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "rgba(31,122,92,0.1)",
+    borderRadius: 16,
+    paddingVertical: 15,
+  },
+  inviteSentText: { fontFamily: fonts.sansSemiBold, fontSize: 14, color: colors.verified },
   resetBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 4 },
   resetText: { fontFamily: fonts.mono, fontSize: 12, color: colors.slate },
 });

@@ -53,8 +53,8 @@ export default function JobDetailScreen({ route, navigation }: Props) {
   const handleFindCandidates = () => {
     const filterSkills = job.required_skills.map((s) => s.name);
     // Navigate to the Discover tab (sibling tab) with the skill filter pre-applied.
-    // getParent() is EmployerHomeStack → getParent() again is EmployerTabs.
-    const tabNav = navigation.getParent()?.getParent();
+    // JobDetailScreen is inside EmployerHomeStack (NativeStack), whose parent is EmployerTabs.
+    const tabNav = navigation.getParent();
     if (tabNav) {
       (tabNav as { navigate: (name: string, params?: object) => void }).navigate("Discover", { filterSkills });
     }

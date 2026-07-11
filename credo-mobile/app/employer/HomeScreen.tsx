@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AlertTriangle, Clock, TrendingUp, LogOut, Briefcase } from "lucide-react-native";
@@ -21,6 +22,8 @@ const LEVEL_META: Record<SignalLevel, { color: string; Icon: typeof AlertTriangl
 };
 
 export default function EmployerHomeScreen({ navigation, onSwitchRole }: Props) {
+  const [expandedSignal, setExpandedSignal] = useState<string | null>(null);
+
   return (
     <View style={{ flex: 1 }}>
       <ScreenBackground />
@@ -62,19 +65,24 @@ export default function EmployerHomeScreen({ navigation, onSwitchRole }: Props) 
           <View style={{ gap: 12 }}>
             {signals.map((sig) => {
               const meta = LEVEL_META[sig.level];
+              const expanded = expandedSignal === sig.id;
               return (
                 <GlassCard key={sig.id} radius={20}>
-                  <View style={styles.signalCard}>
+                  <Pressable
+                    style={styles.signalCard}
+                    onPress={() => setExpandedSignal(expanded ? null : sig.id)}
+                  >
                     <View style={styles.signalHead}>
                       <View style={[styles.signalDot, { backgroundColor: meta.color }]}>
                         <meta.Icon size={13} color="#fff" strokeWidth={2.5} />
                       </View>
                       <Text style={styles.signalFeature}>{sig.feature}</Text>
+                      <Text style={styles.signalChevron}>{expanded ? "▲" : "▼"}</Text>
                     </View>
                     <Text style={styles.signalTitle}>{sig.title}</Text>
-                    {sig.person && <Text style={styles.signalPerson}>{sig.person}</Text>}
-                    <Text style={styles.signalBody}>{sig.body}</Text>
-                  </View>
+                    {expanded && sig.person && <Text style={styles.signalPerson}>{sig.person}</Text>}
+                    {expanded && <Text style={styles.signalBody}>{sig.body}</Text>}
+                  </Pressable>
                 </GlassCard>
               );
             })}
@@ -109,7 +117,8 @@ const styles = StyleSheet.create({
   sectionLabel: { fontFamily: fonts.mono, fontSize: 11, textTransform: "uppercase", letterSpacing: 2, color: colors.slate },
 
   signalCard: { padding: 18, gap: 6 },
-  signalHead: { flexDirection: "row", alignItems: "center", gap: 8 },
+  signalHead: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
+  signalChevron: { marginLeft: "auto", fontFamily: fonts.mono, fontSize: 9, color: colors.slate },
   signalDot: { width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   signalFeature: { fontFamily: fonts.mono, fontSize: 10, textTransform: "uppercase", letterSpacing: 1, color: colors.slate },
   signalTitle: { fontFamily: fonts.displayBold, fontSize: 16, color: colors.ink, marginTop: 2 },

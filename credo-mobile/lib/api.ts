@@ -118,6 +118,41 @@ export const candidatesApi = {
   list: () => (MOCK_MODE ? mock().candidatesList() : request<CandidateSummary[]>("/candidates")),
 };
 
+// ── Jobs (Employer) ───────────────────────────────────────────────────────────
+import type { EmploymentType, JobStatus } from "../data/types";
+
+export interface JobListingResponse {
+  id: string;
+  title: string;
+  location: string;
+  employment_type: EmploymentType;
+  salary_min: number | null;
+  salary_max: number | null;
+  description: string;
+  required_skills: { name: string; verified_only: boolean }[];
+  status: JobStatus;
+  created_at: string;
+}
+
+export interface JobCreatePayload {
+  title: string;
+  location: string;
+  employment_type: EmploymentType;
+  salary_min: number | null;
+  salary_max: number | null;
+  description: string;
+  required_skills: { name: string; verified_only: boolean }[];
+}
+
+export const jobsApi = {
+  list: () =>
+    MOCK_MODE ? mock().jobsList() : request<JobListingResponse[]>("/jobs"),
+  create: (payload: JobCreatePayload) =>
+    MOCK_MODE ? mock().jobsCreate(payload) : request<JobListingResponse>("/jobs", { method: "POST", body: payload }),
+  close: (id: string) =>
+    MOCK_MODE ? mock().jobsClose(id) : request<JobListingResponse>(`/jobs/${id}/close`, { method: "PATCH" }),
+};
+
 // ── Namecard (Candidate Card tab) ────────────────────────────────────────────
 export interface SkillEntry {
   skill: string;

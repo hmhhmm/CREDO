@@ -1,16 +1,48 @@
-import { View, Text, ScrollView, Pressable, StyleSheet, Alert } from "react-native";
+import { useState } from "react";
+import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { FileText, Send, RefreshCw, ChevronRight } from "lucide-react-native";
+import { FileText, Send, RefreshCw, ChevronRight, Check } from "lucide-react-native";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import { pipeline, STAGE_META, type PipelineEntry } from "../../data/employerData";
+import type { DiscoverCandidate } from "../../data/employerData";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
+import type { PipelineStackParamList } from "../../navigation/PipelineStack";
+
+type Props = NativeStackScreenProps<PipelineStackParamList, "PipelineMain">;
+
+function buildCandidate(e: PipelineEntry): DiscoverCandidate {
+  return {
+    id: e.id,
+    name: e.name,
+    field: e.field,
+    university: "",
+    year: "",
+    location: "",
+    openToWork: false,
+    avatar: null,
+    bio: "",
+    linkedinUrl: null,
+    githubUrl: null,
+    trustScore: e.trustScore,
+    verifiedSkills: [],
+    claimedSkills: [],
+    simuHire: { completed: false, shared: false },
+    artifacts: [],
+    ledger: [],
+    merkleRoot: null,
+    trajectory: e.detail,
+  };
+}
 
 function actionFor(entry: PipelineEntry): { label: string; Icon: typeof Send } {
   switch (entry.stage) {
     case "simuhire_done":
       return { label: "Review report", Icon: FileText };
+    case "shortlisted":
+      return { label: "View profile", Icon: ChevronRight };
     case "invited":
       return { label: "Resend invite", Icon: Send };
     case "re_engage":
@@ -20,7 +52,9 @@ function actionFor(entry: PipelineEntry): { label: string; Icon: typeof Send } {
   }
 }
 
-export default function PipelineScreen() {
+export default function PipelineScreen({ navigation }: Props) {
+  const [sent, setSent] = useState<string | null>(null);
+
   return (
     <View style={{ flex: 1 }}>
       <ScreenBackground />
@@ -34,6 +68,18 @@ export default function PipelineScreen() {
               const stage = STAGE_META[e.stage];
               const action = actionFor(e);
               const initials = e.name.split(" ").map((n) => n[0]).join("");
+              const isSent = sent === e.id;
+
+              const handlePress = () => {
+                if (e.stage === "simuhire_done") {
+                  navigation.navigate("SimuHireReport", { entry: e });
+                } else if (e.stage === "shortlisted") {
+                  navigation.navigate("CandidateProfile", { candidate: buildCandidate(e) });
+                } else {
+                  setSent(e.id);
+                }
+              };
+
               return (
                 <GlassCard key={e.id} radius={20}>
                   <View style={styles.card}>
@@ -50,13 +96,17 @@ export default function PipelineScreen() {
                       </View>
                     </View>
                     <Text style={styles.detail}>{e.detail}</Text>
-                    <Pressable
-                      style={styles.action}
-                      onPress={() => Alert.alert(action.label, `${action.label} — ${e.name} (demo)`)}
-                    >
-                      <action.Icon size={14} color={colors.ink} />
-                      <Text style={styles.actionText}>{action.label}</Text>
-                    </Pressable>
+                    {isSent ? (
+                      <View style={styles.sentRow}>
+                        <Check size={14} color={colors.verified} strokeWidth={2.5} />
+                        <Text style={styles.sentText}>Sent</Text>
+                      </View>
+                    ) : (
+                      <Pressable style={styles.action} onPress={handlePress}>
+                        <action.Icon size={14} color={colors.ink} />
+                        <Text style={styles.actionText}>{action.label}</Text>
+                      </Pressable>
+                    )}
                   </View>
                 </GlassCard>
               );
@@ -93,4 +143,12 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
   },
   actionText: { fontFamily: fonts.sansSemiBold, fontSize: 13, color: colors.ink },
+  sentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    paddingVertical: 11,
+  },
+  sentText: { fontFamily: fonts.sansSemiBold, fontSize: 13, color: colors.verified },
 });

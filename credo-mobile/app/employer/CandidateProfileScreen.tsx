@@ -2,15 +2,14 @@ import { useState } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MapPin, TrendingUp, Check } from "lucide-react-native";
-import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import { getConfidenceBand } from "../../utils/confidenceBand";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
-import type { DiscoverStackParamList } from "../../navigation/DiscoverStack";
+import type { DiscoverCandidate } from "../../data/employerData";
 
-type Props = NativeStackScreenProps<DiscoverStackParamList, "CandidateProfile">;
+type Props = { route: { params: { candidate: DiscoverCandidate } }; navigation?: unknown };
 
 const DIMENSION_LABELS: Record<string, string> = {
   adaptability: "Adaptability",

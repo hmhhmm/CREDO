@@ -81,9 +81,26 @@ export interface PipelineEntry {
   trustScore: number;
   stage: PipelineStage;
   detail: string;
+  simuHire?: {
+    type: string;
+    overallScore: number;
+    dimensions: Record<string, number>;
+  };
 }
 export const pipeline: PipelineEntry[] = [
-  { id: "p1", name: "Ahmad Farid", field: "Computer Science", trustScore: 87, stage: "simuhire_done", detail: "SimuHire Technical · 82/100 — report ready to review" },
+  {
+    id: "p1",
+    name: "Ahmad Farid",
+    field: "Computer Science",
+    trustScore: 87,
+    stage: "simuhire_done",
+    detail: "SimuHire Technical · 82/100 — report ready to review",
+    simuHire: {
+      type: "Technical",
+      overallScore: 82,
+      dimensions: { adaptability: 88, communication: 76, problemSolving: 85, stressResponse: 79, systemsThinking: 82 },
+    },
+  },
   { id: "p2", name: "Priya Nair", field: "Software Engineering", trustScore: 71, stage: "invited", detail: "SimuHire invite sent 2 days ago — awaiting completion" },
   { id: "p3", name: "Lim Wei", field: "Data Science", trustScore: 79, stage: "shortlisted", detail: "Shortlisted for Junior ML Engineer — verified Python/SQL" },
   { id: "p4", name: "Sara Yusof", field: "Product Design", trustScore: 68, stage: "re_engage", detail: "Said no in March — timing may have changed, worth a light touch" },

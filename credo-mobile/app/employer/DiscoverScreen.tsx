@@ -65,9 +65,7 @@ export default function DiscoverScreen({ route }: Props) {
   useFocusEffect(
     useCallback(() => {
       const incoming = route.params?.filterSkills ?? [];
-      if (incoming.length > 0) {
-        setActiveSkills(incoming);
-      }
+      setActiveSkills(incoming);
     }, [route.params?.filterSkills])
   );
 
@@ -117,7 +115,7 @@ export default function DiscoverScreen({ route }: Props) {
             </View>
           )}
 
-          <View style={{ gap: 12, marginTop: 4 }}>
+          <View style={styles.chipRow}>
             {list.map((c) => (
               <CandidateCard key={c.id} c={c} />
             ))}
@@ -166,4 +164,5 @@ const styles = StyleSheet.create({
   },
   activeChipText: { fontFamily: fonts.mono, fontSize: 11, color: colors.ink },
   empty: { fontFamily: fonts.sans, fontSize: 13, color: colors.slate, textAlign: "center", marginTop: 20 },
+  chipRow: { gap: 12, marginTop: 4 },
 });

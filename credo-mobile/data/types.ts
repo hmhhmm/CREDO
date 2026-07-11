@@ -52,3 +52,24 @@ export interface Candidate {
   ledger: LedgerEntry[];
   merkleRoot: string | null;
 }
+
+export type EmploymentType = "full-time" | "internship" | "contract";
+export type JobStatus = "open" | "closed";
+
+export interface RequiredSkill {
+  name: string;
+  verifiedOnly: boolean;
+}
+
+export interface JobListing {
+  id: string;
+  title: string;
+  location: string;
+  employmentType: EmploymentType;
+  salaryMin: number | null;
+  salaryMax: number | null;
+  description: string;
+  requiredSkills: RequiredSkill[];
+  status: JobStatus;
+  createdAt: string;
+}

@@ -1,15 +1,17 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { LayoutDashboard, Search, ListChecks, ScanLine } from "lucide-react-native";
+import type { NavigatorScreenParams } from "@react-navigation/native";
 import EmployerHomeStack from "./EmployerHomeStack";
-import DiscoverScreen from "../app/employer/DiscoverScreen";
+import DiscoverStack from "./DiscoverStack";
 import PipelineScreen from "../app/employer/PipelineScreen";
 import FairModeScreen from "../app/employer/FairModeScreen";
 import SegmentedTabBar from "./SegmentedTabBar";
+import type { DiscoverStackParamList } from "./DiscoverStack";
 
 export type EmployerTabsParamList = {
   Home: undefined;
   FairMode: undefined;
-  Discover: { filterSkills?: string[] } | undefined;
+  Discover: NavigatorScreenParams<DiscoverStackParamList> | undefined;
   Pipeline: undefined;
 };
 
@@ -26,7 +28,7 @@ export default function EmployerTabs({ onSwitchRole }: { onSwitchRole: () => voi
     >
       <Tab.Screen name="Home">{() => <EmployerHomeStack onSwitchRole={onSwitchRole} />}</Tab.Screen>
       <Tab.Screen name="FairMode" component={FairModeScreen} />
-      <Tab.Screen name="Discover" component={DiscoverScreen} />
+      <Tab.Screen name="Discover" component={DiscoverStack} />
       <Tab.Screen name="Pipeline" component={PipelineScreen} />
     </Tab.Navigator>
   );

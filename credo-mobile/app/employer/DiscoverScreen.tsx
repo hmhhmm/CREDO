@@ -3,21 +3,22 @@ import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import { Check, TrendingUp, X } from "lucide-react-native";
-import type { BottomTabScreenProps } from "@react-navigation/bottom-tabs";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import { getConfidenceBand } from "../../utils/confidenceBand";
 import { discoverCandidates, type DiscoverCandidate } from "../../data/employerData";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
-import type { EmployerTabsParamList } from "../../navigation/EmployerTabs";
+import type { DiscoverStackParamList } from "../../navigation/DiscoverStack";
 
-type Props = BottomTabScreenProps<EmployerTabsParamList, "Discover">;
+type Props = NativeStackScreenProps<DiscoverStackParamList, "DiscoverMain">;
 
-function CandidateCard({ c }: { c: DiscoverCandidate }) {
+function CandidateCard({ c, onPress }: { c: DiscoverCandidate; onPress: () => void }) {
   const band = getConfidenceBand(c.trustScore);
   const initials = c.name.split(" ").map((n) => n[0]).join("");
   return (
+    <Pressable onPress={onPress}>
     <GlassCard radius={20}>
       <View style={styles.card}>
         <View style={styles.cardHead}>
@@ -54,10 +55,11 @@ function CandidateCard({ c }: { c: DiscoverCandidate }) {
         </View>
       </View>
     </GlassCard>
+    </Pressable>
   );
 }
 
-export default function DiscoverScreen({ route }: Props) {
+export default function DiscoverScreen({ route, navigation }: Props) {
   const paramSkills = route.params?.filterSkills ?? [];
   const [verifiedOnly, setVerifiedOnly] = useState(false);
   const [activeSkills, setActiveSkills] = useState<string[]>(paramSkills);
@@ -117,7 +119,11 @@ export default function DiscoverScreen({ route }: Props) {
 
           <View style={styles.chipRow}>
             {list.map((c) => (
-              <CandidateCard key={c.id} c={c} />
+              <CandidateCard
+                key={c.id}
+                c={c}
+                onPress={() => navigation.navigate("CandidateProfile", { candidate: c })}
+              />
             ))}
             {list.length === 0 && (
               <Text style={styles.empty}>No candidates match the current filters.</Text>

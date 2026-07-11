@@ -54,9 +54,14 @@ export default function JobDetailScreen({ route, navigation }: Props) {
     const filterSkills = job.required_skills.map((s) => s.name);
     // Navigate to the Discover tab (sibling tab) with the skill filter pre-applied.
     // JobDetailScreen is inside EmployerHomeStack (NativeStack), whose parent is EmployerTabs.
+    // Discover is now a nested stack, so we target DiscoverMain via screen/params.
     const tabNav = navigation.getParent();
     if (tabNav) {
-      (tabNav as { navigate: (name: string, params?: object) => void }).navigate("Discover", { filterSkills });
+      (tabNav as { navigate: (name: string, params?: object) => void }).navigate("Discover", {
+        screen: "DiscoverMain",
+        params: { filterSkills },
+        initial: false,
+      });
     }
   };
 

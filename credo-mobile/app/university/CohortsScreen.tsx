@@ -1,14 +1,27 @@
-import { View, Text, ScrollView, StyleSheet } from "react-native";
+import { useState } from "react";
+import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ShieldCheck, Users } from "lucide-react-native";
+import { ShieldCheck, Users, ChevronDown, ChevronUp, FileBadge } from "lucide-react-native";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import { getConfidenceBand } from "../../utils/confidenceBand";
-import { cohorts } from "../../data/universityData";
+import { cohorts, university } from "../../data/universityData";
+import { mockCandidates } from "../../data/mockData";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 
+// U5: credentials this university has actually issued into the ledger, for a given
+// programme — derived from the shared candidate roster instead of a static flag.
+function issuedCredentialsFor(programme: string) {
+  const subject = programme.replace(/^BSc\s*/, "");
+  return mockCandidates
+    .filter((c) => c.university === university.name && c.field === subject)
+    .flatMap((c) => c.artifacts.filter((a) => a.type === "credential").map((a) => ({ candidate: c.name, artifact: a })));
+}
+
 export default function CohortsScreen() {
+  const [expanded, setExpanded] = useState<string | null>(null);
+
   return (
     <View style={{ flex: 1 }}>
       <ScreenBackground />
@@ -20,6 +33,8 @@ export default function CohortsScreen() {
           <View style={{ gap: 12, marginTop: 8 }}>
             {cohorts.map((c) => {
               const band = getConfidenceBand(c.readiness);
+              const isOpen = expanded === c.programme;
+              const issued = c.issuerActive ? issuedCredentialsFor(c.programme) : [];
               return (
                 <GlassCard key={c.programme} radius={20}>
                   <View style={styles.card}>
@@ -39,16 +54,42 @@ export default function CohortsScreen() {
                         <Text style={styles.metaText}>{c.verifiedPct}% verified</Text>
                       </View>
                       {c.issuerActive && (
-                        <View style={styles.issuerChip}>
+                        <Pressable
+                          style={styles.issuerChip}
+                          onPress={() => setExpanded(isOpen ? null : c.programme)}
+                        >
                           <ShieldCheck size={12} color={colors.verified} />
                           <Text style={styles.issuerText}>Credential issuer active</Text>
-                        </View>
+                          {isOpen ? (
+                            <ChevronUp size={12} color={colors.verified} />
+                          ) : (
+                            <ChevronDown size={12} color={colors.verified} />
+                          )}
+                        </Pressable>
                       )}
                     </View>
 
                     <View style={styles.track}>
                       <View style={[styles.fill, { width: `${c.readiness}%`, backgroundColor: band.hex }]} />
                     </View>
+
+                    {isOpen && (
+                      <View style={styles.issuerPanel}>
+                        {issued.length === 0 ? (
+                          <Text style={styles.issuerEmpty}>No credentials issued into the ledger for this programme yet.</Text>
+                        ) : (
+                          issued.map(({ candidate, artifact }) => (
+                            <View key={artifact.id} style={styles.issuedRow}>
+                              <FileBadge size={13} color={colors.gold} />
+                              <View style={{ flex: 1 }}>
+                                <Text style={styles.issuedName}>{artifact.name}</Text>
+                                <Text style={styles.issuedMeta}>{candidate} · {artifact.date}</Text>
+                              </View>
+                            </View>
+                          ))
+                        )}
+                      </View>
+                    )}
                   </View>
                 </GlassCard>
               );
@@ -81,4 +122,10 @@ const styles = StyleSheet.create({
 
   track: { height: 5, backgroundColor: "rgba(16,25,43,0.08)", borderRadius: 3, overflow: "hidden" },
   fill: { height: "100%", borderRadius: 3 },
+
+  issuerPanel: { gap: 8, paddingTop: 4, borderTopWidth: 1, borderTopColor: "rgba(16,25,43,0.08)" },
+  issuerEmpty: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.slate, fontStyle: "italic" },
+  issuedRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  issuedName: { fontFamily: fonts.sansSemiBold, fontSize: 12.5, color: colors.ink },
+  issuedMeta: { fontFamily: fonts.mono, fontSize: 10.5, color: colors.slate, marginTop: 1 },
 });

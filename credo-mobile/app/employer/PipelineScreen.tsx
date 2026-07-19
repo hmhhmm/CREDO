@@ -5,8 +5,10 @@ import { FileText, Send, RefreshCw, ChevronRight, Check } from "lucide-react-nat
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
-import { pipeline, STAGE_META, type PipelineEntry } from "../../data/employerData";
+import { STAGE_META, type PipelineEntry } from "../../data/employerData";
 import type { DiscoverCandidate } from "../../data/employerData";
+import { mockCandidates } from "../../data/mockData";
+import { usePipeline } from "../../context/PipelineContext";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 import type { PipelineStackParamList } from "../../navigation/PipelineStack";
@@ -14,25 +16,28 @@ import type { PipelineStackParamList } from "../../navigation/PipelineStack";
 type Props = NativeStackScreenProps<PipelineStackParamList, "PipelineMain">;
 
 function buildCandidate(e: PipelineEntry): DiscoverCandidate {
+  const full = mockCandidates.find((c) => c.id === e.candidateId);
   return {
-    id: e.id,
-    name: e.name,
-    field: e.field,
-    university: "",
-    year: "",
-    location: "",
-    openToWork: false,
-    avatar: null,
-    bio: "",
-    linkedinUrl: null,
-    githubUrl: null,
-    trustScore: e.trustScore,
-    verifiedSkills: [],
-    claimedSkills: [],
-    simuHire: { completed: false, shared: false },
-    artifacts: [],
-    ledger: [],
-    merkleRoot: null,
+    ...(full ?? {
+      id: e.id,
+      name: e.name,
+      field: e.field,
+      university: "",
+      year: "",
+      location: "",
+      openToWork: false,
+      avatar: null,
+      bio: "",
+      linkedinUrl: null,
+      githubUrl: null,
+      trustScore: e.trustScore,
+      verifiedSkills: [],
+      claimedSkills: [],
+      simuHire: { completed: false, shared: false },
+      artifacts: [],
+      ledger: [],
+      merkleRoot: null,
+    }),
     trajectory: e.detail,
   };
 }
@@ -53,6 +58,7 @@ function actionFor(entry: PipelineEntry): { label: string; Icon: typeof Send } {
 }
 
 export default function PipelineScreen({ navigation }: Props) {
+  const { pipeline } = usePipeline();
   const [sent, setSent] = useState<string | null>(null);
 
   return (

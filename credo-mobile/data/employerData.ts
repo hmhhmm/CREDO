@@ -76,6 +76,7 @@ export const discoverCandidates: DiscoverCandidate[] = mockCandidates.map((c, i)
 export type PipelineStage = "invited" | "simuhire_done" | "shortlisted" | "re_engage";
 export interface PipelineEntry {
   id: string;
+  candidateId: string; // links back to mockCandidates — same person as Discover/Partners
   name: string;
   field: string;
   trustScore: number;
@@ -87,12 +88,20 @@ export interface PipelineEntry {
     dimensions: Record<string, number>;
   };
 }
+
+function candidateFor(id: string) {
+  const c = mockCandidates.find((c) => c.id === id);
+  if (!c) throw new Error(`Unknown candidate id in pipeline: ${id}`);
+  return c;
+}
+
 export const pipeline: PipelineEntry[] = [
   {
     id: "p1",
-    name: "Ahmad Farid",
-    field: "Computer Science",
-    trustScore: 87,
+    candidateId: "ahmad-rahim",
+    name: candidateFor("ahmad-rahim").name,
+    field: candidateFor("ahmad-rahim").field,
+    trustScore: candidateFor("ahmad-rahim").trustScore,
     stage: "simuhire_done",
     detail: "SimuHire Technical · 82/100 — report ready to review",
     simuHire: {
@@ -101,9 +110,33 @@ export const pipeline: PipelineEntry[] = [
       dimensions: { adaptability: 88, communication: 76, problemSolving: 85, stressResponse: 79, systemsThinking: 82 },
     },
   },
-  { id: "p2", name: "Priya Nair", field: "Software Engineering", trustScore: 71, stage: "invited", detail: "SimuHire invite sent 2 days ago — awaiting completion" },
-  { id: "p3", name: "Lim Wei", field: "Data Science", trustScore: 79, stage: "shortlisted", detail: "Shortlisted for Junior ML Engineer — verified Python/SQL" },
-  { id: "p4", name: "Sara Yusof", field: "Product Design", trustScore: 68, stage: "re_engage", detail: "Said no in March — timing may have changed, worth a light touch" },
+  {
+    id: "p2",
+    candidateId: "priya-nair",
+    name: candidateFor("priya-nair").name,
+    field: candidateFor("priya-nair").field,
+    trustScore: candidateFor("priya-nair").trustScore,
+    stage: "invited",
+    detail: "SimuHire invite sent 2 days ago — awaiting completion",
+  },
+  {
+    id: "p3",
+    candidateId: "lim-wei",
+    name: candidateFor("lim-wei").name,
+    field: candidateFor("lim-wei").field,
+    trustScore: candidateFor("lim-wei").trustScore,
+    stage: "shortlisted",
+    detail: "Shortlisted for Junior ML Engineer — verified Python/SQL",
+  },
+  {
+    id: "p4",
+    candidateId: "sara-yusof",
+    name: candidateFor("sara-yusof").name,
+    field: candidateFor("sara-yusof").field,
+    trustScore: candidateFor("sara-yusof").trustScore,
+    stage: "re_engage",
+    detail: "Said no in March — timing may have changed, worth a light touch",
+  },
 ];
 
 export const STAGE_META: Record<PipelineStage, { label: string; color: string }> = {

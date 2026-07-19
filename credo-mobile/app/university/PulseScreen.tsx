@@ -1,14 +1,16 @@
 import { View, Text, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { AlertTriangle, TrendingDown } from "lucide-react-native";
+import { AlertTriangle, TrendingDown, ArrowRight } from "lucide-react-native";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import ScoreRing from "../../components/shared/ScoreRing";
-import { university, campusReadiness, behavioralBenchmark, skillGaps, interventionAlert } from "../../data/universityData";
+import { university, campusReadiness, behavioralBenchmark, skillGaps, curriculumActions, getInterventionAlert } from "../../data/universityData";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 
 export default function PulseScreen() {
+  const interventionAlert = getInterventionAlert();
+
   return (
     <View style={{ flex: 1 }}>
       <ScreenBackground />
@@ -31,15 +33,17 @@ export default function PulseScreen() {
             </View>
           </GlassCard>
 
-          {/* U3 — Early Intervention Alert */}
-          <View style={styles.alert}>
-            <View style={styles.alertHead}>
-              <AlertTriangle size={16} color={colors.alert} />
-              <Text style={styles.alertTag}>Early Intervention Alert</Text>
+          {/* U3 — Early Intervention Alert (only renders when a cohort crosses the threshold) */}
+          {interventionAlert && (
+            <View style={styles.alert}>
+              <View style={styles.alertHead}>
+                <AlertTriangle size={16} color={colors.alert} />
+                <Text style={styles.alertTag}>Early Intervention Alert</Text>
+              </View>
+              <Text style={styles.alertCohort}>{interventionAlert.cohort}</Text>
+              <Text style={styles.alertBody}>{interventionAlert.message}</Text>
             </View>
-            <Text style={styles.alertCohort}>{interventionAlert.cohort}</Text>
-            <Text style={styles.alertBody}>{interventionAlert.message}</Text>
-          </View>
+          )}
 
           {/* U4 — Behavioral Benchmark */}
           <Text style={styles.sectionLabel}>Behavioral Benchmark</Text>
@@ -59,24 +63,33 @@ export default function PulseScreen() {
             </View>
           </GlassCard>
 
-          {/* U2 — Curriculum Gap Detector */}
+          {/* U2 — Curriculum Gap Detector, paired with U9's closed-loop response */}
           <Text style={styles.sectionLabel}>Curriculum Gap Detector</Text>
           <View style={{ gap: 12 }}>
-            {skillGaps.map((g) => (
-              <GlassCard key={g.skill} radius={18}>
-                <View style={styles.gapCard}>
-                  <View style={styles.gapHead}>
-                    <TrendingDown size={15} color={colors.alert} />
-                    <Text style={styles.gapSkill}>{g.skill}</Text>
-                    <Text style={styles.gapRate}>{g.verifyRate}% verify</Text>
+            {skillGaps.map((g) => {
+              const response = curriculumActions.find((a) => a.skill === g.skill);
+              return (
+                <GlassCard key={g.skill} radius={18}>
+                  <View style={styles.gapCard}>
+                    <View style={styles.gapHead}>
+                      <TrendingDown size={15} color={colors.alert} />
+                      <Text style={styles.gapSkill}>{g.skill}</Text>
+                      <Text style={styles.gapRate}>{g.verifyRate}% verify</Text>
+                    </View>
+                    <Text style={styles.gapTaught}>Taught in {g.taughtIn}</Text>
+                    <View style={styles.track}>
+                      <View style={[styles.fill, { width: `${g.verifyRate}%`, backgroundColor: colors.alert }]} />
+                    </View>
+                    {response && (
+                      <View style={styles.actionRow}>
+                        <ArrowRight size={13} color={colors.verified} />
+                        <Text style={styles.actionText}>{response.action}</Text>
+                      </View>
+                    )}
                   </View>
-                  <Text style={styles.gapTaught}>Taught in {g.taughtIn}</Text>
-                  <View style={styles.track}>
-                    <View style={[styles.fill, { width: `${g.verifyRate}%`, backgroundColor: colors.alert }]} />
-                  </View>
-                </View>
-              </GlassCard>
-            ))}
+                </GlassCard>
+              );
+            })}
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -116,4 +129,6 @@ const styles = StyleSheet.create({
   gapSkill: { flex: 1, fontFamily: fonts.sansSemiBold, fontSize: 14, color: colors.ink },
   gapRate: { fontFamily: fonts.mono, fontSize: 12, color: colors.alert },
   gapTaught: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.slate },
+  actionRow: { flexDirection: "row", alignItems: "flex-start", gap: 7, marginTop: 2 },
+  actionText: { flex: 1, fontFamily: fonts.sansMedium, fontSize: 11.5, color: colors.verified, lineHeight: 16 },
 });

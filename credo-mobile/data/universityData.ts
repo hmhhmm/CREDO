@@ -1,4 +1,5 @@
 // Rich mock data for the University side (U1–U10). Pure local demo data — no backend.
+import { mockCandidates } from "./mockData";
 
 export const university = {
   name: "Universiti Malaya",
@@ -38,12 +39,17 @@ export const skillGaps: SkillGap[] = [
   { skill: "Data Visualisation", taughtIn: "DS2200 Analytics", verifyRate: 58 },
 ];
 
-// ── U3 Early Intervention Alert ─────────────────────────────────────────────────
-export const interventionAlert = {
-  cohort: "BSc Software Engineering · Year 3",
-  message:
-    "Readiness for this cohort has trended down 9 points over 8 weeks, driven by low verification rates in cloud and testing skills. Flagging now — 7 months before graduation — so curriculum can adjust.",
-};
+// ── U9 Outcome Loop (curriculum half): the action taken in response to each gap
+// above — this is what makes the loop a loop, not just a stat that dead-ends.
+export interface CurriculumAction {
+  skill: string; // matches a SkillGap.skill
+  action: string;
+}
+export const curriculumActions: CurriculumAction[] = [
+  { skill: "Cloud Infrastructure", action: "CS3040 added 2 additional hands-on lab sessions this semester" },
+  { skill: "Test-Driven Development", action: "SE2010 now requires a verified test-coverage artifact to pass" },
+  { skill: "Data Visualisation", action: "DS2200 partnered with a guest practitioner for a dashboarding workshop" },
+];
 
 // ── U7 Adaptive Readiness + U5 Credential Issuer: per-programme cohorts ──────────
 export interface Cohort {
@@ -60,6 +66,30 @@ export const cohorts: Cohort[] = [
   { programme: "BSc Data Science", year: "Year 3", readiness: 76, students: 194, verifiedPct: 79, issuerActive: false },
   { programme: "BSc Information Tech", year: "Year 2", readiness: 63, students: 240, verifiedPct: 55, issuerActive: false },
 ];
+
+// ── U3 Early Intervention Alert: derived from cohorts + skillGaps above ─────────
+// Fires only when a cohort's readiness actually drops below the threshold — not a
+// permanently-shown static card — so the "early warning" claim is demonstrable.
+const INTERVENTION_THRESHOLD = 70;
+
+export interface InterventionAlert {
+  cohort: string;
+  message: string;
+}
+
+export function getInterventionAlert(): InterventionAlert | null {
+  const atRisk = cohorts.filter((c) => c.readiness < INTERVENTION_THRESHOLD);
+  if (atRisk.length === 0) return null;
+
+  const worst = atRisk.reduce((a, b) => (b.readiness < a.readiness ? b : a));
+  const lowestGaps = [...skillGaps].sort((a, b) => a.verifyRate - b.verifyRate).slice(0, 2);
+  const skillNames = lowestGaps.map((g) => g.skill.toLowerCase()).join(" and ");
+
+  return {
+    cohort: `${worst.programme} · ${worst.year}`,
+    message: `Readiness for this cohort sits at ${worst.readiness}, driven by low verification rates in ${skillNames}. Flagging now so curriculum can adjust before graduation.`,
+  };
+}
 
 // ── U9 Outcome Loop + U10 Alumni Pulse: post-grad tracking ──────────────────────
 export interface OutcomeStat {
@@ -93,6 +123,7 @@ export const lifelongWallet = {
 // ── U6 Live Internship Marketplace: student → employer matches ──────────────────
 export interface InternshipMatch {
   id: string;
+  candidateId: string; // links back to mockCandidates — same person as Discover/Pipeline
   student: string;
   programme: string;
   trustScore: number;
@@ -100,8 +131,42 @@ export interface InternshipMatch {
   role: string;
   matchPct: number;
 }
+
+function candidateFor(id: string) {
+  const c = mockCandidates.find((c) => c.id === id);
+  if (!c) throw new Error(`Unknown candidate id in internshipMatches: ${id}`);
+  return c;
+}
+
 export const internshipMatches: InternshipMatch[] = [
-  { id: "m1", student: "Ahmad Farid", programme: "BSc Computer Science", trustScore: 87, employer: "TechCorp Malaysia", role: "ML Engineering Intern", matchPct: 92 },
-  { id: "m2", student: "Priya Nair", programme: "BSc Software Engineering", trustScore: 71, employer: "Grab", role: "Frontend Intern", matchPct: 84 },
-  { id: "m3", student: "Lim Wei", programme: "BSc Data Science", trustScore: 79, employer: "AirAsia", role: "Data Analyst Intern", matchPct: 88 },
+  {
+    id: "m1",
+    candidateId: "ahmad-rahim",
+    student: candidateFor("ahmad-rahim").name,
+    programme: "BSc Computer Science",
+    trustScore: candidateFor("ahmad-rahim").trustScore,
+    employer: "TechCorp Malaysia",
+    role: "ML Engineering Intern",
+    matchPct: 92,
+  },
+  {
+    id: "m2",
+    candidateId: "priya-nair",
+    student: candidateFor("priya-nair").name,
+    programme: "BSc Software Engineering",
+    trustScore: candidateFor("priya-nair").trustScore,
+    employer: "Grab",
+    role: "Frontend Intern",
+    matchPct: 84,
+  },
+  {
+    id: "m3",
+    candidateId: "lim-wei",
+    student: candidateFor("lim-wei").name,
+    programme: "BSc Data Science",
+    trustScore: candidateFor("lim-wei").trustScore,
+    employer: "AirAsia",
+    role: "Data Analyst Intern",
+    matchPct: 88,
+  },
 ];

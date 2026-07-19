@@ -1,14 +1,17 @@
-import { View, Text, ScrollView, Pressable, StyleSheet, Alert } from "react-native";
+import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ArrowRight, Building2 } from "lucide-react-native";
+import { ArrowRight, Building2, Check } from "lucide-react-native";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import { getConfidenceBand } from "../../utils/confidenceBand";
-import { internshipMatches } from "../../data/universityData";
+import { internshipMatches, university } from "../../data/universityData";
+import { usePipeline } from "../../context/PipelineContext";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 
 export default function PartnersScreen() {
+  const { pipeline, addToPipeline } = usePipeline();
+
   return (
     <View style={{ flex: 1 }}>
       <ScreenBackground />
@@ -20,6 +23,7 @@ export default function PartnersScreen() {
           <View style={{ gap: 12, marginTop: 8 }}>
             {internshipMatches.map((m) => {
               const band = getConfidenceBand(m.trustScore);
+              const introduced = pipeline.some((p) => p.candidateId === m.candidateId);
               return (
                 <GlassCard key={m.id} radius={20}>
                   <View style={styles.card}>
@@ -52,9 +56,29 @@ export default function PartnersScreen() {
                       </View>
                     </View>
 
-                    <Pressable style={styles.pushBtn} onPress={() => Alert.alert("Pushed", `${m.student} introduced to ${m.employer} (demo)`)}>
-                      <Text style={styles.pushText}>Introduce to employer</Text>
-                    </Pressable>
+                    {introduced ? (
+                      <View style={styles.introducedRow}>
+                        <Check size={14} color={colors.verified} strokeWidth={2.5} />
+                        <Text style={styles.introducedText}>Introduced — now in {m.employer}'s Pipeline</Text>
+                      </View>
+                    ) : (
+                      <Pressable
+                        style={styles.pushBtn}
+                        onPress={() =>
+                          addToPipeline({
+                            id: `intro-${m.candidateId}`,
+                            candidateId: m.candidateId,
+                            name: m.student,
+                            field: m.programme.replace(/^BSc\s*/, ""),
+                            trustScore: m.trustScore,
+                            stage: "invited",
+                            detail: `Introduced via ${university.name} Internship Marketplace — matched ${m.matchPct}% for ${m.role} at ${m.employer}`,
+                          })
+                        }
+                      >
+                        <Text style={styles.pushText}>Introduce to employer</Text>
+                      </Pressable>
+                    )}
                   </View>
                 </GlassCard>
               );
@@ -87,4 +111,7 @@ const styles = StyleSheet.create({
 
   pushBtn: { backgroundColor: colors.ink, borderRadius: 12, paddingVertical: 12, alignItems: "center" },
   pushText: { fontFamily: fonts.sansSemiBold, fontSize: 13, color: colors.parchment },
+
+  introducedRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, paddingVertical: 12 },
+  introducedText: { fontFamily: fonts.sansSemiBold, fontSize: 12.5, color: colors.verified },
 });

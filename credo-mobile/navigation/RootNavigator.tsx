@@ -3,6 +3,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { DemoProvider } from "../context/DemoContext";
+import { PipelineProvider } from "../context/PipelineContext";
 import { AuthProvider } from "../context/AuthContext";
 import AuthGate from "../app/auth/AuthGate";
 import RoleSelectScreen from "../app/auth/RoleSelectScreen";
@@ -60,9 +61,11 @@ export default function RootNavigator() {
       <SafeAreaProvider>
         <AuthProvider>
           <DemoProvider>
-            <NavigationContainer>
-              <RoleStackNavigator />
-            </NavigationContainer>
+            <PipelineProvider>
+              <NavigationContainer>
+                <RoleStackNavigator />
+              </NavigationContainer>
+            </PipelineProvider>
           </DemoProvider>
         </AuthProvider>
       </SafeAreaProvider>

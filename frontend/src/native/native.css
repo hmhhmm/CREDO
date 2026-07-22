@@ -1,0 +1,184 @@
+/* Base rules for the react-native compat primitives.
+   Mirrors react-native-web's reset: RN's layout defaults (column flex, no shrink,
+   border-box, solid borders) differ from CSS's, so every View starts from these. */
+
+.rn-view {
+  align-items: stretch;
+  background-color: transparent;
+  border: 0 solid black;
+  box-sizing: border-box;
+  display: flex;
+  flex-basis: auto;
+  flex-direction: column;
+  flex-shrink: 0;
+  margin: 0;
+  min-height: 0;
+  min-width: 0;
+  padding: 0;
+  position: relative;
+  z-index: 0;
+}
+
+/* pointerEvents="none" */
+.rn-box-hidden {
+  pointer-events: none;
+}
+
+/* pointerEvents="box-none": the box itself is transparent to input, children are not. */
+.rn-box-none {
+  pointer-events: none;
+}
+
+.rn-box-none > * {
+  pointer-events: auto;
+}
+
+.rn-text {
+  border: 0 solid black;
+  box-sizing: border-box;
+  color: inherit;
+  display: inline;
+  font: inherit;
+  margin: 0;
+  padding: 0;
+  position: relative;
+  text-align: inherit;
+  text-decoration: none;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.rn-pressable {
+  -webkit-tap-highlight-color: transparent;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: inherit;
+  transition: opacity 120ms ease;
+  user-select: none;
+}
+
+.rn-pressable[aria-disabled='true'] {
+  cursor: default;
+}
+
+.rn-pressable:active {
+  opacity: 0.72;
+}
+
+.rn-scroll {
+  -webkit-overflow-scrolling: touch;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.rn-scroll.rn-scroll-horizontal {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.rn-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.rn-scroll-content {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  min-height: 100%;
+}
+
+.rn-scroll-horizontal > .rn-scroll-content {
+  flex-direction: row;
+  min-height: 0;
+  min-width: 100%;
+}
+
+.rn-input {
+  background: transparent;
+  border: 0 solid black;
+  box-sizing: border-box;
+  font: inherit;
+  margin: 0;
+  outline: none;
+  padding: 0;
+  resize: none;
+}
+
+/* placeholderTextColor is an RN prop, not CSS — TextInput forwards it as this variable. */
+.rn-input::placeholder {
+  color: var(--rn-placeholder, #9aa3ad);
+}
+
+/* ── Desktop layout ──────────────────────────────────────────────────────────
+   The screens are phone-first: a single column with ~20px padding, sized for a
+   viewport around 400px wide. Two rules adapt that to a desktop window without
+   touching the screens themselves.
+
+   The breakpoint MUST match DESKTOP_MIN_WIDTH in
+   src/mobile/navigation/SegmentedTabBar.tsx, which switches the same threshold from
+   the floating tab pill to the fixed left rail. */
+@media (min-width: 900px) {
+  /* Clear the rail. Keep in sync with RAIL_WIDTH in SegmentedTabBar.tsx. */
+  .rn-tab-scenes {
+    padding-left: 232px;
+  }
+
+  /* A screen's content column stops growing at a comfortable reading measure and
+     centres in whatever space is left, instead of stretching to the window edge.
+     This is applied to the screens' SafeAreaView root rather than to their
+     ScrollViews, so that everything in a screen shares one column — on the SimuHire
+     chat, capping only the scroll area left the composer misaligned beneath it. The
+     ambient ScreenBackground is a sibling of this element, so it still runs
+     full-bleed behind the column. */
+  .rn-safe-area {
+    margin-inline: auto;
+    max-width: 880px;
+    width: 100%;
+  }
+}
+
+@keyframes rn-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rn-activity-indicator {
+  animation: rn-spin 750ms linear infinite;
+  border-radius: 50%;
+  border-style: solid;
+  flex-shrink: 0;
+}
+
+/* Native switch is styled per-platform; this is the iOS-style pill the report screen expects. */
+.rn-switch {
+  align-items: center;
+  background: rgba(16, 25, 43, 0.16);
+  border-radius: 16px;
+  cursor: pointer;
+  display: flex;
+  flex-shrink: 0;
+  height: 31px;
+  padding: 2px;
+  transition: background-color 160ms ease;
+  width: 51px;
+}
+
+.rn-switch[data-on='true'] {
+  background: #1f7a5c;
+}
+
+.rn-switch-thumb {
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  height: 27px;
+  transition: transform 160ms ease;
+  width: 27px;
+}
+
+.rn-switch[data-on='true'] .rn-switch-thumb {
+  transform: translateX(20px);
+}

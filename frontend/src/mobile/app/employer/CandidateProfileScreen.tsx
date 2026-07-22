@@ -1,0 +1,273 @@
+import { useState } from "react";
+import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { MapPin, TrendingUp, Check } from "lucide-react-native";
+import ScreenBackground from "../../components/shared/ScreenBackground";
+import GlassCard from "../../components/shared/GlassCard";
+import { getConfidenceBand } from "../../utils/confidenceBand";
+import { colors } from "../../theme/colors";
+import { fonts } from "../../theme/typography";
+import type { DiscoverCandidate } from "../../data/employerData";
+
+type Props = { route: { params: { candidate: DiscoverCandidate } }; navigation?: unknown };
+
+const DIMENSION_LABELS: Record<string, string> = {
+  adaptability: "Adaptability",
+  communication: "Communication",
+  problemSolving: "Problem Solving",
+  stressResponse: "Stress Response",
+  systemsThinking: "Systems Thinking",
+};
+
+const DIMENSION_KEYS = ["adaptability", "communication", "problemSolving", "stressResponse", "systemsThinking"] as const;
+
+export default function CandidateProfileScreen({ route }: Props) {
+  const { candidate: c } = route.params;
+  const [invited, setInvited] = useState(false);
+
+  const band = getConfidenceBand(c.trustScore);
+  const initials = c.name
+    .split(" ")
+    .map((n) => n[0])
+    .join("");
+
+  const simuHire = c.simuHire;
+
+  return (
+    <View style={styles.root}>
+      <ScreenBackground />
+      <SafeAreaView style={styles.safeArea} edges={["bottom"]}>
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          {/* Header block */}
+          <GlassCard radius={22}>
+            <View style={styles.headerBlock}>
+              <View style={styles.headerTop}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>{initials}</Text>
+                </View>
+                <View style={styles.headerInfo}>
+                  <Text style={styles.name}>{c.name}</Text>
+                  <Text style={styles.fieldMeta} numberOfLines={1}>
+                    {c.field} · {c.university}
+                  </Text>
+                  {c.location ? (
+                    <View style={styles.locationRow}>
+                      <MapPin size={12} color={colors.slate} />
+                      <Text style={styles.locationText}>{c.location}</Text>
+                    </View>
+                  ) : null}
+                </View>
+                <View style={[styles.trustRing, { borderColor: band.hex }]}>
+                  <Text style={[styles.trustScore, { color: band.hex }]}>{c.trustScore}</Text>
+                </View>
+              </View>
+              {c.openToWork && (
+                <View style={styles.openPill}>
+                  <Text style={styles.openPillText}>Open to work</Text>
+                </View>
+              )}
+            </View>
+          </GlassCard>
+
+          {/* Verified skills */}
+          <GlassCard radius={18}>
+            <View style={styles.block}>
+              <Text style={styles.blockTitle}>Verified Skills</Text>
+              {c.verifiedSkills.length > 0 ? (
+                <View style={styles.skillsList}>
+                  {c.verifiedSkills.map((s) => (
+                    <View key={s.name} style={styles.skillRow}>
+                      <Text style={styles.skillName}>{s.name}</Text>
+                      <View style={styles.barTrack}>
+                        <View style={[styles.barFill, { width: `${s.confidence}%` }]} />
+                      </View>
+                      <Text style={styles.skillConfidence}>{s.confidence}%</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : (
+                <Text style={styles.emptySlate}>No verified skills yet</Text>
+              )}
+            </View>
+          </GlassCard>
+
+          {/* Claimed skills — only if present */}
+          {c.claimedSkills && c.claimedSkills.length > 0 && (
+            <GlassCard radius={18}>
+              <View style={styles.block}>
+                <Text style={styles.blockTitle}>Also claims</Text>
+                <View style={styles.chipRow}>
+                  {c.claimedSkills.map((skill) => (
+                    <View key={skill} style={styles.claimedChip}>
+                      <Text style={styles.claimedChipText}>{skill}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </GlassCard>
+          )}
+
+          {/* SimuHire block */}
+          <GlassCard radius={18}>
+            <View style={styles.block}>
+              {simuHire.completed && simuHire.shared ? (
+                <>
+                  <View style={styles.simuHireHeader}>
+                    <Text style={styles.blockTitle}>
+                      SimuHire{simuHire.type ? ` · ${simuHire.type}` : ""}
+                    </Text>
+                    <View style={[styles.scoreBadge, { backgroundColor: "rgba(31,122,92,0.12)" }]}>
+                      <Text style={[styles.scoreBadgeText, { color: colors.verified }]}>
+                        {simuHire.overallScore ?? "—"}/100
+                      </Text>
+                    </View>
+                  </View>
+                  {simuHire.dimensions && (
+                    <View style={styles.dimensionsList}>
+                      {DIMENSION_KEYS.map((key) => {
+                        const score = (simuHire.dimensions as Record<string, number>)[key] ?? 0;
+                        return (
+                          <View key={key} style={styles.dimensionRow}>
+                            <Text style={styles.dimensionLabel}>{DIMENSION_LABELS[key]}</Text>
+                            <View style={styles.dimensionBarTrack}>
+                              <View style={[styles.dimensionBarFill, { width: `${score}%` }]} />
+                            </View>
+                            <Text style={styles.dimensionScore}>{score}</Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  )}
+                </>
+              ) : simuHire.completed && !simuHire.shared ? (
+                <Text style={styles.emptySlate}>SimuHire completed — candidate chose to keep private</Text>
+              ) : (
+                <Text style={styles.emptySlate}>SimuHire not yet completed</Text>
+              )}
+            </View>
+          </GlassCard>
+
+          {/* Trajectory block */}
+          {"trajectory" in c && typeof c.trajectory === "string" && (
+            <GlassCard radius={18}>
+              <View style={styles.trajBlock}>
+                <TrendingUp size={14} color={colors.gold} />
+                <Text style={styles.trajText}>{c.trajectory}</Text>
+              </View>
+            </GlassCard>
+          )}
+
+          {/* Bottom action */}
+          {invited ? (
+            <View style={styles.invitedRow}>
+              <Check size={16} color={colors.verified} strokeWidth={2.5} />
+              <Text style={styles.invitedText}>Invite sent</Text>
+            </View>
+          ) : (
+            <Pressable style={styles.inviteBtn} onPress={() => setInvited(true)}>
+              <Text style={styles.inviteBtnText}>Send SimuHire invite</Text>
+            </Pressable>
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+  safeArea: { flex: 1 },
+  scroll: { padding: 20, paddingBottom: 40, gap: 14 },
+
+  // Header block
+  headerBlock: { padding: 20, gap: 12 },
+  headerTop: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  avatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "rgba(16,25,43,0.06)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarText: { fontFamily: fonts.displayBold, fontSize: 22, color: colors.ink },
+  headerInfo: { flex: 1, gap: 3 },
+  name: { fontFamily: fonts.displayBold, fontSize: 24, color: colors.ink },
+  fieldMeta: { fontFamily: fonts.sans, fontSize: 13, color: colors.slate },
+  locationRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
+  locationText: { fontFamily: fonts.sans, fontSize: 12, color: colors.slate },
+  trustRing: { width: 48, height: 48, borderRadius: 24, borderWidth: 2, alignItems: "center", justifyContent: "center" },
+  trustScore: { fontFamily: fonts.mono, fontSize: 13 },
+  openPill: {
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: colors.verified,
+    borderRadius: 100,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+  },
+  openPillText: { fontFamily: fonts.mono, fontSize: 11, color: colors.verified },
+
+  // Shared block chrome
+  block: { padding: 18, gap: 12 },
+  blockTitle: { fontFamily: fonts.sansSemiBold, fontSize: 13, color: colors.ink },
+  emptySlate: { fontFamily: fonts.sans, fontSize: 13, color: colors.slate },
+
+  // Verified skills bars
+  skillsList: { gap: 10 },
+  skillRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  skillName: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink, width: 110 },
+  barTrack: {
+    flex: 1,
+    height: 6,
+    backgroundColor: "rgba(16,25,43,0.08)",
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  barFill: { height: 6, backgroundColor: colors.verified, borderRadius: 3 },
+  skillConfidence: { fontFamily: fonts.mono, fontSize: 11, color: colors.slate, width: 34, textAlign: "right" },
+
+  // Claimed skill chips
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  claimedChip: {
+    borderWidth: 1,
+    borderColor: colors.slate,
+    borderRadius: 100,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+  },
+  claimedChipText: { fontFamily: fonts.mono, fontSize: 11, color: colors.slate },
+
+  // SimuHire
+  simuHireHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  scoreBadge: { borderRadius: 100, paddingVertical: 4, paddingHorizontal: 10 },
+  scoreBadgeText: { fontFamily: fonts.mono, fontSize: 12 },
+  dimensionsList: { gap: 10 },
+  dimensionRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  dimensionLabel: { fontFamily: fonts.sans, fontSize: 12, color: colors.slate, width: 110 },
+  dimensionBarTrack: {
+    flex: 1,
+    height: 6,
+    backgroundColor: "rgba(16,25,43,0.08)",
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  dimensionBarFill: { height: 6, backgroundColor: colors.verified, borderRadius: 3 },
+  dimensionScore: { fontFamily: fonts.mono, fontSize: 11, color: colors.slate, width: 24, textAlign: "right" },
+
+  // Trajectory
+  trajBlock: { flexDirection: "row", alignItems: "flex-start", padding: 18, gap: 10 },
+  trajText: { flex: 1, fontFamily: fonts.sans, fontSize: 13, color: colors.slate, lineHeight: 18 },
+
+  // Bottom action
+  inviteBtn: {
+    backgroundColor: colors.ink,
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  inviteBtnText: { fontFamily: fonts.sansSemiBold, fontSize: 15, color: colors.parchment },
+  invitedRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 16 },
+  invitedText: { fontFamily: fonts.sansSemiBold, fontSize: 15, color: colors.verified },
+});

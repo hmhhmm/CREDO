@@ -1,0 +1,24 @@
+{
+  // Editor/type-check support for the ported mobile app under src/mobile, which is still
+  // TypeScript. Vite compiles these files with esbuild and never type-checks them, so this
+  // config affects your IDE and `tsc --noEmit`, not the build.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true
+  },
+  // The native/Expo specifiers the ported screens import are declared ambiently in
+  // src/native/shims.d.ts; vite.config.js does the matching runtime aliasing.
+  "include": ["src"]
+}

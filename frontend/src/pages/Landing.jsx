@@ -61,6 +61,12 @@ export default function Landing() {
             Browse candidates
           </Link>
           <Link
+            to="/app"
+            className="text-sm text-slate hover:text-ink transition-colors duration-150"
+          >
+            Open the app
+          </Link>
+          <Link
             to="/login"
             className="text-sm text-slate hover:text-ink transition-colors duration-150"
           >

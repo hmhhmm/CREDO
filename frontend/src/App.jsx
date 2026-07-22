@@ -13,6 +13,7 @@ import NamecardOwn from './pages/NamecardOwn'
 import NamecardPublic from './pages/NamecardPublic'
 import EmployerDashboard from './pages/EmployerDashboard'
 import EmployerCandidates from './pages/EmployerCandidates'
+import AppShell from './pages/AppShell'
 import NotFound from './pages/NotFound'
 
 export default function App() {
@@ -41,6 +42,10 @@ export default function App() {
         {/* Employer */}
         <Route path="/employer" element={<EmployerDashboard />} />
         <Route path="/employer/candidates" element={<EmployerCandidates />} />
+
+        {/* Ported mobile app (candidate / employer / university roles). It runs its own
+            in-memory navigator, so the whole tree lives behind one splat route. */}
+        <Route path="/app/*" element={<AppShell />} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>

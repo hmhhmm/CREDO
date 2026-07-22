@@ -1,0 +1,15 @@
+/* Stage for the ported app. It fills the viewport at every size — phone-sized on a
+   phone, desktop-sized on a desktop. The layout inside adapts at the `md` breakpoint
+   below (see src/native/native.css and SegmentedTabBar.tsx, which share it). */
+
+.app-shell {
+  background: #f5ede0;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  left: 0;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  width: 100vw;
+}

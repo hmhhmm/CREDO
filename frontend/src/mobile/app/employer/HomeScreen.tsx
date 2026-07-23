@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { View, Text, ScrollView, Pressable, ActivityIndicator, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { AlertTriangle, Clock, TrendingUp, LogOut, Briefcase } from "lucide-react-native";
+import { AlertTriangle, Clock, TrendingUp, LogOut, Briefcase, MapPin, Check } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
@@ -23,6 +23,13 @@ const LEVEL_META: Record<SignalLevel, { color: string; Icon: typeof AlertTriangl
 };
 
 const JOB_PREVIEW_COUNT = 3;
+const JOB_PREVIEW_SKILL_COUNT = 3;
+
+const TYPE_LABEL: Record<string, string> = {
+  "full-time": "Full-time",
+  internship: "Internship",
+  contract: "Contract",
+};
 
 export default function EmployerHomeScreen({ navigation, onSwitchRole }: Props) {
   const [jobs, setJobs] = useState<JobListingResponse[]>([]);
@@ -93,26 +100,72 @@ export default function EmployerHomeScreen({ navigation, onSwitchRole }: Props) 
             />
           ) : (
             <View style={{ gap: 10 }}>
-              {jobs.slice(0, JOB_PREVIEW_COUNT).map((job) => (
-                <Pressable key={job.id} onPress={() => navigation.navigate("JobDetail", { job })}>
-                  <GlassCard radius={18}>
-                    <View style={styles.jobPreviewCard}>
-                      <View style={{ flex: 1, gap: 2 }}>
-                        <Text style={styles.jobPreviewTitle}>{job.title}</Text>
-                        <Text style={styles.jobPreviewMeta}>
-                          {job.location} · {job.employment_type}
-                        </Text>
+              {jobs.slice(0, JOB_PREVIEW_COUNT).map((job) => {
+                const isOpen = job.status === "open";
+                return (
+                  <Pressable key={job.id} onPress={() => navigation.navigate("JobDetail", { job })}>
+                    <GlassCard radius={18}>
+                      <View style={styles.jobPreviewCard}>
+                        <View style={styles.jobPreviewHead}>
+                          <View style={{ flex: 1, gap: 4 }}>
+                            <Text style={styles.jobPreviewTitle}>{job.title}</Text>
+                            <View style={styles.jobPreviewMetaRow}>
+                              <MapPin size={11} color={colors.slate} />
+                              <Text style={styles.jobPreviewMeta}>{job.location}</Text>
+                              <Text style={styles.jobPreviewDot}>·</Text>
+                              <Text style={styles.jobPreviewMeta}>{TYPE_LABEL[job.employment_type] ?? job.employment_type}</Text>
+                            </View>
+                          </View>
+                          <View
+                            style={[
+                              styles.statusBadge,
+                              { backgroundColor: isOpen ? "rgba(31,122,92,0.1)" : "rgba(16,25,43,0.06)" },
+                            ]}
+                          >
+                            <Text style={[styles.statusText, { color: isOpen ? colors.verified : colors.slate }]}>
+                              {isOpen ? "Open" : "Closed"}
+                            </Text>
+                          </View>
+                        </View>
+
+                        {(job.salary_min != null || job.salary_max != null) && (
+                          <Text style={styles.jobPreviewSalary}>
+                            {job.salary_min != null && job.salary_max != null
+                              ? `RM ${job.salary_min.toLocaleString()} – ${job.salary_max.toLocaleString()} / mo`
+                              : job.salary_min != null
+                              ? `From RM ${job.salary_min.toLocaleString()} / mo`
+                              : `Up to RM ${job.salary_max!.toLocaleString()} / mo`}
+                          </Text>
+                        )}
+
+                        {job.required_skills.length > 0 && (
+                          <View style={styles.jobPreviewSkillRow}>
+                            {job.required_skills.slice(0, JOB_PREVIEW_SKILL_COUNT).map((s) => (
+                              <View
+                                key={s.name}
+                                style={[
+                                  styles.skillChip,
+                                  { backgroundColor: s.verified_only ? "rgba(31,122,92,0.1)" : "rgba(16,25,43,0.06)" },
+                                ]}
+                              >
+                                {s.verified_only && <Check size={9} color={colors.verified} strokeWidth={3} />}
+                                <Text style={[styles.skillText, { color: s.verified_only ? colors.verified : colors.slate }]}>
+                                  {s.name}
+                                </Text>
+                              </View>
+                            ))}
+                            {job.required_skills.length > JOB_PREVIEW_SKILL_COUNT && (
+                              <View style={styles.skillChip}>
+                                <Text style={styles.skillText}>+{job.required_skills.length - JOB_PREVIEW_SKILL_COUNT}</Text>
+                              </View>
+                            )}
+                          </View>
+                        )}
                       </View>
-                      <View
-                        style={[
-                          styles.statusDot,
-                          { backgroundColor: job.status === "open" ? colors.verified : colors.slate },
-                        ]}
-                      />
-                    </View>
-                  </GlassCard>
-                </Pressable>
-              ))}
+                    </GlassCard>
+                  </Pressable>
+                );
+              })}
             </View>
           )}
 
@@ -171,10 +224,19 @@ const styles = StyleSheet.create({
   seeAllLink: { paddingVertical: 2 },
   seeAllText: { fontFamily: fonts.mono, fontSize: 11, color: colors.slate, textDecorationLine: "underline" },
   jobsError: { fontFamily: fonts.mono, fontSize: 12, color: colors.alert },
-  jobPreviewCard: { flexDirection: "row", alignItems: "center", gap: 10, padding: 14 },
-  jobPreviewTitle: { fontFamily: fonts.sansSemiBold, fontSize: 14, color: colors.ink },
+
+  jobPreviewCard: { padding: 16, gap: 10 },
+  jobPreviewHead: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  jobPreviewTitle: { fontFamily: fonts.displayBold, fontSize: 15, color: colors.ink },
+  jobPreviewMetaRow: { flexDirection: "row", alignItems: "center", gap: 5, flexWrap: "wrap" },
   jobPreviewMeta: { fontFamily: fonts.mono, fontSize: 11, color: colors.slate },
-  statusDot: { width: 8, height: 8, borderRadius: 4 },
+  jobPreviewDot: { fontFamily: fonts.mono, fontSize: 11, color: colors.slate },
+  jobPreviewSalary: { fontFamily: fonts.sansSemiBold, fontSize: 13, color: colors.ink },
+  jobPreviewSkillRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  statusBadge: { borderRadius: 100, paddingVertical: 4, paddingHorizontal: 10, alignSelf: "flex-start" },
+  statusText: { fontFamily: fonts.mono, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5 },
+  skillChip: { flexDirection: "row", alignItems: "center", gap: 4, borderRadius: 100, paddingVertical: 3, paddingHorizontal: 9 },
+  skillText: { fontFamily: fonts.mono, fontSize: 10, color: colors.slate },
 
   signalCard: { padding: 18, gap: 6 },
   signalHead: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },

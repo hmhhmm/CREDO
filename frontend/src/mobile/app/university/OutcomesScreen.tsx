@@ -3,11 +3,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Wallet, MessageCircle } from "lucide-react-native";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
-import { outcomeStats, alumniCheckins, lifelongWallet } from "../../data/universityData";
+import { getOutcomeStats, getAlumniCheckins, getLifelongWallet, type University } from "../../data/universityData";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 
-export default function OutcomesScreen() {
+export default function OutcomesScreen({ university }: { university: University }) {
+  const outcomeStats = getOutcomeStats(university);
+  const alumniCheckins = getAlumniCheckins(university);
+  const lifelongWallet = getLifelongWallet(university);
   return (
     <View style={{ flex: 1 }}>
       <ScreenBackground />

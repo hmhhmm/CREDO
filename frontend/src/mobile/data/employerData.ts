@@ -145,3 +145,41 @@ export const STAGE_META: Record<PipelineStage, { label: string; color: string }>
   shortlisted: { label: "Shortlisted", color: "#2F6E8F" },
   re_engage: { label: "Re-engage", color: "#6B7785" },
 };
+
+// ── E8 Hire Intelligence Dashboard ───────────────────────────────────────────────
+// Pure local demo data — no backend. Tells one story: hires sourced through verified
+// profiles keep outperforming keyword-matched hires, and the gap is widening quarter
+// over quarter, not a one-off.
+export interface QuarterPerformance {
+  quarter: string;
+  verifiedAvg: number; // avg 90-day review score, hires sourced via verified profile
+  keywordAvg: number; // avg 90-day review score, keyword-matched hires
+}
+export const performanceByQuarter: QuarterPerformance[] = [
+  { quarter: "Q3 '25", verifiedAvg: 74, keywordAvg: 68 },
+  { quarter: "Q4 '25", verifiedAvg: 79, keywordAvg: 66 },
+  { quarter: "Q1 '26", verifiedAvg: 83, keywordAvg: 65 },
+  { quarter: "Q2 '26", verifiedAvg: 86, keywordAvg: 64 },
+];
+
+export interface HireRecord {
+  id: string;
+  name: string;
+  role: string;
+  trustScoreAtHire: number;
+  reviewScore: number; // 90-day review score
+  hiredOn: string;
+}
+export const recentHires: HireRecord[] = [
+  { id: "h1", name: "Ahmad Rahim", role: "ML Engineer", trustScoreAtHire: 87, reviewScore: 94, hiredOn: "Jun 2026" },
+  { id: "h2", name: "Priya Nair", role: "Frontend Engineer", trustScoreAtHire: 79, reviewScore: 88, hiredOn: "May 2026" },
+  { id: "h3", name: "Lim Wei Sheng", role: "Junior ML Engineer", trustScoreAtHire: 81, reviewScore: 85, hiredOn: "Apr 2026" },
+];
+
+export const hireIntelligence = {
+  upliftPercent: 22, // verifiedAvg vs keywordAvg, latest quarter
+  verifiedShareThisQuarter: 71, // % of this quarter's hires sourced via verified profile
+  totalHiredThisQuarter: 7,
+  performanceByQuarter,
+  recentHires,
+};

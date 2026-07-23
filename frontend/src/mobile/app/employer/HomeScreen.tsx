@@ -174,9 +174,14 @@ export default function EmployerHomeScreen({ navigation, onSwitchRole }: Props) 
           <View style={{ gap: 12 }}>
             {signals.map((sig) => {
               const meta = LEVEL_META[sig.level];
+              const isHireIntelligence = sig.feature.startsWith("E8");
               return (
                 <GlassCard key={sig.id} radius={20}>
-                  <View style={styles.signalCard}>
+                  <Pressable
+                    style={styles.signalCard}
+                    disabled={!isHireIntelligence}
+                    onPress={() => navigation.navigate("HireIntelligence")}
+                  >
                     <View style={styles.signalHead}>
                       <View style={[styles.signalDot, { backgroundColor: meta.color }]}>
                         <meta.Icon size={13} color="#fff" strokeWidth={2.5} />
@@ -186,7 +191,8 @@ export default function EmployerHomeScreen({ navigation, onSwitchRole }: Props) 
                     <Text style={styles.signalTitle}>{sig.title}</Text>
                     {sig.person && <Text style={styles.signalPerson}>{sig.person}</Text>}
                     <Text style={styles.signalBody}>{sig.body}</Text>
-                  </View>
+                    {isHireIntelligence && <Text style={styles.signalLink}>View full dashboard →</Text>}
+                  </Pressable>
                 </GlassCard>
               );
             })}
@@ -245,6 +251,7 @@ const styles = StyleSheet.create({
   signalTitle: { fontFamily: fonts.displayBold, fontSize: 16, color: colors.ink, marginTop: 2 },
   signalPerson: { fontFamily: fonts.sansSemiBold, fontSize: 12, color: colors.ink },
   signalBody: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.slate, lineHeight: 18, marginTop: 2 },
+  signalLink: { fontFamily: fonts.monoMedium, fontSize: 11, color: colors.verified, marginTop: 4 },
 
   switchRoleLink: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 2 },
   switchRoleText: { fontFamily: fonts.mono, fontSize: 12, color: colors.slate },

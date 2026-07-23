@@ -193,14 +193,28 @@ export const TouchableOpacity = Pressable;
 /* ── ScrollView ─────────────────────────────────────────────────────────── */
 
 export const ScrollView = forwardRef(function ScrollView(
-  { style, contentContainerStyle, children, horizontal, showsVerticalScrollIndicator, showsHorizontalScrollIndicator, keyboardShouldPersistTaps, ...rest },
+  {
+    style,
+    contentContainerStyle,
+    children,
+    horizontal,
+    showsVerticalScrollIndicator,
+    showsHorizontalScrollIndicator,
+    keyboardShouldPersistTaps,
+    className,
+    onScroll,
+    scrollEventThrottle,
+    ...rest
+  },
   ref
 ) {
+  void scrollEventThrottle; // native-only throttling hint; the DOM scroll event just fires as-is.
   return (
     <div
       ref={ref}
-      className={`rn-view rn-scroll${horizontal ? ' rn-scroll-horizontal' : ''}`}
+      className={`rn-view rn-scroll${horizontal ? ' rn-scroll-horizontal' : ''}${className ? ` ${className}` : ''}`}
       style={{ flex: style ? undefined : 1, ...css(style) }}
+      onScroll={onScroll}
       {...rest}
     >
       <div className="rn-scroll-content" style={css(contentContainerStyle)}>

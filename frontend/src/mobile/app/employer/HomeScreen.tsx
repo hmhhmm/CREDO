@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { View, Text, ScrollView, Pressable, ActivityIndicator, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AlertTriangle, Clock, TrendingUp, LogOut, Briefcase } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -7,6 +7,7 @@ import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import ActionCard from "../../components/shared/ActionCard";
 import { employer, dashboardStats, signals, type SignalLevel } from "../../data/employerData";
+import { jobsApi, ApiError, type JobListingResponse } from "../../lib/api";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 import type { EmployerHomeStackParamList } from "../../navigation/EmployerHomeStack";
@@ -21,8 +22,28 @@ const LEVEL_META: Record<SignalLevel, { color: string; Icon: typeof AlertTriangl
   good: { color: colors.verified, Icon: TrendingUp },
 };
 
+const JOB_PREVIEW_COUNT = 3;
+
 export default function EmployerHomeScreen({ navigation, onSwitchRole }: Props) {
-  const [expandedSignal, setExpandedSignal] = useState<string | null>(null);
+  const [jobs, setJobs] = useState<JobListingResponse[]>([]);
+  const [jobsLoading, setJobsLoading] = useState(true);
+  const [jobsError, setJobsError] = useState<string | null>(null);
+
+  const loadJobs = useCallback(async () => {
+    try {
+      const data = await jobsApi.list();
+      setJobs(data);
+      setJobsError(null);
+    } catch (e) {
+      setJobsError(e instanceof ApiError ? e.message : "Could not load jobs.");
+    } finally {
+      setJobsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadJobs();
+  }, [loadJobs]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -52,37 +73,67 @@ export default function EmployerHomeScreen({ navigation, onSwitchRole }: Props) 
             ))}
           </View>
 
-          {/* Job Posting quick action */}
-          <ActionCard
-            title="Job Posting"
-            subtitle="Post and manage job listings"
-            icon={<Briefcase size={18} color={colors.ink} />}
-            onPress={() => navigation.navigate("JobList")}
-          />
+          {/* Job Posting — preview a few open roles before drilling into the full list */}
+          <View style={styles.jobsHeadRow}>
+            <Text style={styles.sectionLabel}>Job Posting</Text>
+            <Pressable onPress={() => navigation.navigate("JobList")} style={styles.seeAllLink}>
+              <Text style={styles.seeAllText}>See all</Text>
+            </Pressable>
+          </View>
+          {jobsLoading ? (
+            <ActivityIndicator color={colors.ink} />
+          ) : jobsError ? (
+            <Text style={styles.jobsError}>{jobsError}</Text>
+          ) : jobs.length === 0 ? (
+            <ActionCard
+              title="Post your first role"
+              subtitle="No job listings yet"
+              icon={<Briefcase size={18} color={colors.ink} />}
+              onPress={() => navigation.navigate("JobList")}
+            />
+          ) : (
+            <View style={{ gap: 10 }}>
+              {jobs.slice(0, JOB_PREVIEW_COUNT).map((job) => (
+                <Pressable key={job.id} onPress={() => navigation.navigate("JobDetail", { job })}>
+                  <GlassCard radius={18}>
+                    <View style={styles.jobPreviewCard}>
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <Text style={styles.jobPreviewTitle}>{job.title}</Text>
+                        <Text style={styles.jobPreviewMeta}>
+                          {job.location} · {job.employment_type}
+                        </Text>
+                      </View>
+                      <View
+                        style={[
+                          styles.statusDot,
+                          { backgroundColor: job.status === "open" ? colors.verified : colors.slate },
+                        ]}
+                      />
+                    </View>
+                  </GlassCard>
+                </Pressable>
+              ))}
+            </View>
+          )}
 
-          {/* Live signals */}
+          {/* Live signals — expanded by default, no tap-to-reveal */}
           <Text style={styles.sectionLabel}>Live signals</Text>
           <View style={{ gap: 12 }}>
             {signals.map((sig) => {
               const meta = LEVEL_META[sig.level];
-              const expanded = expandedSignal === sig.id;
               return (
                 <GlassCard key={sig.id} radius={20}>
-                  <Pressable
-                    style={styles.signalCard}
-                    onPress={() => setExpandedSignal(expanded ? null : sig.id)}
-                  >
+                  <View style={styles.signalCard}>
                     <View style={styles.signalHead}>
                       <View style={[styles.signalDot, { backgroundColor: meta.color }]}>
                         <meta.Icon size={13} color="#fff" strokeWidth={2.5} />
                       </View>
                       <Text style={styles.signalFeature}>{sig.feature}</Text>
-                      <Text style={styles.signalChevron}>{expanded ? "▲" : "▼"}</Text>
                     </View>
                     <Text style={styles.signalTitle}>{sig.title}</Text>
                     {sig.person && <Text style={styles.signalPerson}>{sig.person}</Text>}
-                    {expanded && <Text style={styles.signalBody}>{sig.body}</Text>}
-                  </Pressable>
+                    <Text style={styles.signalBody}>{sig.body}</Text>
+                  </View>
                 </GlassCard>
               );
             })}
@@ -116,9 +167,17 @@ const styles = StyleSheet.create({
 
   sectionLabel: { fontFamily: fonts.mono, fontSize: 11, textTransform: "uppercase", letterSpacing: 2, color: colors.slate },
 
+  jobsHeadRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  seeAllLink: { paddingVertical: 2 },
+  seeAllText: { fontFamily: fonts.mono, fontSize: 11, color: colors.slate, textDecorationLine: "underline" },
+  jobsError: { fontFamily: fonts.mono, fontSize: 12, color: colors.alert },
+  jobPreviewCard: { flexDirection: "row", alignItems: "center", gap: 10, padding: 14 },
+  jobPreviewTitle: { fontFamily: fonts.sansSemiBold, fontSize: 14, color: colors.ink },
+  jobPreviewMeta: { fontFamily: fonts.mono, fontSize: 11, color: colors.slate },
+  statusDot: { width: 8, height: 8, borderRadius: 4 },
+
   signalCard: { padding: 18, gap: 6 },
   signalHead: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
-  signalChevron: { marginLeft: "auto", fontFamily: fonts.mono, fontSize: 9, color: colors.slate },
   signalDot: { width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   signalFeature: { fontFamily: fonts.mono, fontSize: 10, textTransform: "uppercase", letterSpacing: 1, color: colors.slate },
   signalTitle: { fontFamily: fonts.displayBold, fontSize: 16, color: colors.ink, marginTop: 2 },

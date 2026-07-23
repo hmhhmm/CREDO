@@ -132,11 +132,12 @@ export const discoverCandidates: DiscoverCandidate[] = allCandidates.map((c) => 
 }));
 
 // ── E3 SimuHire Review + E9 Interview Invitation + E6 Re-Engagement: pipeline stages ─────
-// SimuHire is now compulsory for every candidate — completion is a precondition satisfied
-// before a candidate is ever visible to an employer, not a pipeline stage to wait on. There
-// is deliberately no "invited"/"awaiting SimuHire" stage anymore; a candidate enters the
-// pipeline already SimuHire-complete (see mockData.ts, where every candidate now has
-// simuHire.completed: true — `shared` stays candidate-controlled, completion doesn't).
+// SimuHire completion is no longer a pipeline stage employers wait on — a candidate whose
+// simuhire_done entry is seeded here is already SimuHire-complete (drawn from withSimuHire
+// below). Discover legitimately shows candidates who haven't done SimuHire yet (early-stage
+// "explorers," correspondingly lower trust scores) — that's expected variance across the
+// full roster, not something Pipeline needs to track a waiting-stage for. There is
+// deliberately no "invited"/"awaiting SimuHire" stage anymore.
 export type PipelineStage = "simuhire_done" | "shortlisted" | "re_engage";
 
 // E9 Interview Invitation — orthogonal to `stage`, not folded into it: a candidate can be
@@ -177,9 +178,9 @@ export const INTERVIEW_STATUS_META: Record<InterviewStatus, { label: string; col
 // Picks a deterministic, varied slice of the real roster for this employer's pipeline —
 // one candidate per stage type, chosen by real attributes (SimuHire completion, trust
 // score) rather than 4 fixed ids that would break the moment the roster regenerates.
-// SimuHire is compulsory for every candidate (see mockData.ts/generateDataset.ts) — there
-// is no "candidates without SimuHire" pool to draw from, unlike an earlier draft of this
-// selection logic.
+// Only ~42% of the full 121-candidate roster has completed SimuHire (the rest are early-
+// stage "explorers" — expected, not a bug); withSimuHire is the pool the simuhire_done
+// entries below actually draw from.
 const demoJobs = allJobs.filter((j) => j.employerId === demoEmployer.id);
 const withSimuHire = allCandidates.filter((c) => c.simuHire.completed);
 const shortlistCandidate = allCandidates.find((c) => c.trustScore >= 70 && !withSimuHire.includes(allCandidates[0]))
@@ -293,10 +294,12 @@ export interface HireRecord {
   reviewScore: number; // 90-day review score
   hiredOn: string;
 }
+// Ids must exist in the generated dataset (see generateDataset.ts) — these three are
+// real, strong, SimuHire-completed candidates picked from allCandidates, not placeholders.
 export const recentHires: HireRecord[] = [
-  { id: "h1", candidateId: "ahmad-rahim", name: "Ahmad Rahim", role: "ML Engineer", trustScoreAtHire: 87, reviewScore: 94, hiredOn: "Jun 2026" },
-  { id: "h2", candidateId: "priya-nair", name: "Priya Nair", role: "Frontend Engineer", trustScoreAtHire: 79, reviewScore: 88, hiredOn: "May 2026" },
-  { id: "h3", candidateId: "lim-wei", name: "Lim Wei", role: "Junior ML Engineer", trustScoreAtHire: 81, reviewScore: 85, hiredOn: "Apr 2026" },
+  { id: "h1", candidateId: "khalid-aziz-86", name: "Khalid Aziz", role: "Research Associate", trustScoreAtHire: 83, reviewScore: 91, hiredOn: "Jun 2026" },
+  { id: "h2", candidateId: "liyana-ng-10", name: "Liyana Ng", role: "Financial Analyst", trustScoreAtHire: 83, reviewScore: 87, hiredOn: "May 2026" },
+  { id: "h3", candidateId: "ravi-rashid-81", name: "Ravi Rashid", role: "Data Analyst", trustScoreAtHire: 82, reviewScore: 85, hiredOn: "Apr 2026" },
 ];
 
 export const hireIntelligence = {

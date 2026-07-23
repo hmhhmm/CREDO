@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { View, Text, ScrollView, Pressable, TextInput, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { FileText, Send, RefreshCw, ChevronRight, Check } from "lucide-react-native";
+import { FileText, Send, RefreshCw, ChevronRight, Check, CalendarPlus, CalendarCheck } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
-import { STAGE_META, type PipelineEntry } from "../../data/employerData";
+import { STAGE_META, INTERVIEW_STATUS_META, type PipelineEntry } from "../../data/employerData";
 import type { DiscoverCandidate } from "../../data/employerData";
 import { mockCandidates } from "../../data/mockData";
 import { usePipeline } from "../../context/PipelineContext";
@@ -48,8 +48,6 @@ function actionFor(entry: PipelineEntry): { label: string; Icon: typeof Send } {
       return { label: "Review report", Icon: FileText };
     case "shortlisted":
       return { label: "View profile", Icon: ChevronRight };
-    case "invited":
-      return { label: "Resend invite", Icon: Send };
     case "re_engage":
       return { label: "Re-engage", Icon: RefreshCw };
     default:
@@ -65,10 +63,12 @@ function buildLightTouchMessage(entry: PipelineEntry): string {
 }
 
 export default function PipelineScreen({ navigation }: Props) {
-  const { pipeline, reEngage } = usePipeline();
+  const { pipeline, reEngage, markInterviewInvited, scheduleInterview, completeInterview } = usePipeline();
   const [sent, setSent] = useState<string | null>(null);
   const [composingId, setComposingId] = useState<string | null>(null);
   const [draftMessage, setDraftMessage] = useState("");
+  const [schedulingId, setSchedulingId] = useState<string | null>(null);
+  const [dateDraft, setDateDraft] = useState("");
 
   const startComposing = (entry: PipelineEntry) => {
     setComposingId(entry.id);
@@ -86,13 +86,51 @@ export default function PipelineScreen({ navigation }: Props) {
     setDraftMessage("");
   };
 
+  const startScheduling = (entry: PipelineEntry) => {
+    setSchedulingId(entry.id);
+    setDateDraft("");
+  };
+
+  const cancelScheduling = () => {
+    setSchedulingId(null);
+    setDateDraft("");
+  };
+
+  const confirmSchedule = (entry: PipelineEntry) => {
+    scheduleInterview(entry.id, dateDraft);
+    setSchedulingId(null);
+    setDateDraft("");
+  };
+
+  const interviewSummary = {
+    invited: pipeline.filter((e) => e.interviewStatus === "invited").length,
+    scheduled: pipeline.filter((e) => e.interviewStatus === "scheduled").length,
+    completed: pipeline.filter((e) => e.interviewStatus === "completed").length,
+  };
+
   return (
     <View style={{ flex: 1 }}>
       <ScreenBackground />
       <SafeAreaView style={styles.container} edges={["top"]}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <Text style={styles.heading}>Pipeline</Text>
-          <Text style={styles.subheading}>SimuHire invites, reviews & re-engagement — behavioral evidence before the first interview.</Text>
+          <Text style={styles.subheading}>SimuHire reviews, interviews & re-engagement — behavioral evidence before the first interview.</Text>
+
+          {/* E9 — aggregate interview status, so the "who's where" question doesn't require
+              scrolling every card individually. */}
+          {(interviewSummary.invited > 0 || interviewSummary.scheduled > 0 || interviewSummary.completed > 0) && (
+            <View style={styles.summaryRow}>
+              {interviewSummary.invited > 0 && (
+                <Text style={styles.summaryItem}>{interviewSummary.invited} awaiting interview</Text>
+              )}
+              {interviewSummary.scheduled > 0 && (
+                <Text style={styles.summaryItem}>{interviewSummary.scheduled} scheduled</Text>
+              )}
+              {interviewSummary.completed > 0 && (
+                <Text style={styles.summaryItem}>{interviewSummary.completed} completed</Text>
+              )}
+            </View>
+          )}
 
           <View style={{ gap: 12, marginTop: 8 }}>
             {pipeline.map((e) => {
@@ -176,6 +214,60 @@ export default function PipelineScreen({ navigation }: Props) {
                         <Text style={styles.actionText}>{action.label}</Text>
                       </Pressable>
                     )}
+
+                    {/* E9 Interview Invitation — orthogonal to the stage action above; a
+                        candidate can be e.g. "Shortlisted" and "Interview scheduled" at once. */}
+                    <View style={styles.interviewBlock}>
+                      <View style={styles.interviewHead}>
+                        <View style={[styles.interviewDot, { backgroundColor: INTERVIEW_STATUS_META[e.interviewStatus].color }]} />
+                        <Text style={[styles.interviewLabel, { color: INTERVIEW_STATUS_META[e.interviewStatus].color }]}>
+                          {INTERVIEW_STATUS_META[e.interviewStatus].label}
+                          {e.interviewStatus === "scheduled" && e.interviewDate ? ` · ${e.interviewDate}` : ""}
+                        </Text>
+                      </View>
+
+                      {schedulingId === e.id ? (
+                        <View style={{ gap: 8, marginTop: 8 }}>
+                          <GlassCard radius={14}>
+                            <TextInput
+                              style={styles.dateInput}
+                              value={dateDraft}
+                              onChangeText={setDateDraft}
+                              placeholder="e.g. Aug 12, 2026, 3pm"
+                              placeholderTextColor={colors.slate}
+                            />
+                          </GlassCard>
+                          <View style={styles.composeRow}>
+                            <Pressable style={styles.composeCancel} onPress={cancelScheduling}>
+                              <Text style={styles.composeCancelText}>Cancel</Text>
+                            </Pressable>
+                            <Pressable
+                              style={[styles.composeSend, !dateDraft.trim() && styles.composeSendDisabled]}
+                              onPress={() => confirmSchedule(e)}
+                              disabled={!dateDraft.trim()}
+                            >
+                              <CalendarCheck size={13} color={colors.parchment} />
+                              <Text style={styles.composeSendText}>Confirm</Text>
+                            </Pressable>
+                          </View>
+                        </View>
+                      ) : e.interviewStatus === "invited" ? (
+                        <Pressable style={styles.interviewAction} onPress={() => startScheduling(e)}>
+                          <CalendarPlus size={14} color={colors.ink} />
+                          <Text style={styles.interviewActionText}>Mark scheduled</Text>
+                        </Pressable>
+                      ) : e.interviewStatus === "scheduled" ? (
+                        <Pressable style={styles.interviewAction} onPress={() => completeInterview(e.id)}>
+                          <CalendarCheck size={14} color={colors.ink} />
+                          <Text style={styles.interviewActionText}>Mark completed</Text>
+                        </Pressable>
+                      ) : e.interviewStatus === "not_invited" ? (
+                        <Pressable style={styles.interviewAction} onPress={() => markInterviewInvited(e.id)}>
+                          <Send size={14} color={colors.ink} />
+                          <Text style={styles.interviewActionText}>Invite to Interview</Text>
+                        </Pressable>
+                      ) : null}
+                    </View>
                   </View>
                 </GlassCard>
               );
@@ -247,4 +339,25 @@ const styles = StyleSheet.create({
 
   touchedRow: { flexDirection: "row", alignItems: "center", gap: 7, paddingVertical: 11 },
   touchedText: { flex: 1, fontFamily: fonts.sansSemiBold, fontSize: 12.5, color: colors.verified },
+
+  summaryRow: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 8 },
+  summaryItem: { fontFamily: fonts.mono, fontSize: 11, color: colors.slate },
+
+  interviewBlock: { borderTopWidth: 1, borderTopColor: "rgba(16,25,43,0.08)", paddingTop: 10, marginTop: 2 },
+  interviewHead: { flexDirection: "row", alignItems: "center", gap: 7 },
+  interviewDot: { width: 7, height: 7, borderRadius: 3.5 },
+  interviewLabel: { fontFamily: fonts.mono, fontSize: 11 },
+  interviewAction: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    borderWidth: 1,
+    borderColor: "rgba(16,25,43,0.12)",
+    borderRadius: 12,
+    paddingVertical: 10,
+    marginTop: 8,
+  },
+  interviewActionText: { fontFamily: fonts.sansSemiBold, fontSize: 12.5, color: colors.ink },
+  dateInput: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink, padding: 12 },
 });

@@ -71,8 +71,9 @@ export default function PartnersScreen() {
                             name: m.student,
                             field: m.programme.replace(/^BSc\s*/, ""),
                             trustScore: m.trustScore,
-                            stage: "invited",
+                            stage: "simuhire_done",
                             detail: `Introduced via ${university.name} Internship Marketplace — matched ${m.matchPct}% for ${m.role} at ${m.employer}`,
+                            interviewStatus: "not_invited",
                           })
                         }
                       >

@@ -1,14 +1,14 @@
-import { useState } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MapPin, TrendingUp, Check, Award, FileText } from "lucide-react-native";
+import { MapPin, TrendingUp, Check, Award, FileText, Send } from "lucide-react-native";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import GitHubIcon from "../../components/GitHubIcon";
 import { getConfidenceBand } from "../../utils/confidenceBand";
+import { usePipeline } from "../../context/PipelineContext";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
-import type { DiscoverCandidate } from "../../data/employerData";
+import { INTERVIEW_STATUS_META, type DiscoverCandidate } from "../../data/employerData";
 import type { Artifact } from "../../data/types";
 
 type Props = { route: { params: { candidate: DiscoverCandidate } }; navigation?: unknown };
@@ -49,7 +49,12 @@ const DIMENSION_KEYS = ["adaptability", "communication", "problemSolving", "stre
 
 export default function CandidateProfileScreen({ route }: Props) {
   const { candidate: c } = route.params;
-  const [invited, setInvited] = useState(false);
+  const { pipeline, inviteToInterview } = usePipeline();
+
+  // Derived from the shared pipeline, not local state — so status set from here shows up
+  // in Pipeline too, and status set in Pipeline (or via a prior visit to this profile)
+  // shows up here, instead of two disconnected "invited" flags going out of sync.
+  const interviewStatus = pipeline.find((p) => p.candidateId === c.id)?.interviewStatus ?? "not_invited";
 
   const band = getConfidenceBand(c.trustScore);
   const initials = c.name
@@ -208,16 +213,19 @@ export default function CandidateProfileScreen({ route }: Props) {
             </GlassCard>
           )}
 
-          {/* Bottom action */}
-          {invited ? (
+          {/* Bottom action — E9 Interview Invitation. SimuHire is compulsory now, so there's
+              nothing to invite the candidate to at this stage; the action here is the human
+              interview, tracked further in Pipeline. */}
+          {interviewStatus === "not_invited" ? (
+            <Pressable style={styles.inviteBtn} onPress={() => inviteToInterview(c)}>
+              <Send size={15} color={colors.parchment} />
+              <Text style={styles.inviteBtnText}>Invite to Interview</Text>
+            </Pressable>
+          ) : (
             <View style={styles.invitedRow}>
               <Check size={16} color={colors.verified} strokeWidth={2.5} />
-              <Text style={styles.invitedText}>Invite sent</Text>
+              <Text style={styles.invitedText}>{INTERVIEW_STATUS_META[interviewStatus].label}</Text>
             </View>
-          ) : (
-            <Pressable style={styles.inviteBtn} onPress={() => setInvited(true)}>
-              <Text style={styles.inviteBtnText}>Send SimuHire invite</Text>
-            </Pressable>
           )}
         </ScrollView>
       </SafeAreaView>
@@ -326,6 +334,8 @@ const styles = StyleSheet.create({
 
   // Bottom action
   inviteBtn: {
+    flexDirection: "row",
+    gap: 8,
     backgroundColor: colors.ink,
     borderRadius: 16,
     paddingVertical: 16,

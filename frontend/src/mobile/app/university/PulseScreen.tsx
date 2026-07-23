@@ -4,12 +4,24 @@ import { AlertTriangle, TrendingDown, ArrowRight, LogOut } from "lucide-react-na
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import ScoreRing from "../../components/shared/ScoreRing";
-import { university, campusReadiness, behavioralBenchmark, skillGaps, curriculumActions, getInterventionAlert } from "../../data/universityData";
+import {
+  getCampusReadiness,
+  getBehavioralBenchmark,
+  getSkillGaps,
+  getCurriculumActions,
+  getCohorts,
+  getInterventionAlert,
+  type University,
+} from "../../data/universityData";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 
-export default function PulseScreen({ onSwitchRole }: { onSwitchRole: () => void }) {
-  const interventionAlert = getInterventionAlert();
+export default function PulseScreen({ university, onSwitchRole }: { university: University; onSwitchRole: () => void }) {
+  const campusReadiness = getCampusReadiness(university);
+  const behavioralBenchmark = getBehavioralBenchmark(university);
+  const skillGaps = getSkillGaps(university);
+  const curriculumActions = getCurriculumActions(skillGaps);
+  const interventionAlert = getInterventionAlert(getCohorts(university), skillGaps);
 
   return (
     <View style={{ flex: 1 }}>
@@ -22,7 +34,7 @@ export default function PulseScreen({ onSwitchRole }: { onSwitchRole: () => void
               <Text style={styles.heading}>Campus Pulse</Text>
             </View>
             <Pressable onPress={onSwitchRole} style={styles.avatarButton}>
-              <Text style={styles.avatarInitial}>{university.initial}</Text>
+              <Text style={styles.avatarInitial}>{university.short}</Text>
             </Pressable>
           </View>
 

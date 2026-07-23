@@ -8,7 +8,18 @@ import { fonts } from "../../theme/typography";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 
-export default function LoginScreen({ onSwitchToRegister }: { onSwitchToRegister: () => void }) {
+export default function LoginScreen({
+  role,
+  onLogin,
+  onSwitchToRegister,
+}: {
+  role?: "candidate" | "employer" | "university";
+  // Candidate/Employer log in through the shared AuthContext (default, via useAuth()).
+  // University has no backend role and no AuthContext session at all, so it supplies its
+  // own resolver here instead — same screen, same fields, different plumbing underneath.
+  onLogin?: (email: string, password: string) => Promise<void>;
+  onSwitchToRegister: () => void;
+}) {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,7 +30,8 @@ export default function LoginScreen({ onSwitchToRegister }: { onSwitchToRegister
     setError(null);
     setLoading(true);
     try {
-      await login({ email, password });
+      if (onLogin) await onLogin(email, password);
+      else await login({ email, password, role });
     } catch (e) {
       setError(e instanceof ApiError ? "Invalid email or password." : "Could not reach the server.");
     } finally {

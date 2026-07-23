@@ -5,22 +5,22 @@ import { ShieldCheck, Users, ChevronDown, ChevronUp, FileBadge } from "lucide-re
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import { getConfidenceBand } from "../../utils/confidenceBand";
-import { cohorts, university } from "../../data/universityData";
-import { mockCandidates } from "../../data/mockData";
+import { getCohorts, studentsOf, type University } from "../../data/universityData";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 
-// U5: credentials this university has actually issued into the ledger, for a given
-// programme — derived from the shared candidate roster instead of a static flag.
-function issuedCredentialsFor(programme: string) {
-  const subject = programme.replace(/^BSc\s*/, "");
-  return mockCandidates
-    .filter((c) => c.university === university.name && c.field === subject)
-    .flatMap((c) => c.artifacts.filter((a) => a.type === "credential").map((a) => ({ candidate: c.name, artifact: a })));
-}
-
-export default function CohortsScreen() {
+export default function CohortsScreen({ university }: { university: University }) {
   const [expanded, setExpanded] = useState<string | null>(null);
+  const cohorts = getCohorts(university);
+
+  // U5: credentials this university has actually issued into the ledger, for a given
+  // programme — derived from the shared candidate roster instead of a static flag.
+  function issuedCredentialsFor(programme: string) {
+    const subject = programme.replace(/^BSc\s*/, "");
+    return studentsOf(university)
+      .filter((c) => c.field === subject)
+      .flatMap((c) => c.artifacts.filter((a) => a.type === "credential").map((a) => ({ candidate: c.name, artifact: a })));
+  }
 
   return (
     <View style={{ flex: 1 }}>

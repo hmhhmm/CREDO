@@ -70,6 +70,11 @@ export interface RegisterPayload {
 export interface LoginPayload {
   email: string;
   password: string;
+  // Which mock roster to resolve the email against (candidate vs. employer vs.
+  // university) — the real backend would need this too, since email alone doesn't say
+  // which role table to check. Optional because Candidate/Employer already pass it via
+  // AuthGate; a caller that omits it falls back to the seeded demo candidate.
+  role?: "candidate" | "employer" | "university";
 }
 
 export interface UserResponse {

@@ -21,6 +21,7 @@ function buildCandidate(e: PipelineEntry): DiscoverCandidate {
     ...(full ?? {
       id: e.id,
       name: e.name,
+      email: "",
       field: e.field,
       university: "",
       year: "",

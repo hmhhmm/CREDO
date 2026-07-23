@@ -5,21 +5,28 @@ import CohortsScreen from "../app/university/CohortsScreen";
 import OutcomesScreen from "../app/university/OutcomesScreen";
 import PartnersScreen from "../app/university/PartnersScreen";
 import SegmentedTabBar from "./SegmentedTabBar";
+import type { University } from "../data/universityData";
 
 const Tab = createBottomTabNavigator();
 
 const ICONS = { Pulse: Activity, Cohorts: Users, Outcomes: TrendingUp, Partners: Handshake };
 
-export default function UniversityTabs({ onSwitchRole }: { onSwitchRole: () => void }) {
+export default function UniversityTabs({
+  university,
+  onSwitchRole,
+}: {
+  university: University;
+  onSwitchRole: () => void;
+}) {
   return (
     <Tab.Navigator
       screenOptions={{ headerShown: false }}
       tabBar={(props) => <SegmentedTabBar {...props} icons={ICONS} />}
     >
-      <Tab.Screen name="Pulse">{() => <PulseScreen onSwitchRole={onSwitchRole} />}</Tab.Screen>
-      <Tab.Screen name="Cohorts" component={CohortsScreen} />
-      <Tab.Screen name="Outcomes" component={OutcomesScreen} />
-      <Tab.Screen name="Partners" component={PartnersScreen} />
+      <Tab.Screen name="Pulse">{() => <PulseScreen university={university} onSwitchRole={onSwitchRole} />}</Tab.Screen>
+      <Tab.Screen name="Cohorts">{() => <CohortsScreen university={university} />}</Tab.Screen>
+      <Tab.Screen name="Outcomes">{() => <OutcomesScreen university={university} />}</Tab.Screen>
+      <Tab.Screen name="Partners">{() => <PartnersScreen university={university} />}</Tab.Screen>
     </Tab.Navigator>
   );
 }

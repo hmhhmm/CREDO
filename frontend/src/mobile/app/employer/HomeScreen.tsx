@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AlertTriangle, Clock, TrendingUp, LogOut, Briefcase } from "lucide-react-native";
@@ -6,7 +6,9 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import ActionCard from "../../components/shared/ActionCard";
-import { employer, dashboardStats, signals, type SignalLevel } from "../../data/employerData";
+import { getEmployerIdentity, getDashboardStats, signals, type SignalLevel } from "../../data/employerData";
+import { demoEmployer, type Employer } from "../../data/generateDataset";
+import { currentEmployer } from "../../lib/mockApi";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 import type { EmployerHomeStackParamList } from "../../navigation/EmployerHomeStack";
@@ -23,6 +25,15 @@ const LEVEL_META: Record<SignalLevel, { color: string; Icon: typeof AlertTriangl
 
 export default function EmployerHomeScreen({ navigation, onSwitchRole }: Props) {
   const [expandedSignal, setExpandedSignal] = useState<string | null>(null);
+  // The specific logged-in employer account — defaults to the demo identity until the
+  // real session resolves, same fallback pattern candidate screens use.
+  const [employer, setEmployer] = useState<Employer>(demoEmployer);
+  useEffect(() => {
+    currentEmployer().then(setEmployer);
+  }, []);
+
+  const identity = getEmployerIdentity(employer);
+  const dashboardStats = getDashboardStats(employer);
 
   return (
     <View style={{ flex: 1 }}>
@@ -31,11 +42,11 @@ export default function EmployerHomeScreen({ navigation, onSwitchRole }: Props) 
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.topRow}>
             <View>
-              <Text style={styles.eyebrow}>{employer.company}</Text>
+              <Text style={styles.eyebrow}>{identity.company}</Text>
               <Text style={styles.heading}>Hire Intelligence</Text>
             </View>
             <Pressable onPress={onSwitchRole} style={styles.avatarButton}>
-              <Text style={styles.avatarInitial}>{employer.initial}</Text>
+              <Text style={styles.avatarInitial}>{identity.initial}</Text>
             </Pressable>
           </View>
 

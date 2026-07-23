@@ -20,6 +20,7 @@ function buildCandidate(hire: HireRecord): DiscoverCandidate {
     ...(full ?? {
       id: hire.candidateId,
       name: hire.name,
+      email: "",
       field: hire.role,
       university: "",
       year: "",

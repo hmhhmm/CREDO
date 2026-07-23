@@ -29,6 +29,10 @@ declare module 'react-native' {
     children?: ReactNode;
     pointerEvents?: 'auto' | 'none' | 'box-none' | 'box-only';
     onLayout?: (event: unknown) => void;
+    // Merged (not replaced) onto the shim's own layout classes — the escape hatch for
+    // layout rules (media queries, scroll-driven reveals, keyframe animations) that have
+    // to live in CSS rather than an RN style object — see native.css.
+    className?: string;
     ref?: Ref<HTMLDivElement>;
   }
 
@@ -55,6 +59,9 @@ declare module 'react-native' {
     showsVerticalScrollIndicator?: boolean;
     showsHorizontalScrollIndicator?: boolean;
     keyboardShouldPersistTaps?: 'always' | 'never' | 'handled';
+    onScroll?: (event: unknown) => void;
+    scrollEventThrottle?: number;
+    ref?: Ref<HTMLDivElement>;
   }
 
   export interface TextInputProps {

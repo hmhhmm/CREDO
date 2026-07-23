@@ -6,7 +6,9 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import ActionCard from "../../components/shared/ActionCard";
-import { employer, dashboardStats, signals, type SignalLevel } from "../../data/employerData";
+import { getEmployerIdentity, getDashboardStats, signals, type SignalLevel } from "../../data/employerData";
+import { demoEmployer, type Employer } from "../../data/generateDataset";
+import { currentEmployer } from "../../lib/mockApi";
 import { jobsApi, ApiError, type JobListingResponse } from "../../lib/api";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
@@ -52,6 +54,16 @@ export default function EmployerHomeScreen({ navigation, onSwitchRole }: Props) 
     loadJobs();
   }, [loadJobs]);
 
+  // The specific logged-in employer account — defaults to the demo identity until the
+  // real session resolves, same fallback pattern candidate screens use.
+  const [employer, setEmployer] = useState<Employer>(demoEmployer);
+  useEffect(() => {
+    currentEmployer().then(setEmployer);
+  }, []);
+
+  const identity = getEmployerIdentity(employer);
+  const dashboardStats = getDashboardStats(employer);
+
   return (
     <View style={{ flex: 1 }}>
       <ScreenBackground />
@@ -59,11 +71,11 @@ export default function EmployerHomeScreen({ navigation, onSwitchRole }: Props) 
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.topRow}>
             <View>
-              <Text style={styles.eyebrow}>{employer.company}</Text>
+              <Text style={styles.eyebrow}>{identity.company}</Text>
               <Text style={styles.heading}>Hire Intelligence</Text>
             </View>
             <Pressable onPress={onSwitchRole} style={styles.avatarButton}>
-              <Text style={styles.avatarInitial}>{employer.initial}</Text>
+              <Text style={styles.avatarInitial}>{identity.initial}</Text>
             </Pressable>
           </View>
 

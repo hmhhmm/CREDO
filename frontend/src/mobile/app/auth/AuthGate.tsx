@@ -5,7 +5,10 @@ import LoginScreen from "./LoginScreen";
 import RegisterScreen from "./RegisterScreen";
 import { colors } from "../../theme/colors";
 
-export default function AuthGate({ children }: { children: React.ReactNode }) {
+// role tells login() which mock roster to resolve the typed email against (candidate vs.
+// employer) — it's data plumbing, not a UI change: LoginScreen's fields/layout/copy are
+// unchanged, this is invisible to what's rendered.
+export default function AuthGate({ role, children }: { role: "candidate" | "employer"; children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const [mode, setMode] = useState<"login" | "register">("login");
 
@@ -19,7 +22,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (!user) {
     return mode === "login" ? (
-      <LoginScreen onSwitchToRegister={() => setMode("register")} />
+      <LoginScreen role={role} onSwitchToRegister={() => setMode("register")} />
     ) : (
       <RegisterScreen onSwitchToLogin={() => setMode("login")} />
     );

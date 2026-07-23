@@ -4,13 +4,14 @@ import { ArrowRight, Building2, Check } from "lucide-react-native";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import { getConfidenceBand } from "../../utils/confidenceBand";
-import { internshipMatches, university } from "../../data/universityData";
+import { getInternshipMatches, type University } from "../../data/universityData";
 import { usePipeline } from "../../context/PipelineContext";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 
-export default function PartnersScreen() {
+export default function PartnersScreen({ university }: { university: University }) {
   const { pipeline, addToPipeline } = usePipeline();
+  const internshipMatches = getInternshipMatches(university);
 
   return (
     <View style={{ flex: 1 }}>

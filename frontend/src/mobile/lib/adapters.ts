@@ -28,6 +28,7 @@ export function namecardResponseToCandidate(n: NamecardResponse): Candidate {
   return {
     id: n.user_id,
     name: n.name,
+    email: "",
     field: "",
     university: "",
     year: "",

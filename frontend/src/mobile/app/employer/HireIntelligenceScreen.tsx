@@ -147,6 +147,9 @@ export default function HireIntelligenceScreen({ navigation }: Props) {
           <Text style={styles.sectionLabel}>Performance by Quarter</Text>
           <GlassCard radius={18}>
             <View style={styles.chartCard}>
+              <Text style={styles.chartCaption}>
+                Average 90-day review score per quarter, by how the candidate was sourced. Scroll for earlier quarters.
+              </Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <PerformanceChart data={performanceByQuarter} />
               </ScrollView>
@@ -234,6 +237,7 @@ const styles = StyleSheet.create({
   sectionLabel: { fontFamily: fonts.mono, fontSize: 11, textTransform: "uppercase", letterSpacing: 2, color: colors.slate },
 
   chartCard: { padding: 18, gap: 14 },
+  chartCaption: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.slate, lineHeight: 18 },
   legendRow: { flexDirection: "row", gap: 18 },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },

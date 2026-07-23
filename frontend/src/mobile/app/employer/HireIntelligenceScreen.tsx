@@ -1,13 +1,45 @@
-import { View, Text, ScrollView, StyleSheet } from "react-native";
+import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Rect, Line, Text as SvgText, G } from "react-native-svg";
-import { TrendingUp } from "lucide-react-native";
+import { TrendingUp, ChevronRight } from "lucide-react-native";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import ScoreRing from "../../components/shared/ScoreRing";
-import { hireIntelligence } from "../../data/employerData";
+import { hireIntelligence, type HireRecord, type DiscoverCandidate } from "../../data/employerData";
+import { mockCandidates } from "../../data/mockData";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
+import type { EmployerHomeStackParamList } from "../../navigation/EmployerHomeStack";
+
+type Props = NativeStackScreenProps<EmployerHomeStackParamList, "HireIntelligence">;
+
+function buildCandidate(hire: HireRecord): DiscoverCandidate {
+  const full = mockCandidates.find((c) => c.id === hire.candidateId);
+  return {
+    ...(full ?? {
+      id: hire.candidateId,
+      name: hire.name,
+      field: hire.role,
+      university: "",
+      year: "",
+      location: "",
+      openToWork: false,
+      avatar: null,
+      bio: "",
+      linkedinUrl: null,
+      githubUrl: null,
+      trustScore: hire.trustScoreAtHire,
+      verifiedSkills: [],
+      claimedSkills: [],
+      simuHire: { completed: false, shared: false },
+      artifacts: [],
+      ledger: [],
+      merkleRoot: null,
+    }),
+    trajectory: `Hired ${hire.hiredOn} · ${hire.reviewScore}/100 on 90-day review`,
+  };
+}
 
 // Grouped bar chart, hand-rolled on react-native-svg (no charting lib in this stack).
 // Fixed layout math rather than a measured container — the screen has one consumer and a
@@ -65,9 +97,30 @@ function PerformanceChart({ data }: { data: typeof hireIntelligence.performanceB
   );
 }
 
-export default function HireIntelligenceScreen() {
-  const { upliftPercent, verifiedShareThisQuarter, totalHiredThisQuarter, performanceByQuarter, recentHires } =
-    hireIntelligence;
+export default function HireIntelligenceScreen({ navigation }: Props) {
+  const { verifiedShareThisQuarter, totalHiredThisQuarter, performanceByQuarter, recentHires } = hireIntelligence;
+
+  // Derived from the same series the chart renders, not a separately maintained constant —
+  // the headline number can never drift from the chart directly beneath it.
+  const latestQuarter = performanceByQuarter[performanceByQuarter.length - 1];
+  const upliftPercent = Math.round(
+    ((latestQuarter.verifiedAvg - latestQuarter.keywordAvg) / latestQuarter.keywordAvg) * 100
+  );
+  const firstQuarter = performanceByQuarter[0];
+
+  const openCandidate = (hire: HireRecord) => {
+    // HireIntelligenceScreen lives in EmployerHomeStack; CandidateProfile lives in the
+    // sibling DiscoverStack — same cross-stack pattern JobDetailScreen uses for "Find
+    // candidates".
+    const tabNav = navigation.getParent();
+    if (tabNav) {
+      (tabNav as { navigate: (name: string, params?: object) => void }).navigate("Discover", {
+        screen: "CandidateProfile",
+        params: { candidate: buildCandidate(hire) },
+        initial: false,
+      });
+    }
+  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -83,6 +136,9 @@ export default function HireIntelligenceScreen() {
               <Text style={styles.heroNumber}>+{upliftPercent}%</Text>
               <Text style={styles.heroLabel}>
                 Verified-sourced hires are outperforming keyword-matched hires on 90-day review scores
+              </Text>
+              <Text style={styles.heroCaption}>
+                {totalHiredThisQuarter} hires · {firstQuarter.quarter}–{latestQuarter.quarter}
               </Text>
             </View>
           </GlassCard>
@@ -126,21 +182,29 @@ export default function HireIntelligenceScreen() {
           <Text style={styles.sectionLabel}>Recent Verified Hires</Text>
           <View style={{ gap: 10 }}>
             {recentHires.map((h) => (
-              <GlassCard key={h.id} radius={16}>
-                <View style={styles.hireRow}>
-                  <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>{h.name.split(" ").map((n) => n[0]).join("")}</Text>
+              <Pressable
+                key={h.id}
+                onPress={() => openCandidate(h)}
+                accessibilityRole="button"
+                accessibilityLabel={`${h.name}, ${h.role}, hired ${h.hiredOn}, 90-day review score ${h.reviewScore}. View profile.`}
+              >
+                <GlassCard radius={16}>
+                  <View style={styles.hireRow}>
+                    <View style={styles.avatar}>
+                      <Text style={styles.avatarText}>{h.name.split(" ").map((n) => n[0]).join("")}</Text>
+                    </View>
+                    <View style={{ flex: 1, gap: 2 }}>
+                      <Text style={styles.hireName}>{h.name}</Text>
+                      <Text style={styles.hireMeta}>{h.role} · Hired {h.hiredOn}</Text>
+                    </View>
+                    <View style={styles.hireScores}>
+                      <Text style={styles.hireScoreValue}>{h.reviewScore}</Text>
+                      <Text style={styles.hireScoreLabel}>90-day score</Text>
+                    </View>
+                    <ChevronRight size={16} color={colors.slate} />
                   </View>
-                  <View style={{ flex: 1, gap: 2 }}>
-                    <Text style={styles.hireName}>{h.name}</Text>
-                    <Text style={styles.hireMeta}>{h.role} · Hired {h.hiredOn}</Text>
-                  </View>
-                  <View style={styles.hireScores}>
-                    <Text style={styles.hireScoreValue}>{h.reviewScore}</Text>
-                    <Text style={styles.hireScoreLabel}>90-day score</Text>
-                  </View>
-                </View>
-              </GlassCard>
+                </GlassCard>
+              </Pressable>
             ))}
           </View>
         </ScrollView>
@@ -165,6 +229,7 @@ const styles = StyleSheet.create({
   },
   heroNumber: { fontFamily: fonts.displayBold, fontSize: 44, color: colors.verified },
   heroLabel: { fontFamily: fonts.sans, fontSize: 13, color: colors.slate, textAlign: "center", lineHeight: 19, maxWidth: 280 },
+  heroCaption: { fontFamily: fonts.mono, fontSize: 10, color: colors.slate, textAlign: "center", marginTop: 2 },
 
   sectionLabel: { fontFamily: fonts.mono, fontSize: 11, textTransform: "uppercase", letterSpacing: 2, color: colors.slate },
 

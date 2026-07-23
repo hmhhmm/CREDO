@@ -164,6 +164,7 @@ export const performanceByQuarter: QuarterPerformance[] = [
 
 export interface HireRecord {
   id: string;
+  candidateId: string; // links back to mockCandidates — lets the row drill into a real profile
   name: string;
   role: string;
   trustScoreAtHire: number;
@@ -171,13 +172,15 @@ export interface HireRecord {
   hiredOn: string;
 }
 export const recentHires: HireRecord[] = [
-  { id: "h1", name: "Ahmad Rahim", role: "ML Engineer", trustScoreAtHire: 87, reviewScore: 94, hiredOn: "Jun 2026" },
-  { id: "h2", name: "Priya Nair", role: "Frontend Engineer", trustScoreAtHire: 79, reviewScore: 88, hiredOn: "May 2026" },
-  { id: "h3", name: "Lim Wei Sheng", role: "Junior ML Engineer", trustScoreAtHire: 81, reviewScore: 85, hiredOn: "Apr 2026" },
+  { id: "h1", candidateId: "ahmad-rahim", name: "Ahmad Rahim", role: "ML Engineer", trustScoreAtHire: 87, reviewScore: 94, hiredOn: "Jun 2026" },
+  { id: "h2", candidateId: "priya-nair", name: "Priya Nair", role: "Frontend Engineer", trustScoreAtHire: 79, reviewScore: 88, hiredOn: "May 2026" },
+  { id: "h3", candidateId: "lim-wei", name: "Lim Wei", role: "Junior ML Engineer", trustScoreAtHire: 81, reviewScore: 85, hiredOn: "Apr 2026" },
 ];
 
 export const hireIntelligence = {
-  upliftPercent: 22, // verifiedAvg vs keywordAvg, latest quarter
+  // No separate upliftPercent constant — it's derived in HireIntelligenceScreen from the
+  // latest entry in performanceByQuarter so the headline number can never drift from the
+  // chart directly beneath it.
   verifiedShareThisQuarter: 71, // % of this quarter's hires sourced via verified profile
   totalHiredThisQuarter: 7,
   performanceByQuarter,

@@ -29,6 +29,9 @@ declare module 'react-native' {
     children?: ReactNode;
     pointerEvents?: 'auto' | 'none' | 'box-none' | 'box-only';
     onLayout?: (event: unknown) => void;
+    // Merged (not replaced) onto the shim's own layout classes — lets a screen opt into
+    // a CSS-only effect (e.g. a keyframe animation defined in native.css).
+    className?: string;
     ref?: Ref<HTMLDivElement>;
   }
 

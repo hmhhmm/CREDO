@@ -6,7 +6,6 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { DemoProvider } from "../context/DemoContext";
 import { PipelineProvider } from "../context/PipelineContext";
 import { AuthProvider } from "../context/AuthContext";
-import AuthGate from "../app/auth/AuthGate";
 import RoleSelectScreen from "../app/auth/RoleSelectScreen";
 import CandidateTabs from "./CandidateTabs";
 import EmployerTabs from "./EmployerTabs";
@@ -32,19 +31,17 @@ const PATH_TO_SCREEN: Record<string, string> = {
   university: "UniversityTabs",
 };
 
-// Candidate/Employer require a real logged-in account (backend only supports these two
-// roles). University has no backend role — it stays a no-auth demo entry point, matching
-// the original brief ("reachable with no auth from Landing's University demo link").
+// Login/Register are temporarily bypassed — see AuthGate.tsx, which normally wraps this
+// with a login/register requirement before rendering children. Candidate/Employer are the
+// only roles a real logged-in account would apply to; University has no backend role and
+// stays a no-auth demo entry point regardless (matching the original brief: "reachable
+// with no auth from Landing's University demo link").
 // Each role's own tab navigator supplies its own in-content "switch role" affordance
 // (see HomeScreen's profile button) instead of a system stack header — a native header
 // here would double up with each tab's own screen chrome and show the previous route's
 // name as an ugly, undesigned back label.
 function AuthedTabs({ role, onSwitchRole }: { role: "candidate" | "employer"; onSwitchRole: () => void }) {
-  return (
-    <AuthGate>
-      {role === "candidate" ? <CandidateTabs onSwitchRole={onSwitchRole} /> : <EmployerTabs onSwitchRole={onSwitchRole} />}
-    </AuthGate>
-  );
+  return role === "candidate" ? <CandidateTabs onSwitchRole={onSwitchRole} /> : <EmployerTabs onSwitchRole={onSwitchRole} />;
 }
 
 function RoleStackNavigator() {

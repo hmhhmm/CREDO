@@ -30,3 +30,18 @@ export function candidateFromApi(summary) {
     },
   }
 }
+
+// Backend JobListingResponse (backend/app/schemas/job.py) is also snake_case;
+// EmployerDashboard was built against mockData.js's camelCase job shape.
+export function jobFromApi(job) {
+  return {
+    id: job.id,
+    title: job.title,
+    company: job.company,
+    requiredSkills: job.required_skills ?? [],
+    requireVerified: job.require_verified,
+    requireSimuHire: job.require_simuhire,
+    description: job.description,
+    createdAt: job.created_at ? job.created_at.slice(0, 10) : null,
+  }
+}

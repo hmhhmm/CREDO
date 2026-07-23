@@ -1,15 +1,41 @@
 import { useState } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MapPin, TrendingUp, Check } from "lucide-react-native";
+import { MapPin, TrendingUp, Check, Award, FileText } from "lucide-react-native";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
+import GitHubIcon from "../../components/GitHubIcon";
 import { getConfidenceBand } from "../../utils/confidenceBand";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 import type { DiscoverCandidate } from "../../data/employerData";
+import type { Artifact } from "../../data/types";
 
 type Props = { route: { params: { candidate: DiscoverCandidate } }; navigation?: unknown };
+
+// The specific proof behind an artifact's confidence score — commit/complexity for GitHub,
+// issuer/name-match for credentials, AI-probability/writing-complexity for documents. Reads
+// straight from the same metadata VerifyPage's ArtifactCard shows on the candidate side, so
+// the employer sees the same evidence the candidate's own verification produced.
+function artifactDetailLine(a: Artifact): string {
+  const m = a.metadata as Record<string, unknown>;
+  switch (a.type) {
+    case "github":
+      return `${m.commits ?? "—"} commits · ${m.complexity ?? "—"} complexity · ${m.flags ?? 0} flags`;
+    case "credential":
+      return `${m.issuer ?? "Unknown issuer"} · name match ${m.nameMatch ? "confirmed" : "not confirmed"}`;
+    case "document":
+      return `${m.aiProbability ?? "—"}% AI-probability · ${m.writingComplexity ?? "—"} writing complexity`;
+    default:
+      return "";
+  }
+}
+
+function ArtifactTypeIcon({ type, size, color }: { type: Artifact["type"]; size: number; color: string }) {
+  if (type === "github") return <GitHubIcon size={size} color={color} />;
+  if (type === "credential") return <Award size={size} color={color} strokeWidth={2.5} />;
+  return <FileText size={size} color={color} strokeWidth={2.5} />;
+}
 
 const DIMENSION_LABELS: Record<string, string> = {
   adaptability: "Adaptability",
@@ -102,6 +128,31 @@ export default function CandidateProfileScreen({ route }: Props) {
                       <Text style={styles.claimedChipText}>{skill}</Text>
                     </View>
                   ))}
+                </View>
+              </View>
+            </GlassCard>
+          )}
+
+          {/* Evidence — the specific proof behind the verified-skill scores above */}
+          {c.artifacts.some((a) => a.status === "verified") && (
+            <GlassCard radius={18}>
+              <View style={styles.block}>
+                <Text style={styles.blockTitle}>Evidence</Text>
+                <View style={{ gap: 12 }}>
+                  {c.artifacts
+                    .filter((a) => a.status === "verified")
+                    .map((a) => (
+                      <View key={a.id} style={styles.evidenceRow}>
+                        <View style={styles.evidenceIcon}>
+                          <ArtifactTypeIcon type={a.type} size={14} color={colors.ink} />
+                        </View>
+                        <View style={{ flex: 1, gap: 2 }}>
+                          <Text style={styles.evidenceName}>{a.name}</Text>
+                          <Text style={styles.evidenceDetail}>{artifactDetailLine(a)}</Text>
+                        </View>
+                        <Text style={styles.evidenceConfidence}>{a.confidence}%</Text>
+                      </View>
+                    ))}
                 </View>
               </View>
             </GlassCard>
@@ -237,6 +288,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   claimedChipText: { fontFamily: fonts.mono, fontSize: 11, color: colors.slate },
+
+  // Evidence — per-artifact proof
+  evidenceRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  evidenceIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(16,25,43,0.06)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  evidenceName: { fontFamily: fonts.sansSemiBold, fontSize: 13, color: colors.ink },
+  evidenceDetail: { fontFamily: fonts.mono, fontSize: 10.5, color: colors.slate },
+  evidenceConfidence: { fontFamily: fonts.mono, fontSize: 12, color: colors.verified },
 
   // SimuHire
   simuHireHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },

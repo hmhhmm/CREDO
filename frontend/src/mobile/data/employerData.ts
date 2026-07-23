@@ -62,14 +62,39 @@ export const signals: Signal[] = [
 export interface DiscoverCandidate extends Candidate {
   trajectory: string; // E2: where they're heading, not just where they've been
 }
-export const discoverCandidates: DiscoverCandidate[] = mockCandidates.map((c, i) => ({
+
+function formatMonthYear(isoDate: string): string {
+  const d = new Date(isoDate);
+  return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
+
+// Computed from the candidate's own artifacts/claimedSkills — not a hardcoded per-index
+// string. "Where they're heading" = verified momentum (how many artifacts, how recent) +
+// direction (claimed skills not yet verified, i.e. what they're actively building toward).
+// Deliberately doesn't compare artifact dates against wall-clock "now": as the mock dates
+// age relative to the real calendar, a "verified in the last 6 months" claim would silently
+// go stale and start reading as false. Citing the actual month instead stays true forever.
+function buildTrajectory(c: Candidate): string {
+  const verified = c.artifacts.filter((a) => a.status === "verified");
+  if (verified.length === 0) {
+    return "Early-stage — no verified artifacts yet";
+  }
+
+  const mostRecent = [...verified].sort((a, b) => b.date.localeCompare(a.date))[0];
+  const momentum = `${verified.length} verified artifact${verified.length === 1 ? "" : "s"}, most recently ${formatMonthYear(mostRecent.date)}`;
+
+  const buildingToward = c.claimedSkills.filter(
+    (skill) => !c.verifiedSkills.some((vs) => vs.name.toLowerCase() === skill.toLowerCase())
+  );
+  if (buildingToward.length > 0) {
+    return `${momentum} — building toward ${buildingToward.join(", ")}`;
+  }
+  return momentum;
+}
+
+export const discoverCandidates: DiscoverCandidate[] = mockCandidates.map((c) => ({
   ...c,
-  trajectory:
-    i === 0
-      ? "Trending toward ML Engineering — 3 verified ML artifacts in 6 months"
-      : i === 1
-        ? "Growing frontend depth — React + TypeScript verified, adding Node.js"
-        : "Early-stage — building first verified artifacts",
+  trajectory: buildTrajectory(c),
 }));
 
 // ── E3 SimuHire Invite/Review + E6 Re-Engagement: pipeline stages ───────────────

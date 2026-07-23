@@ -73,6 +73,20 @@ export default function DiscoverScreen({ route, navigation }: Props) {
 
   const removeSkill = (skill: string) => setActiveSkills((prev) => prev.filter((s) => s !== skill));
 
+  // E2 Smart Matching: rank by how well each candidate matches the active skill filter, not
+  // just trust score — verified matches count double claimed ones, so a candidate who's
+  // actually verified a required skill outranks one who's merely claimed it, consistent with
+  // the rest of the product treating "verified" and "claimed" as different tiers of trust.
+  // With no active filter, every match score is 0 and this collapses to a pure trust-score
+  // sort, same as before.
+  const matchScore = (c: DiscoverCandidate) =>
+    activeSkills.reduce((score, sk) => {
+      const skLower = sk.toLowerCase();
+      if (c.verifiedSkills.some((vs) => vs.name.toLowerCase() === skLower)) return score + 2;
+      if ((c.claimedSkills ?? []).some((cs) => cs.toLowerCase() === skLower)) return score + 1;
+      return score;
+    }, 0);
+
   const list = useMemo(
     () =>
       discoverCandidates
@@ -85,7 +99,7 @@ export default function DiscoverScreen({ route, navigation }: Props) {
                 (c.claimedSkills ?? []).some((cs) => cs.toLowerCase() === sk.toLowerCase())
               )
         )
-        .sort((a, b) => b.trustScore - a.trustScore),
+        .sort((a, b) => matchScore(b) - matchScore(a) || b.trustScore - a.trustScore),
     [verifiedOnly, activeSkills]
   );
 

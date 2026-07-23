@@ -90,7 +90,13 @@ export const mockCandidates: Candidate[] = [
       { name: "TypeScript", confidence: 68, verified: true },
     ],
     claimedSkills: ["GraphQL", "AWS"],
-    simuHire: { completed: false, shared: false },
+    simuHire: {
+      completed: true,
+      shared: true,
+      type: "Technical",
+      overallScore: 74,
+      dimensions: { adaptability: 72, communication: 81, problemSolving: 70, stressResponse: 68, systemsThinking: 75 },
+    },
     artifacts: [
       {
         id: "b1",
@@ -135,7 +141,13 @@ export const mockCandidates: Candidate[] = [
       { name: "SQL", confidence: 86, verified: true },
     ],
     claimedSkills: ["Tableau", "Spark"],
-    simuHire: { completed: false, shared: false },
+    simuHire: {
+      completed: true,
+      shared: true,
+      type: "Technical",
+      overallScore: 78,
+      dimensions: { adaptability: 80, communication: 71, problemSolving: 84, stressResponse: 75, systemsThinking: 79 },
+    },
     artifacts: [
       {
         id: "c1",
@@ -177,7 +189,15 @@ export const mockCandidates: Candidate[] = [
     trustScore: 68,
     verifiedSkills: [{ name: "Figma", confidence: 74, verified: true }],
     claimedSkills: ["User Research", "Design Systems"],
-    simuHire: { completed: false, shared: false },
+    // Completed like every candidate, but kept private — sharing the report stays the
+    // candidate's own choice even though completion no longer is.
+    simuHire: {
+      completed: true,
+      shared: false,
+      type: "General",
+      overallScore: 69,
+      dimensions: { adaptability: 74, communication: 77, problemSolving: 65, stressResponse: 60, systemsThinking: 71 },
+    },
     artifacts: [
       {
         id: "d1",
@@ -209,7 +229,13 @@ export const mockCandidates: Candidate[] = [
     trustScore: 38,
     verifiedSkills: [],
     claimedSkills: ["Excel", "PowerPoint", "Canva", "Python"],
-    simuHire: { completed: false, shared: false },
+    simuHire: {
+      completed: true,
+      shared: false,
+      type: "General",
+      overallScore: 52,
+      dimensions: { adaptability: 55, communication: 58, problemSolving: 49, stressResponse: 47, systemsThinking: 50 },
+    },
     artifacts: [],
     ledger: [],
     merkleRoot: null,

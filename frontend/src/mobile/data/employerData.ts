@@ -117,8 +117,19 @@ export const discoverCandidates: DiscoverCandidate[] = mockCandidates.map((c) =>
   trajectory: buildTrajectory(c),
 }));
 
-// ── E3 SimuHire Invite/Review + E6 Re-Engagement: pipeline stages ───────────────
-export type PipelineStage = "invited" | "simuhire_done" | "shortlisted" | "re_engage";
+// ── E3 SimuHire Review + E9 Interview Invitation + E6 Re-Engagement: pipeline stages ─────
+// SimuHire is now compulsory for every candidate — completion is a precondition satisfied
+// before a candidate is ever visible to an employer, not a pipeline stage to wait on. There
+// is deliberately no "invited"/"awaiting SimuHire" stage anymore; a candidate enters the
+// pipeline already SimuHire-complete (see mockData.ts, where every candidate now has
+// simuHire.completed: true — `shared` stays candidate-controlled, completion doesn't).
+export type PipelineStage = "simuhire_done" | "shortlisted" | "re_engage";
+
+// E9 Interview Invitation — orthogonal to `stage`, not folded into it: a candidate can be
+// `shortlisted` and separately `interview: "scheduled"` at the same time. Tracks the human
+// interview process employers now explicitly manage, since SimuHire no longer needs tracking.
+export type InterviewStatus = "not_invited" | "invited" | "scheduled" | "completed";
+
 export interface PipelineEntry {
   id: string;
   candidateId: string; // links back to mockCandidates — same person as Discover/Partners
@@ -134,15 +145,47 @@ export interface PipelineEntry {
   };
   // E6 Re-Engagement — set once a light-touch message has actually been sent, so the
   // pipeline remembers the touch instead of a component-local "sent" flag that forgets on
-  // navigation. Distinct from `invited`'s resend, which has no message/history at all.
+  // navigation.
   lastTouchedAt?: string;
   lastTouchMessage?: string;
+  // E9 Interview Invitation
+  interviewStatus: InterviewStatus;
+  interviewDate?: string;
 }
+
+export const INTERVIEW_STATUS_META: Record<InterviewStatus, { label: string; color: string }> = {
+  not_invited: { label: "Not invited", color: "#6B7785" },
+  invited: { label: "Interview invited", color: "#D9A441" },
+  scheduled: { label: "Interview scheduled", color: "#2F6E8F" },
+  completed: { label: "Interview completed", color: "#1F7A5C" },
+};
 
 function candidateFor(id: string) {
   const c = mockCandidates.find((c) => c.id === id);
   if (!c) throw new Error(`Unknown candidate id in pipeline: ${id}`);
   return c;
+}
+
+// Builds a fresh PipelineEntry from any candidate not already in the pipeline — used when
+// "Invite to Interview" is pressed from a profile the employer reached via Discover/Fair
+// Mode rather than one already tracked in Pipeline.
+export function pipelineEntryFromCandidate(c: Candidate): PipelineEntry {
+  return {
+    id: `p-${c.id}`,
+    candidateId: c.id,
+    name: c.name,
+    field: c.field,
+    trustScore: c.trustScore,
+    stage: "simuhire_done",
+    detail: c.simuHire.type
+      ? `SimuHire ${c.simuHire.type} · ${c.simuHire.overallScore}/100 — report ready to review`
+      : "SimuHire completed — candidate chose to keep private",
+    simuHire:
+      c.simuHire.type && c.simuHire.overallScore != null && c.simuHire.dimensions
+        ? { type: c.simuHire.type, overallScore: c.simuHire.overallScore, dimensions: c.simuHire.dimensions }
+        : undefined,
+    interviewStatus: "not_invited",
+  };
 }
 
 export const pipeline: PipelineEntry[] = [
@@ -159,6 +202,7 @@ export const pipeline: PipelineEntry[] = [
       overallScore: 82,
       dimensions: { adaptability: 88, communication: 76, problemSolving: 85, stressResponse: 79, systemsThinking: 82 },
     },
+    interviewStatus: "invited",
   },
   {
     id: "p2",
@@ -166,8 +210,14 @@ export const pipeline: PipelineEntry[] = [
     name: candidateFor("priya-nair").name,
     field: candidateFor("priya-nair").field,
     trustScore: candidateFor("priya-nair").trustScore,
-    stage: "invited",
-    detail: "SimuHire invite sent 2 days ago — awaiting completion",
+    stage: "simuhire_done",
+    detail: "SimuHire Technical · 74/100 — report ready to review",
+    simuHire: {
+      type: "Technical",
+      overallScore: 74,
+      dimensions: { adaptability: 72, communication: 81, problemSolving: 70, stressResponse: 68, systemsThinking: 75 },
+    },
+    interviewStatus: "not_invited",
   },
   {
     id: "p3",
@@ -177,6 +227,8 @@ export const pipeline: PipelineEntry[] = [
     trustScore: candidateFor("lim-wei").trustScore,
     stage: "shortlisted",
     detail: "Shortlisted for Junior ML Engineer — verified Python/SQL",
+    interviewStatus: "scheduled",
+    interviewDate: "Aug 5, 2026",
   },
   {
     id: "p4",
@@ -186,11 +238,11 @@ export const pipeline: PipelineEntry[] = [
     trustScore: candidateFor("sara-yusof").trustScore,
     stage: "re_engage",
     detail: "Said no in March — timing may have changed, worth a light touch",
+    interviewStatus: "not_invited",
   },
 ];
 
 export const STAGE_META: Record<PipelineStage, { label: string; color: string }> = {
-  invited: { label: "Invited", color: "#D9A441" },
   simuhire_done: { label: "SimuHire done", color: "#1F7A5C" },
   shortlisted: { label: "Shortlisted", color: "#2F6E8F" },
   re_engage: { label: "Re-engage", color: "#6B7785" },

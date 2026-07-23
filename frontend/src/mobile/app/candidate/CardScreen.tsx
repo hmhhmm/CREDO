@@ -8,6 +8,9 @@ import { QrCode, Link2, Share2, ShieldCheck, ChevronRight, Plus, Check } from "l
 import SmartNamecard from "../../components/SmartNamecard";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
+import CardStrength from "../../components/namecard/CardStrength";
+import CardAudience from "../../components/namecard/CardAudience";
+import CardDistribution from "../../components/namecard/CardDistribution";
 import { useDemo } from "../../context/DemoContext";
 import { useAuth } from "../../context/AuthContext";
 import { namecardApi, portfolioApi, ApiError, type PortfolioResponse } from "../../lib/api";
@@ -83,6 +86,13 @@ export default function CardScreen({ navigation }: Props) {
       screen: "Portfolio",
     });
   };
+  const goToSimuHire = () => {
+    (navigation.getParent() as { navigate: (name: string, params?: object) => void } | undefined)?.navigate("Home", {
+      screen: "SimuHire",
+    });
+  };
+
+  const handle = (candidate.name || "you").toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 16) || "you";
 
   const copyLink = async () => {
     if (!publicUrl) return;
@@ -117,6 +127,15 @@ export default function CardScreen({ navigation }: Props) {
               <View style={styles.cardWrap}>
                 <SmartNamecard candidate={candidate} onEmptyCta={goToVerify} />
               </View>
+
+              {/* 1b — Card strength (drives the candidate back into Verify / SimuHire) */}
+              <CardStrength
+                candidate={candidate}
+                ledgerCount={ledger?.entry_count ?? 0}
+                onVerify={goToVerify}
+                onSimuHire={goToSimuHire}
+                onPortfolio={goToPortfolio}
+              />
 
               {/* 2 — Verified Skills */}
               <Text style={styles.sectionLabel}>Verified Skills</Text>
@@ -224,6 +243,14 @@ export default function CardScreen({ navigation }: Props) {
                   </GlassCard>
                 </Pressable>
               </View>
+
+              {/* 6 — Audience & privacy (candidate control over the verified identity) */}
+              <Text style={styles.sectionLabel}>Audience & Privacy</Text>
+              <CardAudience handle={handle} />
+
+              {/* 7 — Distribution (get the verified card out into the world) */}
+              <Text style={styles.sectionLabel}>Distribution</Text>
+              <CardDistribution handle={handle} name={candidate.name} tagline={candidate.field} />
             </>
           )}
         </ScrollView>

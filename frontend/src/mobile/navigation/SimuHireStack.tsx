@@ -7,10 +7,11 @@ import SimuHireReportScreen from "../app/candidate/SimuHireReportScreen";
 import { candidateHeaderOptions } from "./headerOptions";
 import { colors } from "../theme/colors";
 import type { SessionCreateResponse } from "../lib/api";
+import type { ScenarioBrief } from "../data/simuhireBriefs";
 
 export type SimuHireStackParamList = {
   SimuHireSetup: undefined;
-  SimuHireChat: { session: SessionCreateResponse };
+  SimuHireChat: { session: SessionCreateResponse; brief: ScenarioBrief; autoPlay?: boolean };
   SimuHireReport: { sessionId: string };
 };
 

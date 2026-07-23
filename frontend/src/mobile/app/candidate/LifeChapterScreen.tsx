@@ -4,6 +4,10 @@ import { Baby, HeartPulse, Compass, Plus } from "lucide-react-native";
 import PreviewBanner from "../../components/shared/PreviewBanner";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
+import ChapterTimeline from "../../components/lifechapter/ChapterTimeline";
+import ChapterPlanner from "../../components/lifechapter/ChapterPlanner";
+import ChapterSupport from "../../components/lifechapter/ChapterSupport";
+import ChapterPrinciples from "../../components/lifechapter/ChapterPrinciples";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 
@@ -23,6 +27,25 @@ export default function LifeChapterScreen() {
           <Text style={styles.intro}>
             Plan your career around real life events — not just continuous, uninterrupted employment.
           </Text>
+
+          {/* Destigmatize — chapters, not gaps, with candidate-controlled disclosure */}
+          <Text style={styles.sectionLabel}>Your chapters</Text>
+          <ChapterTimeline />
+
+          {/* Design ahead — plan the next break: runway, timing, re-entry */}
+          <Text style={styles.sectionLabel}>Plan the next one</Text>
+          <ChapterPlanner />
+
+          {/* Support during — the Coach steps back on your terms */}
+          <Text style={styles.sectionLabel}>While you're away</Text>
+          <ChapterSupport />
+
+          {/* Tone & safety — the non-negotiable, made explicit */}
+          <Text style={styles.sectionLabel}>Tone & safety</Text>
+          <ChapterPrinciples />
+
+          {/* Start a new chapter from a template */}
+          <Text style={styles.sectionLabel}>Start a chapter</Text>
           {CHAPTER_TYPES.map(({ Icon, label, description }) => (
             <GlassCard key={label} radius={18}>
               <View style={styles.card}>
@@ -47,6 +70,14 @@ export default function LifeChapterScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   intro: { fontFamily: fonts.sans, fontSize: 13, color: colors.slate, lineHeight: 19 },
+  sectionLabel: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    textTransform: "uppercase",
+    letterSpacing: 2,
+    color: colors.slate,
+    marginTop: 6,
+  },
   card: {
     flexDirection: "row",
     alignItems: "flex-start",

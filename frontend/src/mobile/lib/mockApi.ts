@@ -253,12 +253,12 @@ const SIMUHIRE_SCRIPT: { interviewer: string; stakeholder?: string; stage: strin
   {
     interviewer:
       "Welcome. You're a junior engineer, three months in. A bug report just came in: the contact form's Submit button stops responding for ~20% of users — they click, nothing happens, no error. Your tech lead is in a 2-hour meeting. Where do you start?",
-    stage: "Diagnosis",
+    stage: "Setup",
   },
   {
     interviewer: "Good instinct checking the console. You find intermittent 500s from the submit endpoint. What's your next move?",
-    stakeholder: "(Client Success): Just a heads-up — a key client is watching this form closely today.",
-    stage: "Investigation",
+    stakeholder: "Just a heads-up — a key client is watching this form closely today.",
+    stage: "Challenge",
   },
   {
     interviewer:

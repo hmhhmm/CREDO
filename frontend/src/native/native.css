@@ -145,6 +145,19 @@
   }
 }
 
+@keyframes rn-rec-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+.rn-rec-dot {
+  animation: rn-rec-pulse 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rn-rec-dot { animation: none; }
+}
+
 .rn-activity-indicator {
   animation: rn-spin 750ms linear infinite;
   border-radius: 50%;

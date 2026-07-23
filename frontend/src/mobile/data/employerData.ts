@@ -57,6 +57,26 @@ export const signals: Signal[] = [
   },
 ];
 
+// ── E1 Verified Marketplace: verification completeness ──────────────────────────
+// Single source of truth for "which of the three verification types does this candidate
+// have, verified" — read by both the Discover glance row and the fully-verified stamp, so
+// the two can never disagree about what counts as verified.
+export interface VerificationCompleteness {
+  github: boolean;
+  credential: boolean;
+  document: boolean;
+  isFullyVerified: boolean;
+}
+
+export function getVerificationCompleteness(c: Candidate): VerificationCompleteness {
+  const hasVerified = (type: "github" | "credential" | "document") =>
+    c.artifacts.some((a) => a.type === type && a.status === "verified");
+  const github = hasVerified("github");
+  const credential = hasVerified("credential");
+  const document = hasVerified("document");
+  return { github, credential, document, isFullyVerified: github && credential && document };
+}
+
 // ── E1 Verified Marketplace + E2 Smart Matching: discover candidates ────────────
 // Reuse the shared mock candidates, add a "trajectory" line for E2 Smart Matching.
 export interface DiscoverCandidate extends Candidate {

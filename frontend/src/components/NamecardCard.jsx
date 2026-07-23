@@ -36,7 +36,9 @@ export default function NamecardCard({ candidate, compact = false, isOwn = false
         </div>
         {candidate.simuHire?.completed && candidate.simuHire?.shared && (
           <div className="mt-2 pt-2 border-t border-line">
-            <span className="text-xs text-verified font-mono">✓ SimuHire · {candidate.simuHire.overallScore}/100</span>
+            <span className="text-xs text-verified font-mono">
+              ✓ SimuHire{candidate.simuHire.overallScore != null ? ` · ${candidate.simuHire.overallScore}/100` : ''}
+            </span>
           </div>
         )}
       </div>

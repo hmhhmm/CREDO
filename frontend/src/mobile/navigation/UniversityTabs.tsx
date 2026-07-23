@@ -10,13 +10,13 @@ const Tab = createBottomTabNavigator();
 
 const ICONS = { Pulse: Activity, Cohorts: Users, Outcomes: TrendingUp, Partners: Handshake };
 
-export default function UniversityTabs() {
+export default function UniversityTabs({ onSwitchRole }: { onSwitchRole: () => void }) {
   return (
     <Tab.Navigator
       screenOptions={{ headerShown: false }}
       tabBar={(props) => <SegmentedTabBar {...props} icons={ICONS} />}
     >
-      <Tab.Screen name="Pulse" component={PulseScreen} />
+      <Tab.Screen name="Pulse">{() => <PulseScreen onSwitchRole={onSwitchRole} />}</Tab.Screen>
       <Tab.Screen name="Cohorts" component={CohortsScreen} />
       <Tab.Screen name="Outcomes" component={OutcomesScreen} />
       <Tab.Screen name="Partners" component={PartnersScreen} />

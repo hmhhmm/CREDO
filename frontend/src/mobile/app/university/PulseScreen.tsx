@@ -1,6 +1,6 @@
-import { View, Text, ScrollView, StyleSheet } from "react-native";
+import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { AlertTriangle, TrendingDown, ArrowRight } from "lucide-react-native";
+import { AlertTriangle, TrendingDown, ArrowRight, LogOut } from "lucide-react-native";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import ScoreRing from "../../components/shared/ScoreRing";
@@ -8,7 +8,7 @@ import { university, campusReadiness, behavioralBenchmark, skillGaps, curriculum
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 
-export default function PulseScreen() {
+export default function PulseScreen({ onSwitchRole }: { onSwitchRole: () => void }) {
   const interventionAlert = getInterventionAlert();
 
   return (
@@ -16,9 +16,14 @@ export default function PulseScreen() {
       <ScreenBackground />
       <SafeAreaView style={styles.container} edges={["top"]}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <View>
-            <Text style={styles.eyebrow}>{university.name} · {university.office}</Text>
-            <Text style={styles.heading}>Campus Pulse</Text>
+          <View style={styles.topRow}>
+            <View>
+              <Text style={styles.eyebrow}>{university.name} · {university.office}</Text>
+              <Text style={styles.heading}>Campus Pulse</Text>
+            </View>
+            <Pressable onPress={onSwitchRole} style={styles.avatarButton}>
+              <Text style={styles.avatarInitial}>{university.initial}</Text>
+            </Pressable>
           </View>
 
           {/* U1 — Cohort Readiness hero */}
@@ -91,6 +96,11 @@ export default function PulseScreen() {
               );
             })}
           </View>
+
+          <Pressable onPress={onSwitchRole} style={styles.switchRoleLink}>
+            <LogOut size={13} color={colors.slate} />
+            <Text style={styles.switchRoleText}>Switch role</Text>
+          </Pressable>
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -100,8 +110,13 @@ export default function PulseScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { padding: 20, paddingBottom: 110, gap: 16 },
+  topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
   eyebrow: { fontFamily: fonts.mono, fontSize: 11, textTransform: "uppercase", letterSpacing: 1.5, color: colors.slate },
   heading: { fontFamily: fonts.displayBold, fontSize: 28, color: colors.ink, marginTop: 2 },
+  avatarButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.ink, alignItems: "center", justifyContent: "center" },
+  avatarInitial: { fontFamily: fonts.displayBold, fontSize: 16, color: colors.parchment },
+  switchRoleLink: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 2 },
+  switchRoleText: { fontFamily: fonts.mono, fontSize: 12, color: colors.slate },
 
   heroRow: { flexDirection: "row", alignItems: "center", gap: 16, padding: 22 },
   heroLabel: { fontFamily: fonts.mono, fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, color: colors.slate },

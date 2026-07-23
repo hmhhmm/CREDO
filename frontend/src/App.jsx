@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { DemoProvider } from './context/DemoContext'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
@@ -21,7 +21,9 @@ export default function App() {
     <DemoProvider>
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Landing />} />
+        {/* /app (the ported mobile app) is the default landing page. */}
+        <Route path="/" element={<Navigate to="/app" replace />} />
+        <Route path="/landing" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
@@ -44,7 +46,8 @@ export default function App() {
         <Route path="/employer/candidates" element={<EmployerCandidates />} />
 
         {/* Ported mobile app (candidate / employer / university roles). It runs its own
-            in-memory navigator, so the whole tree lives behind one splat route. */}
+            in-memory navigator synced to the URL, so the whole tree lives behind one
+            splat route. */}
         <Route path="/app/*" element={<AppShell />} />
 
         <Route path="*" element={<NotFound />} />

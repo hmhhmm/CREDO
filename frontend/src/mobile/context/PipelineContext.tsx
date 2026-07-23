@@ -7,6 +7,7 @@ import { pipeline as seedPipeline, type PipelineEntry } from "../data/employerDa
 interface PipelineContextValue {
   pipeline: PipelineEntry[];
   addToPipeline: (entry: PipelineEntry) => void;
+  reEngage: (id: string, message: string) => void;
 }
 
 const PipelineCtx = createContext<PipelineContextValue | null>(null);
@@ -18,7 +19,16 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
     setPipeline((prev) => (prev.some((p) => p.candidateId === entry.candidateId) ? prev : [entry, ...prev]));
   }, []);
 
-  return <PipelineCtx.Provider value={{ pipeline, addToPipeline }}>{children}</PipelineCtx.Provider>;
+  // Records a light-touch message on the entry itself (lastTouchedAt/lastTouchMessage)
+  // instead of a screen-local flag, so the touch survives navigation away and back.
+  const reEngage = useCallback((id: string, message: string) => {
+    const touchedAt = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    setPipeline((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, lastTouchedAt: touchedAt, lastTouchMessage: message } : p))
+    );
+  }, []);
+
+  return <PipelineCtx.Provider value={{ pipeline, addToPipeline, reEngage }}>{children}</PipelineCtx.Provider>;
 }
 
 export function usePipeline() {

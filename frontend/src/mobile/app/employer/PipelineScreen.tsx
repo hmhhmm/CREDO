@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
+import { View, Text, ScrollView, Pressable, TextInput, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FileText, Send, RefreshCw, ChevronRight, Check } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -57,9 +57,34 @@ function actionFor(entry: PipelineEntry): { label: string; Icon: typeof Send } {
   }
 }
 
+// Light-touch default: references the reason logged on the entry rather than repeating a
+// hard "are you available now" invite — re-engagement is meant to read as low-pressure.
+function buildLightTouchMessage(entry: PipelineEntry): string {
+  const firstName = entry.name.split(" ")[0];
+  return `Hi ${firstName} — it's been a while since we last spoke. Wanted to check in and see if the timing might be better now. No pressure either way — always happy to reconnect when it works for you.`;
+}
+
 export default function PipelineScreen({ navigation }: Props) {
-  const { pipeline } = usePipeline();
+  const { pipeline, reEngage } = usePipeline();
   const [sent, setSent] = useState<string | null>(null);
+  const [composingId, setComposingId] = useState<string | null>(null);
+  const [draftMessage, setDraftMessage] = useState("");
+
+  const startComposing = (entry: PipelineEntry) => {
+    setComposingId(entry.id);
+    setDraftMessage(buildLightTouchMessage(entry));
+  };
+
+  const cancelComposing = () => {
+    setComposingId(null);
+    setDraftMessage("");
+  };
+
+  const sendTouch = (entry: PipelineEntry) => {
+    reEngage(entry.id, draftMessage);
+    setComposingId(null);
+    setDraftMessage("");
+  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -75,12 +100,16 @@ export default function PipelineScreen({ navigation }: Props) {
               const action = actionFor(e);
               const initials = e.name.split(" ").map((n) => n[0]).join("");
               const isSent = sent === e.id;
+              const isComposing = composingId === e.id;
+              const isTouched = e.stage === "re_engage" && !!e.lastTouchedAt;
 
               const handlePress = () => {
                 if (e.stage === "simuhire_done") {
                   navigation.navigate("SimuHireReport", { entry: e });
                 } else if (e.stage === "shortlisted") {
                   navigation.navigate("CandidateProfile", { candidate: buildCandidate(e) });
+                } else if (e.stage === "re_engage") {
+                  startComposing(e);
                 } else {
                   setSent(e.id);
                 }
@@ -102,7 +131,41 @@ export default function PipelineScreen({ navigation }: Props) {
                       </View>
                     </View>
                     <Text style={styles.detail}>{e.detail}</Text>
-                    {isSent ? (
+
+                    {isComposing ? (
+                      <View style={{ gap: 8 }}>
+                        <GlassCard radius={14}>
+                          <TextInput
+                            style={styles.composeInput}
+                            value={draftMessage}
+                            onChangeText={setDraftMessage}
+                            placeholder="Write a light-touch message…"
+                            placeholderTextColor={colors.slate}
+                            multiline
+                            numberOfLines={4}
+                            textAlignVertical="top"
+                          />
+                        </GlassCard>
+                        <View style={styles.composeRow}>
+                          <Pressable style={styles.composeCancel} onPress={cancelComposing}>
+                            <Text style={styles.composeCancelText}>Cancel</Text>
+                          </Pressable>
+                          <Pressable
+                            style={[styles.composeSend, !draftMessage.trim() && styles.composeSendDisabled]}
+                            onPress={() => sendTouch(e)}
+                            disabled={!draftMessage.trim()}
+                          >
+                            <Send size={13} color={colors.parchment} />
+                            <Text style={styles.composeSendText}>Send</Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    ) : isTouched ? (
+                      <View style={styles.touchedRow}>
+                        <Check size={14} color={colors.verified} strokeWidth={2.5} />
+                        <Text style={styles.touchedText}>Touched {e.lastTouchedAt} — following up in your own time</Text>
+                      </View>
+                    ) : isSent ? (
                       <View style={styles.sentRow}>
                         <Check size={14} color={colors.verified} strokeWidth={2.5} />
                         <Text style={styles.sentText}>Sent</Text>
@@ -157,4 +220,31 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
   },
   sentText: { fontFamily: fonts.sansSemiBold, fontSize: 13, color: colors.verified },
+
+  composeInput: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink, padding: 12, minHeight: 84 },
+  composeRow: { flexDirection: "row", gap: 8 },
+  composeCancel: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 12,
+    paddingVertical: 11,
+    backgroundColor: "rgba(16,25,43,0.06)",
+  },
+  composeCancelText: { fontFamily: fonts.sansSemiBold, fontSize: 13, color: colors.ink },
+  composeSend: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    borderRadius: 12,
+    paddingVertical: 11,
+    backgroundColor: colors.ink,
+  },
+  composeSendDisabled: { opacity: 0.4 },
+  composeSendText: { fontFamily: fonts.sansSemiBold, fontSize: 13, color: colors.parchment },
+
+  touchedRow: { flexDirection: "row", alignItems: "center", gap: 7, paddingVertical: 11 },
+  touchedText: { flex: 1, fontFamily: fonts.sansSemiBold, fontSize: 12.5, color: colors.verified },
 });

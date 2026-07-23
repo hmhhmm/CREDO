@@ -87,6 +87,11 @@ export interface PipelineEntry {
     overallScore: number;
     dimensions: Record<string, number>;
   };
+  // E6 Re-Engagement — set once a light-touch message has actually been sent, so the
+  // pipeline remembers the touch instead of a component-local "sent" flag that forgets on
+  // navigation. Distinct from `invited`'s resend, which has no message/history at all.
+  lastTouchedAt?: string;
+  lastTouchMessage?: string;
 }
 
 function candidateFor(id: string) {

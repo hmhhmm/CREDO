@@ -195,3 +195,25 @@
 .rn-switch[data-on='true'] .rn-switch-thumb {
   transform: translateX(20px);
 }
+
+/* ── Intro screen ────────────────────────────────────────────────────────── */
+/* A 3-slide swipeable carousel: native scroll-snap gives real touch-swipe on phones for
+   free, the dots/Next button drive the same scrollTo programmatically for desktop
+   (mouse) users. Each slide is exactly the ScrollView's own width — not 100vw — so it
+   still respects the .rn-safe-area desktop cap instead of overflowing it. */
+
+.rn-intro-carousel {
+  flex: 1;
+  scroll-snap-type: x mandatory;
+}
+
+.rn-intro-carousel .rn-scroll-content {
+  height: 100%;
+}
+
+.rn-intro-slide {
+  flex: 0 0 100%;
+  height: 100%;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}

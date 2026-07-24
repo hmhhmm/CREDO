@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { View, Text, ScrollView, Pressable, TextInput, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Send, RefreshCw, Check, CalendarPlus, CalendarCheck, Settings, ThumbsUp, ThumbsDown, X, Sparkles } from "lucide-react-native";
+import { Send, RefreshCw, Check, CalendarPlus, CalendarCheck, Settings, ThumbsUp, ThumbsDown, X, Sparkles, ChevronRight } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
@@ -47,11 +47,11 @@ function buildCandidate(e: PipelineEntry): DiscoverCandidate {
   };
 }
 
-// Light-touch default: references the reason logged on the entry rather than repeating a
-// hard "are you available now" invite — re-engagement is meant to read as low-pressure.
+// Default re-engage draft: a short invitation message that opens the conversation with
+// intent, rather than a generic follow-up.
 function buildLightTouchMessage(entry: PipelineEntry): string {
   const firstName = entry.name.split(" ")[0];
-  return `Hi ${firstName} — it's been a while since we last spoke. Wanted to check in and see if the timing might be better now. No pressure either way — always happy to reconnect when it works for you.`;
+  return `Hi ${firstName} — we'd like to invite you back into the process. Your profile still looks like a strong fit, and I'd love to reconnect if you're open to it.`;
 }
 
 export default function PipelineScreen({ navigation }: Props) {
@@ -87,7 +87,7 @@ export default function PipelineScreen({ navigation }: Props) {
   // AI-style suggestion — candidates who became open to work again and haven't been
   // re-engaged yet. Capped at 1 so it reads as a single pointed nudge, not a list.
   const reEngageSuggestions = useMemo(
-    () => pipeline.filter((e) => e.openToWork && !e.decision && !e.lastTouchedAt).slice(0, 1),
+    () => pipeline.filter((e) => e.stage === "re_engage" && !e.decision && !e.lastTouchedAt).slice(0, 1),
     [pipeline]
   );
 
@@ -189,30 +189,31 @@ export default function PipelineScreen({ navigation }: Props) {
             </View>
           )}
 
-          {/* AI-style nudge — dark "identity" glass (real blur + gradient sheen + gold
-              edge, see CredoGlass) instead of the flat parchment glass everything else
-              uses, so it visually reads as a distinct AI surface, not another candidate
-              card. Driven by real Pipeline data, not static copy. */}
+          {/* Re-engage suggestion — reads as a quiet AI notification, not a promo card: dark
+              glass, a small pulsing "agent" dot instead of a candidate avatar, and an
+              AI-generated label so it's clear the copy wasn't written by a human. Deliberately
+              understated — it should sit like a system nudge, not compete with the pipeline. */}
           {reEngageSuggestions.length > 0 && (
             <View style={{ marginTop: 12 }}>
               {reEngageSuggestions.map((e) => (
-                <View key={`suggest-${e.id}`} style={styles.suggestionShadow}>
-                  <CredoGlass variant="identity" borderRadius={18} contentStyle={styles.suggestionCard}>
-                    <View style={styles.suggestionHead}>
-                      <View style={styles.suggestionDot}>
-                        <Sparkles size={12} color={colors.ink} strokeWidth={2.5} />
+                <Pressable key={`suggest-${e.id}`} style={styles.suggestionShadow} onPress={() => startComposing(e)}>
+                  <CredoGlass variant="identity" borderRadius={13} contentStyle={styles.suggestionCard}>
+                    <View style={styles.suggestionRow}>
+                      <View style={styles.suggestionAgentDot}>
+                        <Sparkles size={10} color={colors.gold} strokeWidth={2} />
                       </View>
-                      <Text style={styles.suggestionLabel}>Suggested</Text>
+
+                      <View style={styles.suggestionCopy}>
+                        <Text style={styles.suggestionLabel}>AI Suggestion</Text>
+                        <Text style={styles.suggestionBody} numberOfLines={1}>
+                          <Text style={styles.suggestionName}>{e.name}</Text> is open to work again — consider re-engaging.
+                        </Text>
+                      </View>
+
+                      <ChevronRight size={14} color="rgba(245,237,224,0.5)" strokeWidth={2} />
                     </View>
-                    <Text style={styles.suggestionBody}>
-                      <Text style={styles.suggestionName}>{e.name}</Text> has open to work now — consider re-engaging them.
-                    </Text>
-                    <Pressable style={styles.suggestionAction} onPress={() => startComposing(e)}>
-                      <RefreshCw size={13} color={colors.parchment} />
-                      <Text style={styles.suggestionActionText}>Re-engage</Text>
-                    </Pressable>
                   </CredoGlass>
-                </View>
+                </Pressable>
               ))}
             </View>
           )}
@@ -563,39 +564,34 @@ const styles = StyleSheet.create({
   summaryRow: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 8 },
 
   suggestionShadow: {
-    shadowColor: "rgba(16,25,43,0.35)",
-    shadowOffset: { width: 0, height: 10 },
+    shadowColor: "rgba(16,25,43,0.14)",
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 1,
-    shadowRadius: 24,
-    elevation: 8,
+    shadowRadius: 10,
+    elevation: 3,
   },
-  suggestionCard: { padding: 16, gap: 8 },
-  suggestionHead: { flexDirection: "row", alignItems: "center", gap: 8 },
-  suggestionDot: {
+  suggestionCard: { paddingVertical: 8, paddingHorizontal: 11 },
+  suggestionRow: { flexDirection: "row", alignItems: "center", gap: 9 },
+  suggestionAgentDot: {
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: colors.gold,
+    backgroundColor: "rgba(201,166,70,0.14)",
+    borderWidth: 1,
+    borderColor: "rgba(201,166,70,0.35)",
     alignItems: "center",
     justifyContent: "center",
   },
-  suggestionLabel: { fontFamily: fonts.mono, fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, color: colors.gold },
-  suggestionBody: { fontFamily: fonts.sans, fontSize: 13, color: colors.parchment, lineHeight: 19 },
-  suggestionName: { fontFamily: fonts.sansSemiBold },
-  suggestionAction: {
-    flexDirection: "row",
-    alignSelf: "flex-start",
-    alignItems: "center",
-    gap: 6,
-    borderWidth: 1,
-    borderColor: "rgba(245,237,224,0.35)",
-    borderRadius: 100,
-    paddingVertical: 7,
-    paddingHorizontal: 13,
-    marginTop: 2,
-    backgroundColor: "rgba(245,237,224,0.08)",
+  suggestionCopy: { flex: 1, minWidth: 0, gap: 1 },
+  suggestionLabel: {
+    fontFamily: fonts.mono,
+    fontSize: 8.5,
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
+    color: colors.gold,
   },
-  suggestionActionText: { fontFamily: fonts.sansSemiBold, fontSize: 12.5, color: colors.parchment },
+  suggestionName: { fontFamily: fonts.sansSemiBold, fontSize: 11.5, color: colors.parchment },
+  suggestionBody: { fontFamily: fonts.sans, fontSize: 11.5, color: "rgba(245,237,224,0.75)", lineHeight: 15 },
 
   filterScroll: { marginTop: 12 },
   filterRow: { flexDirection: "row", gap: 8, paddingRight: 4 },

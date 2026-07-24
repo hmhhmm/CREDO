@@ -192,8 +192,9 @@ export default function PipelineScreen({ navigation }: Props) {
           {/* Re-engage suggestion — reads as a quiet AI notification, not a promo card: dark
               glass, a small pulsing "agent" dot instead of a candidate avatar, and an
               AI-generated label so it's clear the copy wasn't written by a human. Deliberately
-              understated — it should sit like a system nudge, not compete with the pipeline. */}
-          {reEngageSuggestions.length > 0 && (
+              understated — it should sit like a system nudge, not compete with the pipeline.
+              Temporarily disabled (design still being reconsidered) — code kept intact below. */}
+          {false && reEngageSuggestions.length > 0 && (
             <View style={{ marginTop: 12 }}>
               {reEngageSuggestions.map((e) => (
                 <Pressable key={`suggest-${e.id}`} style={styles.suggestionShadow} onPress={() => startComposing(e)}>

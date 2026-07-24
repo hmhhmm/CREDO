@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { View, Text, ScrollView, Pressable, ActivityIndicator, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { AlertTriangle, Clock, TrendingUp, LogOut, Briefcase, MapPin, Check, CalendarClock } from "lucide-react-native";
+import { AlertTriangle, Clock, TrendingUp, Briefcase, MapPin, Check, CalendarClock, Settings } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import ActionCard from "../../components/shared/ActionCard";
+import Avatar from "../../components/shared/Avatar";
 import { getEmployerIdentity, getDashboardStats, signals, type SignalLevel } from "../../data/employerData";
 import { demoEmployer, type Employer } from "../../data/generateDataset";
 import { currentEmployer } from "../../lib/mockApi";
@@ -16,9 +17,7 @@ import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 import type { EmployerHomeStackParamList } from "../../navigation/EmployerHomeStack";
 
-type Props = NativeStackScreenProps<EmployerHomeStackParamList, "EmployerHome"> & {
-  onSwitchRole: () => void;
-};
+type Props = NativeStackScreenProps<EmployerHomeStackParamList, "EmployerHome">;
 
 const LEVEL_META: Record<SignalLevel, { color: string; Icon: typeof AlertTriangle }> = {
   critical: { color: colors.alert, Icon: AlertTriangle },
@@ -35,7 +34,7 @@ const TYPE_LABEL: Record<string, string> = {
   contract: "Contract",
 };
 
-export default function EmployerHomeScreen({ navigation, onSwitchRole }: Props) {
+export default function EmployerHomeScreen({ navigation }: Props) {
   const [jobs, setJobs] = useState<JobListingResponse[]>([]);
   const [jobsLoading, setJobsLoading] = useState(true);
   const [jobsError, setJobsError] = useState<string | null>(null);
@@ -82,12 +81,12 @@ export default function EmployerHomeScreen({ navigation, onSwitchRole }: Props) 
       <SafeAreaView style={styles.container} edges={["top"]}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.topRow}>
-            <View>
-              <Text style={styles.eyebrow}>{identity.company}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.eyebrow} numberOfLines={1}>{identity.company}</Text>
               <Text style={styles.heading}>Hire Intelligence</Text>
             </View>
-            <Pressable onPress={onSwitchRole} style={styles.avatarButton}>
-              <Text style={styles.avatarInitial}>{identity.initial}</Text>
+            <Pressable onPress={() => navigation.navigate("Settings", { employer })}>
+              <Avatar initial={identity.initial} />
             </Pressable>
           </View>
 
@@ -250,9 +249,9 @@ export default function EmployerHomeScreen({ navigation, onSwitchRole }: Props) 
             })}
           </View>
 
-          <Pressable onPress={onSwitchRole} style={styles.switchRoleLink}>
-            <LogOut size={13} color={colors.slate} />
-            <Text style={styles.switchRoleText}>Switch role</Text>
+          <Pressable onPress={() => navigation.navigate("Settings", { employer })} style={styles.settingsLink}>
+            <Settings size={13} color={colors.slate} />
+            <Text style={styles.settingsText}>Settings</Text>
           </Pressable>
         </ScrollView>
       </SafeAreaView>
@@ -263,11 +262,9 @@ export default function EmployerHomeScreen({ navigation, onSwitchRole }: Props) 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { padding: 20, paddingBottom: 110, gap: 18 },
-  topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginTop: 4 },
+  topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginTop: 4, gap: 12 },
   eyebrow: { fontFamily: fonts.mono, fontSize: 11, textTransform: "uppercase", letterSpacing: 2, color: colors.slate },
   heading: { fontFamily: fonts.displayBold, fontSize: 28, color: colors.ink, marginTop: 2 },
-  avatarButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.ink, alignItems: "center", justifyContent: "center" },
-  avatarInitial: { fontFamily: fonts.displayBold, fontSize: 16, color: colors.parchment },
 
   statsRow: { flexDirection: "row", gap: 10 },
   statCell: { flex: 1 },
@@ -319,6 +316,6 @@ const styles = StyleSheet.create({
   signalBody: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.slate, lineHeight: 18, marginTop: 2 },
   signalLink: { fontFamily: fonts.monoMedium, fontSize: 11, color: colors.verified, marginTop: 4 },
 
-  switchRoleLink: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 2 },
-  switchRoleText: { fontFamily: fonts.mono, fontSize: 12, color: colors.slate },
+  settingsLink: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 2 },
+  settingsText: { fontFamily: fonts.mono, fontSize: 12, color: colors.slate },
 });

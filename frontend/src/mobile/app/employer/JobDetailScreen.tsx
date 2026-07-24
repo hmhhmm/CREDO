@@ -9,6 +9,7 @@ import { jobsApi, ApiError } from "../../lib/api";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 import type { EmployerHomeStackParamList } from "../../navigation/EmployerHomeStack";
+import type { ParentNav } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<EmployerHomeStackParamList, "JobDetail">;
 
@@ -55,14 +56,12 @@ export default function JobDetailScreen({ route, navigation }: Props) {
     // Navigate to the Discover tab (sibling tab) with the skill filter pre-applied.
     // JobDetailScreen is inside EmployerHomeStack (NativeStack), whose parent is EmployerTabs.
     // Discover is now a nested stack, so we target DiscoverMain via screen/params.
-    const tabNav = navigation.getParent();
-    if (tabNav) {
-      (tabNav as { navigate: (name: string, params?: object) => void }).navigate("Discover", {
-        screen: "DiscoverMain",
-        params: { filterSkills },
-        initial: false,
-      });
-    }
+    const tabNav = navigation.getParent() as ParentNav;
+    tabNav?.navigate("Discover", {
+      screen: "DiscoverMain",
+      params: { filterSkills },
+      initial: false,
+    });
   };
 
   const isOpen = job.status === "open";

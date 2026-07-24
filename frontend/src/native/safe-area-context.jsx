@@ -8,6 +8,14 @@ import { View } from './react-native';
 
 const InsetsCtx = createContext({ top: 0, right: 0, bottom: 0, left: 0 });
 
+// env(safe-area-inset-top) is 0 in a plain browser tab or most emulators (no real notch
+// to report), so anything relying on useSafeAreaInsets()/SafeAreaView alone for top
+// clearance sits flush against the very top edge everywhere except a real notched
+// device. Custom headers that need clearance regardless of a real inset (the native-stack
+// header shim, the intro screen's own header row) should add this as a fixed baseline —
+// one shared value so those call sites can't quietly drift apart.
+export const FALLBACK_TOP_CLEARANCE = 20;
+
 function readEnvInsets() {
   if (typeof window === 'undefined' || !window.getComputedStyle) return { top: 0, right: 0, bottom: 0, left: 0 };
   const probe = document.createElement('div');

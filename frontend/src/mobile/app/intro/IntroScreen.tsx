@@ -10,7 +10,7 @@
 // This rebuild follows that shape instead of inventing a new one.
 import { useEffect, useRef, useState } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, FALLBACK_TOP_CLEARANCE } from "react-native-safe-area-context";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming, useReducedMotion } from "react-native-reanimated";
 import {
   ArrowRight,
@@ -221,10 +221,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     // SafeAreaView's edges=["top"] only reserves real device notch space (env(safe-area-
     // inset-top)) — that's 0 in a plain browser tab / most emulators, which is why this
-    // sat flush against the very top edge. A fixed padding on top of that gives the
-    // header the same clearance a native app's status bar would, everywhere, not only on
-    // a real notched device.
-    paddingTop: 20,
+    // sat flush against the very top edge. FALLBACK_TOP_CLEARANCE gives the header the
+    // same clearance a native app's status bar would, everywhere, not only on a real
+    // notched device — same constant the native-stack header shim uses.
+    paddingTop: FALLBACK_TOP_CLEARANCE,
   },
   wordmark: { fontFamily: fonts.displayBold, fontSize: 19, color: colors.ink, letterSpacing: 3 },
   skip: { fontFamily: fonts.mono, fontSize: 12, color: colors.slate, letterSpacing: 0.5 },

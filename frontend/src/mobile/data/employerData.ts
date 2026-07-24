@@ -167,6 +167,7 @@ export interface PipelineEntry {
   // E9 Interview Invitation
   interviewStatus: InterviewStatus;
   interviewDate?: string;
+  meetingLink?: string;
 }
 
 export const INTERVIEW_STATUS_META: Record<InterviewStatus, { label: string; color: string }> = {
@@ -270,6 +271,7 @@ export function getPipelineSeedFor(employer: Employer): PipelineEntry[] {
         d.setHours(10, 0, 0, 0);
         return d.toISOString();
       })(),
+      meetingLink: `https://meet.credo.app/${employer.id}-p3`,
     },
     {
       id: `${employer.id}-p4`,

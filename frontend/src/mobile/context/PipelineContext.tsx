@@ -99,9 +99,15 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
     setAllEntries((prev) => prev.map((p) => (p.id === id ? { ...p, interviewStatus: "invited" } : p)));
   }, []);
 
+  // Generates a meeting link at scheduling time, not on-demand at view time, so it stays
+  // stable across repeat visits to the same interview instead of a fresh link every render.
   const scheduleInterview = useCallback((id: string, date: string) => {
     setAllEntries((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, interviewStatus: "scheduled", interviewDate: date } : p))
+      prev.map((p) =>
+        p.id === id
+          ? { ...p, interviewStatus: "scheduled", interviewDate: date, meetingLink: `https://meet.credo.app/${id}` }
+          : p
+      )
     );
   }, []);
 

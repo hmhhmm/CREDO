@@ -2,9 +2,11 @@
 // in Home's Today's Interviews list. Deliberately not the full CandidateProfileScreen (too
 // evidence-heavy for "am I about to walk into the right meeting") — that's one tap away via
 // "View full profile" for anyone who wants the deeper read.
-import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
+import { useState } from "react";
+import { View, Text, ScrollView, Pressable, Linking, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Calendar, ArrowRight, CalendarCheck } from "lucide-react-native";
+import { Calendar, ArrowRight, CalendarCheck, Video, Copy, Check as CheckIcon } from "lucide-react-native";
+import * as Clipboard from "expo-clipboard";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
@@ -26,6 +28,14 @@ export default function InterviewDetailScreen({ route, navigation }: Props) {
   const stage = STAGE_META[entry.stage];
   const interview = INTERVIEW_STATUS_META[entry.interviewStatus];
   const initials = entry.name.split(" ").map((n) => n[0]).join("");
+  const [copied, setCopied] = useState(false);
+
+  const copyMeetingLink = async () => {
+    if (!entry.meetingLink) return;
+    await Clipboard.setStringAsync(entry.meetingLink);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const openProfile = () => {
     const full = mockCandidates.find((c) => c.id === entry.candidateId);
@@ -63,6 +73,21 @@ export default function InterviewDetailScreen({ route, navigation }: Props) {
                 <View style={styles.timeRow}>
                   <Calendar size={14} color={colors.ink} />
                   <Text style={styles.timeText}>{formatInterviewDateTime(entry.interviewDate)}</Text>
+                </View>
+              )}
+
+              {entry.meetingLink && (
+                <View style={styles.meetingRow}>
+                  <View style={styles.meetingLinkChip}>
+                    <Video size={13} color={colors.slate} />
+                    <Text style={styles.meetingLinkText} numberOfLines={1}>{entry.meetingLink}</Text>
+                  </View>
+                  <Pressable style={styles.meetingIconBtn} onPress={copyMeetingLink}>
+                    {copied ? <CheckIcon size={14} color={colors.verified} /> : <Copy size={14} color={colors.ink} />}
+                  </Pressable>
+                  <Pressable style={styles.meetingJoinBtn} onPress={() => Linking.openURL(entry.meetingLink!)}>
+                    <Text style={styles.meetingJoinText}>Join</Text>
+                  </Pressable>
                 </View>
               )}
 
@@ -116,6 +141,30 @@ const styles = StyleSheet.create({
 
   timeRow: { flexDirection: "row", alignItems: "center", gap: 8, borderTopWidth: 1, borderTopColor: "rgba(16,25,43,0.08)", paddingTop: 12 },
   timeText: { fontFamily: fonts.sansSemiBold, fontSize: 14, color: colors.ink },
+
+  meetingRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  meetingLinkChip: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(16,25,43,0.06)",
+    borderRadius: 100,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  meetingLinkText: { flex: 1, fontFamily: fonts.mono, fontSize: 11, color: colors.slate },
+  meetingIconBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(16,25,43,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  meetingJoinBtn: { backgroundColor: colors.ink, borderRadius: 100, paddingVertical: 8, paddingHorizontal: 14 },
+  meetingJoinText: { fontFamily: fonts.sansSemiBold, fontSize: 12.5, color: colors.parchment },
 
   pillRow: { flexDirection: "row", gap: 8 },
   pill: { borderWidth: 1, borderRadius: 100, paddingVertical: 4, paddingHorizontal: 10 },

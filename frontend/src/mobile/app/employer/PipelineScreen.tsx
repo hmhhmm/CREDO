@@ -5,6 +5,7 @@ import { Send, RefreshCw, Check, CalendarPlus, CalendarCheck, Settings, ThumbsUp
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
+import { CredoGlass } from "../../components/shared/CredoGlass";
 import { STAGE_META, sortPipelineForAttention, type PipelineEntry } from "../../data/employerData";
 import type { DiscoverCandidate } from "../../data/employerData";
 import { mockCandidates } from "../../data/mockData";
@@ -84,9 +85,9 @@ export default function PipelineScreen({ navigation }: Props) {
     [pipeline, stages]
   );
   // AI-style suggestion — candidates who became open to work again and haven't been
-  // re-engaged yet. Capped at 2 so it stays a nudge, not another list to scroll through.
+  // re-engaged yet. Capped at 1 so it reads as a single pointed nudge, not a list.
   const reEngageSuggestions = useMemo(
-    () => pipeline.filter((e) => e.openToWork && !e.decision && !e.lastTouchedAt).slice(0, 2),
+    () => pipeline.filter((e) => e.openToWork && !e.decision && !e.lastTouchedAt).slice(0, 1),
     [pipeline]
   );
 
@@ -188,16 +189,18 @@ export default function PipelineScreen({ navigation }: Props) {
             </View>
           )}
 
-          {/* AI-style nudge — same visual language as Home's "Live signals" cards, driven
-              by real Pipeline data instead of static copy. */}
+          {/* AI-style nudge — dark "identity" glass (real blur + gradient sheen + gold
+              edge, see CredoGlass) instead of the flat parchment glass everything else
+              uses, so it visually reads as a distinct AI surface, not another candidate
+              card. Driven by real Pipeline data, not static copy. */}
           {reEngageSuggestions.length > 0 && (
-            <View style={{ gap: 10, marginTop: 12 }}>
+            <View style={{ marginTop: 12 }}>
               {reEngageSuggestions.map((e) => (
-                <GlassCard key={`suggest-${e.id}`} radius={18}>
-                  <View style={styles.suggestionCard}>
+                <View key={`suggest-${e.id}`} style={styles.suggestionShadow}>
+                  <CredoGlass variant="identity" borderRadius={18} contentStyle={styles.suggestionCard}>
                     <View style={styles.suggestionHead}>
                       <View style={styles.suggestionDot}>
-                        <Sparkles size={12} color="#fff" strokeWidth={2.5} />
+                        <Sparkles size={12} color={colors.ink} strokeWidth={2.5} />
                       </View>
                       <Text style={styles.suggestionLabel}>Suggested</Text>
                     </View>
@@ -205,11 +208,11 @@ export default function PipelineScreen({ navigation }: Props) {
                       <Text style={styles.suggestionName}>{e.name}</Text> has open to work now — consider re-engaging them.
                     </Text>
                     <Pressable style={styles.suggestionAction} onPress={() => startComposing(e)}>
-                      <RefreshCw size={13} color={colors.ink} />
+                      <RefreshCw size={13} color={colors.parchment} />
                       <Text style={styles.suggestionActionText}>Re-engage</Text>
                     </Pressable>
-                  </View>
-                </GlassCard>
+                  </CredoGlass>
+                </View>
               ))}
             </View>
           )}
@@ -559,6 +562,13 @@ const styles = StyleSheet.create({
 
   summaryRow: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 8 },
 
+  suggestionShadow: {
+    shadowColor: "rgba(16,25,43,0.35)",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 1,
+    shadowRadius: 24,
+    elevation: 8,
+  },
   suggestionCard: { padding: 16, gap: 8 },
   suggestionHead: { flexDirection: "row", alignItems: "center", gap: 8 },
   suggestionDot: {
@@ -569,8 +579,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  suggestionLabel: { fontFamily: fonts.mono, fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, color: colors.slate },
-  suggestionBody: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink, lineHeight: 19 },
+  suggestionLabel: { fontFamily: fonts.mono, fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, color: colors.gold },
+  suggestionBody: { fontFamily: fonts.sans, fontSize: 13, color: colors.parchment, lineHeight: 19 },
   suggestionName: { fontFamily: fonts.sansSemiBold },
   suggestionAction: {
     flexDirection: "row",
@@ -578,13 +588,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     borderWidth: 1,
-    borderColor: "rgba(16,25,43,0.12)",
+    borderColor: "rgba(245,237,224,0.35)",
     borderRadius: 100,
     paddingVertical: 7,
     paddingHorizontal: 13,
     marginTop: 2,
+    backgroundColor: "rgba(245,237,224,0.08)",
   },
-  suggestionActionText: { fontFamily: fonts.sansSemiBold, fontSize: 12.5, color: colors.ink },
+  suggestionActionText: { fontFamily: fonts.sansSemiBold, fontSize: 12.5, color: colors.parchment },
 
   filterScroll: { marginTop: 12 },
   filterRow: { flexDirection: "row", gap: 8, paddingRight: 4 },

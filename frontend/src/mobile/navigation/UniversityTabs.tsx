@@ -1,4 +1,5 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { useLocation } from "react-router-dom";
 import { Activity, Users, TrendingUp, Handshake } from "lucide-react-native";
 import PulseScreen from "../app/university/PulseScreen";
 import CohortsScreen from "../app/university/CohortsScreen";
@@ -11,6 +12,14 @@ import type { University } from "../data/universityData";
 const Tab = createBottomTabNavigator();
 
 const ICONS = { Pulse: Activity, Cohorts: Users, Outcomes: TrendingUp, Partners: Handshake, Community: Users };
+const BASE_PATH = "/app/university";
+const PATH_TO_SCREEN: Record<string, string> = {
+  pulse: "Pulse",
+  cohorts: "Cohorts",
+  outcomes: "Outcomes",
+  partners: "Partners",
+  community: "Community",
+};
 
 export default function UniversityTabs({
   university,
@@ -19,10 +28,15 @@ export default function UniversityTabs({
   university: University;
   onSwitchRole: () => void;
 }) {
+  const location = useLocation();
+  const segment = location.pathname.replace(new RegExp(`^${BASE_PATH}/?`), "").split("/")[0];
+  const initialRouteName = PATH_TO_SCREEN[segment] ?? "Pulse";
+
   return (
     <Tab.Navigator
       screenOptions={{ headerShown: false }}
-      tabBar={(props) => <SegmentedTabBar {...props} icons={ICONS} />}
+      initialRouteName={initialRouteName}
+      tabBar={(props) => <SegmentedTabBar {...props} icons={ICONS} basePath={BASE_PATH} />}
     >
       <Tab.Screen name="Pulse">{() => <PulseScreen university={university} onSwitchRole={onSwitchRole} />}</Tab.Screen>
       <Tab.Screen name="Cohorts">{() => <CohortsScreen university={university} />}</Tab.Screen>

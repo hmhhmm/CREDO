@@ -10,6 +10,7 @@
 // Pass an icon map keyed by route name.
 import { View, Pressable, Text, StyleSheet, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useLocation, useNavigate as useRouterNavigate } from "react-router-dom";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import type { LucideIcon } from "lucide-react-native";
 import { colors } from "../theme/colors";
@@ -24,6 +25,7 @@ export default function SegmentedTabBar({
   icons,
   labels,
   centerRoute,
+  basePath,
 }: BottomTabBarProps & {
   icons: Record<string, LucideIcon>;
   labels?: Record<string, string>;
@@ -31,12 +33,18 @@ export default function SegmentedTabBar({
   // of the pill instead of an inline tab, with the remaining routes split left/right of it
   // in registration order. Phone width only — the desktop rail stays a plain vertical list.
   centerRoute?: string;
+  // When set, each tab press also pushes `${basePath}/${route.name.toLowerCase()}` so every
+  // top-level tab has its own shareable, direct-loadable URL — mirrors the pattern
+  // RootNavigator uses for the role tabs themselves, one level down.
+  basePath?: string;
 }) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const desktop = width >= DESKTOP_MIN_WIDTH;
   const bottom = insets.bottom > 0 ? insets.bottom + 4 : 18;
   const first = Object.values(icons)[0];
+  const location = useLocation();
+  const routerNavigate = useRouterNavigate();
 
   const tabs = state.routes.map((route, index) => {
     const focused = state.index === index;
@@ -45,6 +53,10 @@ export default function SegmentedTabBar({
     const onPress = () => {
       const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
       if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+      if (basePath) {
+        const path = `${basePath}/${route.name.toLowerCase()}`;
+        if (path !== location.pathname) routerNavigate(path);
+      }
     };
     return { key: route.key, name: route.name, focused, Icon, label, onPress };
   });

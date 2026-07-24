@@ -1,4 +1,5 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { useLocation } from "react-router-dom";
 import { LayoutDashboard, Search, ListChecks, ScanLine, Users } from "lucide-react-native";
 import type { NavigatorScreenParams } from "@react-navigation/native";
 import EmployerHomeStack from "./EmployerHomeStack";
@@ -22,12 +23,25 @@ const Tab = createBottomTabNavigator<EmployerTabsParamList>();
 
 const ICONS = { Home: LayoutDashboard, Discover: Search, Pipeline: ListChecks, FairMode: ScanLine, Community: Users };
 const LABELS = { Home: "Home", Discover: "Discover", Pipeline: "Pipeline", FairMode: "Fair", Community: "Community" };
+const BASE_PATH = "/app/employer";
+const PATH_TO_SCREEN: Record<string, keyof EmployerTabsParamList> = {
+  home: "Home",
+  discover: "Discover",
+  fairmode: "FairMode",
+  pipeline: "Pipeline",
+  community: "Community",
+};
 
 export default function EmployerTabs({ onSwitchRole }: { onSwitchRole: () => void }) {
+  const location = useLocation();
+  const segment = location.pathname.replace(new RegExp(`^${BASE_PATH}/?`), "").split("/")[0];
+  const initialRouteName = PATH_TO_SCREEN[segment] ?? "Home";
+
   return (
     <Tab.Navigator
       screenOptions={{ headerShown: false }}
-      tabBar={(props) => <SegmentedTabBar {...props} icons={ICONS} labels={LABELS} centerRoute="FairMode" />}
+      initialRouteName={initialRouteName}
+      tabBar={(props) => <SegmentedTabBar {...props} icons={ICONS} labels={LABELS} centerRoute="FairMode" basePath={BASE_PATH} />}
     >
       <Tab.Screen name="Home">{() => <EmployerHomeStack onSwitchRole={onSwitchRole} />}</Tab.Screen>
       <Tab.Screen name="Discover" component={DiscoverStack} />

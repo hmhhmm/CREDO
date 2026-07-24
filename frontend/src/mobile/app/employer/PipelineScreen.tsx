@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { View, Text, ScrollView, Pressable, TextInput, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FileText, Send, RefreshCw, ChevronRight, Check, CalendarPlus, CalendarCheck } from "lucide-react-native";
@@ -9,6 +9,7 @@ import { STAGE_META, INTERVIEW_STATUS_META, type PipelineEntry } from "../../dat
 import type { DiscoverCandidate } from "../../data/employerData";
 import { mockCandidates } from "../../data/mockData";
 import { usePipeline } from "../../context/PipelineContext";
+import { getUpcomingInterviewSlots, formatInterviewDateTime } from "../../utils/interviewSlots";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 import type { PipelineStackParamList } from "../../navigation/PipelineStack";
@@ -69,7 +70,8 @@ export default function PipelineScreen({ navigation }: Props) {
   const [composingId, setComposingId] = useState<string | null>(null);
   const [draftMessage, setDraftMessage] = useState("");
   const [schedulingId, setSchedulingId] = useState<string | null>(null);
-  const [dateDraft, setDateDraft] = useState("");
+  const [selectedSlotIso, setSelectedSlotIso] = useState<string | null>(null);
+  const upcomingSlots = useMemo(() => getUpcomingInterviewSlots(), []);
 
   const startComposing = (entry: PipelineEntry) => {
     setComposingId(entry.id);
@@ -89,18 +91,19 @@ export default function PipelineScreen({ navigation }: Props) {
 
   const startScheduling = (entry: PipelineEntry) => {
     setSchedulingId(entry.id);
-    setDateDraft("");
+    setSelectedSlotIso(null);
   };
 
   const cancelScheduling = () => {
     setSchedulingId(null);
-    setDateDraft("");
+    setSelectedSlotIso(null);
   };
 
   const confirmSchedule = (entry: PipelineEntry) => {
-    scheduleInterview(entry.id, dateDraft);
+    if (!selectedSlotIso) return;
+    scheduleInterview(entry.id, selectedSlotIso);
     setSchedulingId(null);
-    setDateDraft("");
+    setSelectedSlotIso(null);
   };
 
   const interviewSummary = {
@@ -223,29 +226,36 @@ export default function PipelineScreen({ navigation }: Props) {
                         <View style={[styles.interviewDot, { backgroundColor: INTERVIEW_STATUS_META[e.interviewStatus].color }]} />
                         <Text style={[styles.interviewLabel, { color: INTERVIEW_STATUS_META[e.interviewStatus].color }]}>
                           {INTERVIEW_STATUS_META[e.interviewStatus].label}
-                          {e.interviewStatus === "scheduled" && e.interviewDate ? ` · ${e.interviewDate}` : ""}
+                          {e.interviewStatus === "scheduled" && e.interviewDate ? ` · ${formatInterviewDateTime(e.interviewDate)}` : ""}
                         </Text>
                       </View>
 
                       {schedulingId === e.id ? (
                         <View style={{ gap: 8, marginTop: 8 }}>
-                          <GlassCard radius={14}>
-                            <TextInput
-                              style={styles.dateInput}
-                              value={dateDraft}
-                              onChangeText={setDateDraft}
-                              placeholder="e.g. Aug 12, 2026, 3pm"
-                              placeholderTextColor={colors.slate}
-                            />
-                          </GlassCard>
+                          <View style={styles.slotGrid}>
+                            {upcomingSlots.map((slot) => {
+                              const selected = selectedSlotIso === slot.iso;
+                              return (
+                                <Pressable
+                                  key={slot.iso}
+                                  style={[styles.slotChip, selected && styles.slotChipSelected]}
+                                  onPress={() => setSelectedSlotIso(slot.iso)}
+                                >
+                                  <Text style={[styles.slotChipText, selected && styles.slotChipTextSelected]}>
+                                    {slot.label}
+                                  </Text>
+                                </Pressable>
+                              );
+                            })}
+                          </View>
                           <View style={styles.composeRow}>
                             <Pressable style={styles.composeCancel} onPress={cancelScheduling}>
                               <Text style={styles.composeCancelText}>Cancel</Text>
                             </Pressable>
                             <Pressable
-                              style={[styles.composeSend, !dateDraft.trim() && styles.composeSendDisabled]}
+                              style={[styles.composeSend, !selectedSlotIso && styles.composeSendDisabled]}
                               onPress={() => confirmSchedule(e)}
-                              disabled={!dateDraft.trim()}
+                              disabled={!selectedSlotIso}
                             >
                               <CalendarCheck size={13} color={colors.parchment} />
                               <Text style={styles.composeSendText}>Confirm</Text>
@@ -360,5 +370,15 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   interviewActionText: { fontFamily: fonts.sansSemiBold, fontSize: 12.5, color: colors.ink },
-  dateInput: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink, padding: 12 },
+  slotGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  slotChip: {
+    borderWidth: 1,
+    borderColor: "rgba(16,25,43,0.12)",
+    borderRadius: 100,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+  },
+  slotChipSelected: { backgroundColor: colors.ink, borderColor: colors.ink },
+  slotChipText: { fontFamily: fonts.mono, fontSize: 11, color: colors.ink },
+  slotChipTextSelected: { color: colors.parchment },
 });

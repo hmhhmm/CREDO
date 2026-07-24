@@ -20,10 +20,12 @@ interface PipelineContextValue {
   // employer") and so can't use the current-employer-filtered `pipeline` above.
   isInPipelineFor: (employerId: string, candidateId: string) => boolean;
   reEngage: (id: string, message: string) => void;
-  // E9 Interview Invitation
-  inviteToInterview: (candidate: Candidate) => void;
-  markInterviewInvited: (id: string) => void;
+  // E9 Interview Invitation — stageId always comes from the caller (which already has
+  // useInterviewStages()), so this context stays decoupled from stage configuration.
+  inviteToInterview: (candidate: Candidate, stageId: string) => void;
+  markInterviewInvited: (id: string, stageId: string) => void;
   scheduleInterview: (id: string, date: string) => void;
+  advanceStage: (id: string, nextStageId: string) => void;
   completeInterview: (id: string) => void;
 }
 
@@ -79,14 +81,14 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
   // Always stamped with the *current* logged-in employer, not whichever entry happens to
   // match — inviting is something only the acting employer can do.
   const inviteToInterview = useCallback(
-    (candidate: Candidate) => {
+    (candidate: Candidate, stageId: string) => {
       if (!employerId) return;
       setAllEntries((prev) => {
         const existing = prev.find((p) => p.employerId === employerId && p.candidateId === candidate.id);
         if (existing) {
-          return prev.map((p) => (p.id === existing.id ? { ...p, interviewStatus: "invited" } : p));
+          return prev.map((p) => (p.id === existing.id ? { ...p, currentStageId: stageId } : p));
         }
-        return [{ ...pipelineEntryFromCandidate(candidate, employerId), interviewStatus: "invited" }, ...prev];
+        return [{ ...pipelineEntryFromCandidate(candidate, employerId), currentStageId: stageId }, ...prev];
       });
     },
     [employerId]
@@ -95,24 +97,34 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
   // For an entry already in the pipeline — e.g. inviting straight from a Pipeline card
   // rather than a Discover/Fair Mode profile, where inviteToInterview's add-if-missing
   // behavior isn't needed.
-  const markInterviewInvited = useCallback((id: string) => {
-    setAllEntries((prev) => prev.map((p) => (p.id === id ? { ...p, interviewStatus: "invited" } : p)));
+  const markInterviewInvited = useCallback((id: string, stageId: string) => {
+    setAllEntries((prev) => prev.map((p) => (p.id === id ? { ...p, currentStageId: stageId } : p)));
   }, []);
 
   // Generates a meeting link at scheduling time, not on-demand at view time, so it stays
   // stable across repeat visits to the same interview instead of a fresh link every render.
   const scheduleInterview = useCallback((id: string, date: string) => {
     setAllEntries((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, interviewDate: date, meetingLink: `https://meet.credo.app/${id}` } : p))
+    );
+  }, []);
+
+  // Moves to the next configured stage and clears the previous stage's scheduling — a new
+  // stage needs its own date/link, not the old one carried over.
+  const advanceStage = useCallback((id: string, nextStageId: string) => {
+    setAllEntries((prev) =>
       prev.map((p) =>
-        p.id === id
-          ? { ...p, interviewStatus: "scheduled", interviewDate: date, meetingLink: `https://meet.credo.app/${id}` }
-          : p
+        p.id === id ? { ...p, currentStageId: nextStageId, interviewDate: undefined, meetingLink: undefined } : p
       )
     );
   }, []);
 
+  // Only meaningful once the candidate has finished the *last* configured stage — the
+  // caller (PipelineScreen) decides when that's true, this just records the timestamp.
   const completeInterview = useCallback((id: string) => {
-    setAllEntries((prev) => prev.map((p) => (p.id === id ? { ...p, interviewStatus: "completed" } : p)));
+    setAllEntries((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, stageCompletedAt: new Date().toISOString() } : p))
+    );
   }, []);
 
   return (
@@ -125,6 +137,7 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
         inviteToInterview,
         markInterviewInvited,
         scheduleInterview,
+        advanceStage,
         completeInterview,
       }}
     >

@@ -141,9 +141,26 @@ export const discoverCandidates: DiscoverCandidate[] = allCandidates.map((c) => 
 export type PipelineStage = "simuhire_done" | "shortlisted" | "re_engage";
 
 // E9 Interview Invitation — orthogonal to `stage`, not folded into it: a candidate can be
-// `shortlisted` and separately `interview: "scheduled"` at the same time. Tracks the human
-// interview process employers now explicitly manage, since SimuHire no longer needs tracking.
-export type InterviewStatus = "not_invited" | "invited" | "scheduled" | "completed";
+// `shortlisted` and separately partway through the interview round sequence at the same
+// time. Tracks the human interview process employers now explicitly manage, since SimuHire
+// no longer needs tracking.
+//
+// Stage *names* are employer-configurable (Settings — see InterviewStagesContext), not a
+// fixed enum: "1st Round"/"Technical Interview"/"Cultural Fit" etc. are data, not code. Each
+// employer gets their own ordered list, seeded from DEFAULT_INTERVIEW_STAGES, and can
+// rename/reorder/add/remove — names must stay unique within one employer's list.
+export interface InterviewStageDef {
+  id: string; // stable — survives a rename, so PipelineEntry.currentStageId never dangles
+  name: string;
+}
+
+export const DEFAULT_INTERVIEW_STAGES: InterviewStageDef[] = [
+  { id: "invitation-sent", name: "Invitation Sent" },
+  { id: "round-1", name: "1st Round" },
+  { id: "round-2", name: "2nd Round" },
+  { id: "technical", name: "Technical Interview" },
+  { id: "cultural-fit", name: "Cultural Fit Interview" },
+];
 
 export interface PipelineEntry {
   id: string; // globally unique across employers — always prefixed with employerId
@@ -164,18 +181,15 @@ export interface PipelineEntry {
   // navigation.
   lastTouchedAt?: string;
   lastTouchMessage?: string;
-  // E9 Interview Invitation
-  interviewStatus: InterviewStatus;
+  // E9 Interview Invitation — currentStageId is null until "Invite to Interview"; it then
+  // references one of the employer's configured InterviewStageDef ids. interviewDate/
+  // meetingLink describe the *current* stage's meeting; advancing to the next stage clears
+  // both. stageCompletedAt is set only once the candidate finishes the last configured stage.
+  currentStageId: string | null;
   interviewDate?: string;
   meetingLink?: string;
+  stageCompletedAt?: string;
 }
-
-export const INTERVIEW_STATUS_META: Record<InterviewStatus, { label: string; color: string }> = {
-  not_invited: { label: "Not invited", color: "#6B7785" },
-  invited: { label: "Interview invited", color: "#D9A441" },
-  scheduled: { label: "Interview scheduled", color: "#2F6E8F" },
-  completed: { label: "Interview completed", color: "#1F7A5C" },
-};
 
 // Picks a deterministic, varied slice of the real roster to seed each employer's pipeline
 // with — one candidate per stage type, chosen by real attributes (SimuHire completion,
@@ -211,7 +225,7 @@ export function pipelineEntryFromCandidate(c: Candidate, employerId: string): Pi
       c.simuHire.type && c.simuHire.overallScore != null && c.simuHire.dimensions
         ? { type: c.simuHire.type, overallScore: c.simuHire.overallScore, dimensions: c.simuHire.dimensions }
         : undefined,
-    interviewStatus: "not_invited",
+    currentStageId: null,
   };
 }
 
@@ -235,7 +249,7 @@ export function getPipelineSeedFor(employer: Employer): PipelineEntry[] {
         overallScore: withSimuHire[0].simuHire.overallScore!,
         dimensions: withSimuHire[0].simuHire.dimensions!,
       },
-      interviewStatus: "invited",
+      currentStageId: DEFAULT_INTERVIEW_STAGES[0].id, // "Invitation Sent"
     },
     {
       id: `${employer.id}-p2`,
@@ -251,7 +265,7 @@ export function getPipelineSeedFor(employer: Employer): PipelineEntry[] {
         overallScore: withSimuHire[1].simuHire.overallScore!,
         dimensions: withSimuHire[1].simuHire.dimensions!,
       },
-      interviewStatus: "not_invited",
+      currentStageId: null,
     },
     {
       id: `${employer.id}-p3`,
@@ -262,7 +276,7 @@ export function getPipelineSeedFor(employer: Employer): PipelineEntry[] {
       trustScore: shortlistCandidate.trustScore,
       stage: "shortlisted",
       detail: `Shortlisted for ${demoJobs[0]?.title ?? "an open role"} — verified ${shortlistCandidate.verifiedSkills[0]?.name ?? "skills"}`,
-      interviewStatus: "scheduled",
+      currentStageId: DEFAULT_INTERVIEW_STAGES[1].id, // "1st Round" — scheduled, mid-funnel
       // Real ISO datetime, set to today at 10am — every employer sees at least one
       // same-day interview on login, so Home's "Today's Interviews" section (E4) always
       // has something real to show without requiring manual scheduling first.
@@ -282,7 +296,7 @@ export function getPipelineSeedFor(employer: Employer): PipelineEntry[] {
       trustScore: reEngageCandidate.trustScore,
       stage: "re_engage",
       detail: "Said no in March — timing may have changed, worth a light touch",
-      interviewStatus: "not_invited",
+      currentStageId: null,
     },
   ];
 }

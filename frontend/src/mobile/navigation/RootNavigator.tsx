@@ -5,6 +5,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { DemoProvider } from "../context/DemoContext";
 import { PipelineProvider } from "../context/PipelineContext";
+import { InterviewStagesProvider } from "../context/InterviewStagesContext";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import AuthGate from "../app/auth/AuthGate";
 import UniversityAuthGate from "../app/auth/UniversityAuthGate";
@@ -127,11 +128,13 @@ export default function RootNavigator() {
       <SafeAreaProvider>
         <AuthProvider>
           <DemoProvider>
-            <PipelineProvider>
-              <NavigationContainer>
-                <RoleStackNavigator />
-              </NavigationContainer>
-            </PipelineProvider>
+            <InterviewStagesProvider>
+              <PipelineProvider>
+                <NavigationContainer>
+                  <RoleStackNavigator />
+                </NavigationContainer>
+              </PipelineProvider>
+            </InterviewStagesProvider>
           </DemoProvider>
         </AuthProvider>
       </SafeAreaProvider>

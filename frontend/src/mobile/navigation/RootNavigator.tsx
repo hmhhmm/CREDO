@@ -6,6 +6,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { DemoProvider } from "../context/DemoContext";
 import { PipelineProvider } from "../context/PipelineContext";
 import { InterviewStagesProvider } from "../context/InterviewStagesContext";
+import { SkillFeedbackProvider } from "../context/SkillFeedbackContext";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import AuthGate from "../app/auth/AuthGate";
 import UniversityAuthGate from "../app/auth/UniversityAuthGate";
@@ -129,11 +130,13 @@ export default function RootNavigator() {
         <AuthProvider>
           <DemoProvider>
             <InterviewStagesProvider>
-              <PipelineProvider>
-                <NavigationContainer>
-                  <RoleStackNavigator />
-                </NavigationContainer>
-              </PipelineProvider>
+              <SkillFeedbackProvider>
+                <PipelineProvider>
+                  <NavigationContainer>
+                    <RoleStackNavigator />
+                  </NavigationContainer>
+                </PipelineProvider>
+              </SkillFeedbackProvider>
             </InterviewStagesProvider>
           </DemoProvider>
         </AuthProvider>

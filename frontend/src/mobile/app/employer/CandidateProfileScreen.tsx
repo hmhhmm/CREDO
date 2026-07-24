@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { View, Text, ScrollView, Pressable, TextInput, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MapPin, TrendingUp, Check, Award, FileText, Send, ThumbsUp, ThumbsDown, Star } from "lucide-react-native";
+import { MapPin, TrendingUp, Check, Award, FileText, Send, ThumbsUp, ThumbsDown, Star, GraduationCap } from "lucide-react-native";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import GitHubIcon from "../../components/GitHubIcon";
 import { getConfidenceBand } from "../../utils/confidenceBand";
 import { usePipeline } from "../../context/PipelineContext";
 import { useInterviewStages } from "../../context/InterviewStagesContext";
+import { useSkillFeedback } from "../../context/SkillFeedbackContext";
+import { useAuth } from "../../context/AuthContext";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 import type { DiscoverCandidate } from "../../data/employerData";
@@ -53,7 +55,12 @@ export default function CandidateProfileScreen({ route }: Props) {
   const { candidate: c } = route.params;
   const { pipeline, inviteToInterview, setRating, addComment } = usePipeline();
   const { stages } = useInterviewStages();
+  const { submitFeedback } = useSkillFeedback();
+  const { user } = useAuth();
   const [commentDraft, setCommentDraft] = useState("");
+  const [feedbackSkill, setFeedbackSkill] = useState<string | null>(null);
+  const [feedbackNote, setFeedbackNote] = useState("");
+  const [feedbackSent, setFeedbackSent] = useState(false);
 
   // Derived from the shared pipeline, not local state — so status set from here shows up
   // in Pipeline too, and status set in Pipeline (or via a prior visit to this profile)
@@ -277,6 +284,71 @@ export default function CandidateProfileScreen({ route }: Props) {
             </GlassCard>
           )}
 
+          {/* Skill feedback to university — E9 Bridge C. Lets an employer flag a skill gap
+              straight to the candidate's university, separate from HR Notes (which stays
+              internal to this employer). */}
+          {c.university && (
+            <GlassCard radius={18}>
+              <View style={styles.block}>
+                <View style={styles.simuHireHeader}>
+                  <GraduationCap size={16} color={colors.gold} />
+                  <Text style={styles.blockTitle}>Feedback to {c.university}</Text>
+                </View>
+                {feedbackSent ? (
+                  <Text style={styles.emptySlate}>Feedback sent to {c.university}.</Text>
+                ) : (
+                  <>
+                    <Text style={styles.feedbackHint}>Flag a skill this candidate should sharpen before graduating.</Text>
+                    <View style={styles.chipRow}>
+                      {[...c.verifiedSkills.map((s) => s.name), ...(c.claimedSkills ?? [])].map((skill) => (
+                        <Pressable
+                          key={skill}
+                          style={[styles.skillChip, feedbackSkill === skill && styles.skillChipActive]}
+                          onPress={() => setFeedbackSkill(skill)}
+                        >
+                          <Text style={[styles.skillChipText, feedbackSkill === skill && styles.skillChipTextActive]}>
+                            {skill}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                    <View style={styles.commentComposeRow}>
+                      <TextInput
+                        style={styles.commentInput}
+                        value={feedbackNote}
+                        onChangeText={setFeedbackNote}
+                        placeholder="What should they improve on?"
+                        placeholderTextColor={colors.slate}
+                        multiline
+                      />
+                      <Pressable
+                        style={[
+                          styles.commentSendBtn,
+                          (!feedbackSkill || !feedbackNote.trim()) && styles.commentSendBtnDisabled,
+                        ]}
+                        onPress={() => {
+                          if (!feedbackSkill || !feedbackNote.trim()) return;
+                          submitFeedback({
+                            universityName: c.university,
+                            candidateId: c.id,
+                            candidateName: c.name,
+                            employerName: (user?.role === "employer" ? user.company_name : null) || "An employer",
+                            skill: feedbackSkill,
+                            note: feedbackNote.trim(),
+                          });
+                          setFeedbackSent(true);
+                        }}
+                        disabled={!feedbackSkill || !feedbackNote.trim()}
+                      >
+                        <Send size={14} color={colors.parchment} />
+                      </Pressable>
+                    </View>
+                  </>
+                )}
+              </View>
+            </GlassCard>
+          )}
+
           {/* Bottom action — E9 Interview Invitation. SimuHire is compulsory now, so there's
               nothing to invite the candidate to at this stage; the action here is the human
               interview, tracked further in Pipeline. */}
@@ -422,6 +494,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   claimedChipText: { fontFamily: fonts.mono, fontSize: 11, color: colors.slate },
+
+  // Skill feedback to university
+  feedbackHint: { fontFamily: fonts.sans, fontSize: 12, color: colors.slate },
+  skillChip: {
+    borderWidth: 1,
+    borderColor: colors.slate,
+    borderRadius: 100,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+  },
+  skillChipActive: { borderColor: colors.gold, backgroundColor: "rgba(201,166,70,0.14)" },
+  skillChipText: { fontFamily: fonts.mono, fontSize: 11, color: colors.slate },
+  skillChipTextActive: { color: colors.gold },
 
   // Evidence — per-artifact proof
   evidenceRow: { flexDirection: "row", alignItems: "center", gap: 10 },

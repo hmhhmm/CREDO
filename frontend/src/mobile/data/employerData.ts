@@ -209,9 +209,17 @@ export interface PipelineEntry {
 // Pipeline actually theirs is employerId-scoped storage in PipelineContext, not different
 // seed candidates.
 const withSimuHire = allCandidates.filter((c) => c.simuHire.completed);
-const shortlistCandidate = allCandidates.find((c) => c.trustScore >= 70 && !withSimuHire.includes(allCandidates[0]))
-  ?? allCandidates[2];
-const reEngageCandidate = allCandidates.find((c) => !c.openToWork) ?? allCandidates[3];
+// Each pick explicitly excludes everyone already chosen — without this, two of the four
+// seed slots can resolve to the same real person (seen live: shortlistCandidate's old
+// predicate never referenced its own loop variable, so it always fell through to the same
+// fallback index as reEngageCandidate's unconstrained find(), seeding one candidate twice
+// into the same employer's Pipeline under two different stages).
+const seedPickedIds = new Set([withSimuHire[0]?.id, withSimuHire[1]?.id]);
+const shortlistCandidate =
+  allCandidates.find((c) => c.trustScore >= 70 && !seedPickedIds.has(c.id)) ?? allCandidates[2];
+seedPickedIds.add(shortlistCandidate.id);
+const reEngageCandidate =
+  allCandidates.find((c) => !c.openToWork && !seedPickedIds.has(c.id)) ?? allCandidates[3];
 
 // Builds a fresh PipelineEntry from any candidate not already in the pipeline — used when
 // "Invite to Interview" is pressed from a profile the employer reached via Discover/Fair

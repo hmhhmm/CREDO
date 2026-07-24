@@ -6,7 +6,7 @@
 // own name/company/job stats — Discover/Pipeline/Signals stay shared demo content across
 // every employer account, illustrating the platform rather than one company's real data.
 import type { Candidate } from "./types";
-import { allCandidates, demoEmployer, allJobs, type Employer } from "./generateDataset";
+import { allCandidates, allJobs, type Employer } from "./generateDataset";
 
 export function getEmployerIdentity(employer: Employer) {
   return {
@@ -146,7 +146,8 @@ export type PipelineStage = "simuhire_done" | "shortlisted" | "re_engage";
 export type InterviewStatus = "not_invited" | "invited" | "scheduled" | "completed";
 
 export interface PipelineEntry {
-  id: string;
+  id: string; // globally unique across employers — always prefixed with employerId
+  employerId: string; // which employer this entry belongs to — Pipeline is scoped per employer
   candidateId: string; // links back to allCandidates — same person as Discover/Partners
   name: string;
   field: string;
@@ -175,13 +176,15 @@ export const INTERVIEW_STATUS_META: Record<InterviewStatus, { label: string; col
   completed: { label: "Interview completed", color: "#1F7A5C" },
 };
 
-// Picks a deterministic, varied slice of the real roster for this employer's pipeline —
-// one candidate per stage type, chosen by real attributes (SimuHire completion, trust
-// score) rather than 4 fixed ids that would break the moment the roster regenerates.
+// Picks a deterministic, varied slice of the real roster to seed each employer's pipeline
+// with — one candidate per stage type, chosen by real attributes (SimuHire completion,
+// trust score) rather than 4 fixed ids that would break the moment the roster regenerates.
 // Only ~42% of the full 121-candidate roster has completed SimuHire (the rest are early-
 // stage "explorers" — expected, not a bug); withSimuHire is the pool the simuhire_done
-// entries below actually draw from.
-const demoJobs = allJobs.filter((j) => j.employerId === demoEmployer.id);
+// entries below actually draw from. These picks are the same across every employer (the
+// selection formula is deterministic, not employer-specific) — what makes each employer's
+// Pipeline actually theirs is employerId-scoped storage in PipelineContext, not different
+// seed candidates.
 const withSimuHire = allCandidates.filter((c) => c.simuHire.completed);
 const shortlistCandidate = allCandidates.find((c) => c.trustScore >= 70 && !withSimuHire.includes(allCandidates[0]))
   ?? allCandidates[2];
@@ -189,10 +192,12 @@ const reEngageCandidate = allCandidates.find((c) => !c.openToWork) ?? allCandida
 
 // Builds a fresh PipelineEntry from any candidate not already in the pipeline — used when
 // "Invite to Interview" is pressed from a profile the employer reached via Discover/Fair
-// Mode rather than one already tracked in Pipeline.
-export function pipelineEntryFromCandidate(c: Candidate): PipelineEntry {
+// Mode rather than one already tracked in Pipeline. id is employerId-prefixed so the same
+// candidate invited by two different employers doesn't collide into one entry.
+export function pipelineEntryFromCandidate(c: Candidate, employerId: string): PipelineEntry {
   return {
-    id: `p-${c.id}`,
+    id: `${employerId}-p-${c.id}`,
+    employerId,
     candidateId: c.id,
     name: c.name,
     field: c.field,
@@ -209,59 +214,76 @@ export function pipelineEntryFromCandidate(c: Candidate): PipelineEntry {
   };
 }
 
-export const pipeline: PipelineEntry[] = [
-  {
-    id: "p1",
-    candidateId: withSimuHire[0].id,
-    name: withSimuHire[0].name,
-    field: withSimuHire[0].field,
-    trustScore: withSimuHire[0].trustScore,
-    stage: "simuhire_done",
-    detail: `SimuHire ${withSimuHire[0].simuHire.type} · ${withSimuHire[0].simuHire.overallScore}/100 — report ready to review`,
-    simuHire: {
-      type: withSimuHire[0].simuHire.type!,
-      overallScore: withSimuHire[0].simuHire.overallScore!,
-      dimensions: withSimuHire[0].simuHire.dimensions!,
+// Called once per employer, the first time they're seen logged in this session (see
+// PipelineContext) — not a module-level constant, since every employer needs their own
+// entries with their own employerId, not one shared array.
+export function getPipelineSeedFor(employer: Employer): PipelineEntry[] {
+  const demoJobs = allJobs.filter((j) => j.employerId === employer.id);
+  return [
+    {
+      id: `${employer.id}-p1`,
+      employerId: employer.id,
+      candidateId: withSimuHire[0].id,
+      name: withSimuHire[0].name,
+      field: withSimuHire[0].field,
+      trustScore: withSimuHire[0].trustScore,
+      stage: "simuhire_done",
+      detail: `SimuHire ${withSimuHire[0].simuHire.type} · ${withSimuHire[0].simuHire.overallScore}/100 — report ready to review`,
+      simuHire: {
+        type: withSimuHire[0].simuHire.type!,
+        overallScore: withSimuHire[0].simuHire.overallScore!,
+        dimensions: withSimuHire[0].simuHire.dimensions!,
+      },
+      interviewStatus: "invited",
     },
-    interviewStatus: "invited",
-  },
-  {
-    id: "p2",
-    candidateId: withSimuHire[1].id,
-    name: withSimuHire[1].name,
-    field: withSimuHire[1].field,
-    trustScore: withSimuHire[1].trustScore,
-    stage: "simuhire_done",
-    detail: `SimuHire ${withSimuHire[1].simuHire.type} · ${withSimuHire[1].simuHire.overallScore}/100 — report ready to review`,
-    simuHire: {
-      type: withSimuHire[1].simuHire.type!,
-      overallScore: withSimuHire[1].simuHire.overallScore!,
-      dimensions: withSimuHire[1].simuHire.dimensions!,
+    {
+      id: `${employer.id}-p2`,
+      employerId: employer.id,
+      candidateId: withSimuHire[1].id,
+      name: withSimuHire[1].name,
+      field: withSimuHire[1].field,
+      trustScore: withSimuHire[1].trustScore,
+      stage: "simuhire_done",
+      detail: `SimuHire ${withSimuHire[1].simuHire.type} · ${withSimuHire[1].simuHire.overallScore}/100 — report ready to review`,
+      simuHire: {
+        type: withSimuHire[1].simuHire.type!,
+        overallScore: withSimuHire[1].simuHire.overallScore!,
+        dimensions: withSimuHire[1].simuHire.dimensions!,
+      },
+      interviewStatus: "not_invited",
     },
-    interviewStatus: "not_invited",
-  },
-  {
-    id: "p3",
-    candidateId: shortlistCandidate.id,
-    name: shortlistCandidate.name,
-    field: shortlistCandidate.field,
-    trustScore: shortlistCandidate.trustScore,
-    stage: "shortlisted",
-    detail: `Shortlisted for ${demoJobs[0]?.title ?? "an open role"} — verified ${shortlistCandidate.verifiedSkills[0]?.name ?? "skills"}`,
-    interviewStatus: "scheduled",
-    interviewDate: "Aug 5, 2026",
-  },
-  {
-    id: "p4",
-    candidateId: reEngageCandidate.id,
-    name: reEngageCandidate.name,
-    field: reEngageCandidate.field,
-    trustScore: reEngageCandidate.trustScore,
-    stage: "re_engage",
-    detail: "Said no in March — timing may have changed, worth a light touch",
-    interviewStatus: "not_invited",
-  },
-];
+    {
+      id: `${employer.id}-p3`,
+      employerId: employer.id,
+      candidateId: shortlistCandidate.id,
+      name: shortlistCandidate.name,
+      field: shortlistCandidate.field,
+      trustScore: shortlistCandidate.trustScore,
+      stage: "shortlisted",
+      detail: `Shortlisted for ${demoJobs[0]?.title ?? "an open role"} — verified ${shortlistCandidate.verifiedSkills[0]?.name ?? "skills"}`,
+      interviewStatus: "scheduled",
+      // Real ISO datetime, set to today at 10am — every employer sees at least one
+      // same-day interview on login, so Home's "Today's Interviews" section (E4) always
+      // has something real to show without requiring manual scheduling first.
+      interviewDate: (() => {
+        const d = new Date();
+        d.setHours(10, 0, 0, 0);
+        return d.toISOString();
+      })(),
+    },
+    {
+      id: `${employer.id}-p4`,
+      employerId: employer.id,
+      candidateId: reEngageCandidate.id,
+      name: reEngageCandidate.name,
+      field: reEngageCandidate.field,
+      trustScore: reEngageCandidate.trustScore,
+      stage: "re_engage",
+      detail: "Said no in March — timing may have changed, worth a light touch",
+      interviewStatus: "not_invited",
+    },
+  ];
+}
 
 export const STAGE_META: Record<PipelineStage, { label: string; color: string }> = {
   simuhire_done: { label: "SimuHire done", color: "#1F7A5C" },

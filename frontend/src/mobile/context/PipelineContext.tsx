@@ -27,6 +27,8 @@ interface PipelineContextValue {
   scheduleInterview: (id: string, date: string) => void;
   advanceStage: (id: string, nextStageId: string) => void;
   completeInterview: (id: string) => void;
+  // E-Decision — final accept/reject call, independent of which round the candidate was at.
+  recordDecision: (id: string, decision: "accepted" | "rejected", message: string) => void;
 }
 
 const PipelineCtx = createContext<PipelineContextValue | null>(null);
@@ -127,6 +129,12 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const recordDecision = useCallback((id: string, decision: "accepted" | "rejected", message: string) => {
+    setAllEntries((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, decision, decisionMessage: message, decisionAt: new Date().toISOString() } : p))
+    );
+  }, []);
+
   return (
     <PipelineCtx.Provider
       value={{
@@ -139,6 +147,7 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
         scheduleInterview,
         advanceStage,
         completeInterview,
+        recordDecision,
       }}
     >
       {children}

@@ -1,6 +1,7 @@
-import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
+import { useState } from "react";
+import { View, Text, ScrollView, Pressable, TextInput, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MapPin, TrendingUp, Check, Award, FileText, Send } from "lucide-react-native";
+import { MapPin, TrendingUp, Check, Award, FileText, Send, ThumbsUp, ThumbsDown, X } from "lucide-react-native";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import GitHubIcon from "../../components/GitHubIcon";
@@ -48,16 +49,44 @@ const DIMENSION_LABELS: Record<string, string> = {
 
 const DIMENSION_KEYS = ["adaptability", "communication", "problemSolving", "stressResponse", "systemsThinking"] as const;
 
+// Default templates — always editable before sending, never forced verbatim.
+function defaultAcceptMessage(name: string): string {
+  const firstName = name.split(" ")[0];
+  return `Hi ${firstName} — great news! We'd like to move forward and extend you an offer. We'll follow up shortly with next steps.`;
+}
+function defaultRejectMessage(name: string): string {
+  const firstName = name.split(" ")[0];
+  return `Hi ${firstName} — thank you for the time you put into interviewing with us. After careful consideration, we've decided to move forward with other candidates. We wish you the best in your search.`;
+}
+
 export default function CandidateProfileScreen({ route }: Props) {
   const { candidate: c } = route.params;
-  const { pipeline, inviteToInterview } = usePipeline();
+  const { pipeline, inviteToInterview, recordDecision } = usePipeline();
   const { stages } = useInterviewStages();
+  const [decidingAs, setDecidingAs] = useState<"accepted" | "rejected" | null>(null);
+  const [decisionDraft, setDecisionDraft] = useState("");
 
   // Derived from the shared pipeline, not local state — so status set from here shows up
   // in Pipeline too, and status set in Pipeline (or via a prior visit to this profile)
   // shows up here, instead of two disconnected "invited" flags going out of sync.
-  const currentStageId = pipeline.find((p) => p.candidateId === c.id)?.currentStageId ?? null;
+  const entry = pipeline.find((p) => p.candidateId === c.id);
+  const currentStageId = entry?.currentStageId ?? null;
   const currentStageName = stages.find((s) => s.id === currentStageId)?.name;
+
+  const startDeciding = (decision: "accepted" | "rejected") => {
+    setDecidingAs(decision);
+    setDecisionDraft(decision === "accepted" ? defaultAcceptMessage(c.name) : defaultRejectMessage(c.name));
+  };
+  const cancelDeciding = () => {
+    setDecidingAs(null);
+    setDecisionDraft("");
+  };
+  const confirmDecision = () => {
+    if (!entry || !decidingAs || !decisionDraft.trim()) return;
+    recordDecision(entry.id, decidingAs, decisionDraft);
+    setDecidingAs(null);
+    setDecisionDraft("");
+  };
 
   const band = getConfidenceBand(c.trustScore);
   const initials = c.name
@@ -234,6 +263,80 @@ export default function CandidateProfileScreen({ route }: Props) {
               <Text style={styles.invitedText}>{currentStageName ?? "In interview process"}</Text>
             </View>
           )}
+
+          {/* E-Decision — only offered once the candidate is actually in the interview
+              process; an employer can accept/reject mid-process, not only after the last
+              round. Message is always editable before sending, default or custom. */}
+          {entry && currentStageId !== null && (
+            entry.decision ? (
+              <View
+                style={[
+                  styles.decisionResult,
+                  { borderColor: entry.decision === "accepted" ? colors.verified : colors.alert },
+                ]}
+              >
+                {entry.decision === "accepted" ? (
+                  <ThumbsUp size={15} color={colors.verified} />
+                ) : (
+                  <ThumbsDown size={15} color={colors.alert} />
+                )}
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text
+                    style={[
+                      styles.decisionResultTitle,
+                      { color: entry.decision === "accepted" ? colors.verified : colors.alert },
+                    ]}
+                  >
+                    {entry.decision === "accepted" ? "Accepted" : "Rejected"}
+                  </Text>
+                  {entry.decisionMessage && <Text style={styles.decisionResultMessage}>{entry.decisionMessage}</Text>}
+                </View>
+              </View>
+            ) : decidingAs ? (
+              <View style={{ gap: 8 }}>
+                <GlassCard radius={14}>
+                  <TextInput
+                    style={styles.decisionInput}
+                    value={decisionDraft}
+                    onChangeText={setDecisionDraft}
+                    multiline
+                    numberOfLines={4}
+                    textAlignVertical="top"
+                  />
+                </GlassCard>
+                <View style={styles.decisionComposeRow}>
+                  <Pressable style={styles.decisionCancelBtn} onPress={cancelDeciding}>
+                    <X size={14} color={colors.ink} />
+                    <Text style={styles.decisionCancelText}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.decisionSendBtn,
+                      { backgroundColor: decidingAs === "accepted" ? colors.verified : colors.alert },
+                      !decisionDraft.trim() && styles.decisionSendDisabled,
+                    ]}
+                    onPress={confirmDecision}
+                    disabled={!decisionDraft.trim()}
+                  >
+                    <Text style={styles.decisionSendText}>
+                      {decidingAs === "accepted" ? "Send acceptance" : "Send rejection"}
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.decisionRow}>
+                <Pressable style={styles.acceptBtn} onPress={() => startDeciding("accepted")}>
+                  <ThumbsUp size={15} color={colors.verified} />
+                  <Text style={styles.acceptBtnText}>Accept</Text>
+                </Pressable>
+                <Pressable style={styles.rejectBtn} onPress={() => startDeciding("rejected")}>
+                  <ThumbsDown size={15} color={colors.alert} />
+                  <Text style={styles.rejectBtnText}>Reject</Text>
+                </Pressable>
+              </View>
+            )
+          )}
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -352,4 +455,51 @@ const styles = StyleSheet.create({
   inviteBtnText: { fontFamily: fonts.sansSemiBold, fontSize: 15, color: colors.parchment },
   invitedRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 16 },
   invitedText: { fontFamily: fonts.sansSemiBold, fontSize: 15, color: colors.verified },
+
+  decisionRow: { flexDirection: "row", gap: 10 },
+  acceptBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    borderWidth: 1.5,
+    borderColor: colors.verified,
+    borderRadius: 16,
+    paddingVertical: 14,
+  },
+  acceptBtnText: { fontFamily: fonts.sansSemiBold, fontSize: 14, color: colors.verified },
+  rejectBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    borderWidth: 1.5,
+    borderColor: colors.alert,
+    borderRadius: 16,
+    paddingVertical: 14,
+  },
+  rejectBtnText: { fontFamily: fonts.sansSemiBold, fontSize: 14, color: colors.alert },
+
+  decisionInput: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink, padding: 14, minHeight: 96 },
+  decisionComposeRow: { flexDirection: "row", gap: 8 },
+  decisionCancelBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderRadius: 16,
+    paddingVertical: 14,
+    backgroundColor: "rgba(16,25,43,0.06)",
+  },
+  decisionCancelText: { fontFamily: fonts.sansSemiBold, fontSize: 14, color: colors.ink },
+  decisionSendBtn: { flex: 2, alignItems: "center", justifyContent: "center", borderRadius: 16, paddingVertical: 14 },
+  decisionSendDisabled: { opacity: 0.4 },
+  decisionSendText: { fontFamily: fonts.sansSemiBold, fontSize: 14, color: colors.parchment },
+
+  decisionResult: { flexDirection: "row", alignItems: "flex-start", gap: 10, borderWidth: 1, borderRadius: 16, padding: 16 },
+  decisionResultTitle: { fontFamily: fonts.sansSemiBold, fontSize: 14 },
+  decisionResultMessage: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.slate, lineHeight: 18 },
 });

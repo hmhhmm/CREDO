@@ -189,6 +189,13 @@ export interface PipelineEntry {
   interviewDate?: string;
   meetingLink?: string;
   stageCompletedAt?: string;
+  // E-Decision — the final call on a candidate, independent of which round they're at when
+  // it's made (an employer can reject mid-process, not only after the last round). Message
+  // is always stored, whether the HR user sent the default template or a custom one — the
+  // profile screen needs something real to display either way.
+  decision?: "accepted" | "rejected";
+  decisionMessage?: string;
+  decisionAt?: string;
 }
 
 // Picks a deterministic, varied slice of the real roster to seed each employer's pipeline

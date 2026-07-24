@@ -322,6 +322,24 @@ export default function PipelineScreen({ navigation }: Props) {
                         )
                       )}
                     </View>
+
+                    {e.decision && (
+                      <View
+                        style={[
+                          styles.decisionBadge,
+                          { borderColor: e.decision === "accepted" ? colors.verified : colors.alert },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.decisionBadgeText,
+                            { color: e.decision === "accepted" ? colors.verified : colors.alert },
+                          ]}
+                        >
+                          {e.decision === "accepted" ? "✓ Accepted" : "✕ Rejected"}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 </GlassCard>
               );
@@ -409,6 +427,15 @@ const styles = StyleSheet.create({
   summaryItem: { fontFamily: fonts.mono, fontSize: 11, color: colors.slate },
 
   interviewBlock: { borderTopWidth: 1, borderTopColor: "rgba(16,25,43,0.08)", paddingTop: 10, marginTop: 2 },
+  decisionBadge: {
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderRadius: 100,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    marginTop: 4,
+  },
+  decisionBadgeText: { fontFamily: fonts.mono, fontSize: 10.5 },
   interviewHead: { flexDirection: "row", alignItems: "center", gap: 7 },
   interviewDot: { width: 7, height: 7, borderRadius: 3.5 },
   interviewLabel: { fontFamily: fonts.mono, fontSize: 11 },

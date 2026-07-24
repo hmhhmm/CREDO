@@ -71,7 +71,7 @@ export default function EmployerHomeScreen({ navigation, onSwitchRole }: Props) 
   const todaysInterviews = useMemo(
     () =>
       pipeline
-        .filter((e) => e.interviewStatus === "scheduled" && e.interviewDate && isSameDay(e.interviewDate))
+        .filter((e) => e.currentStageId !== null && !e.stageCompletedAt && e.interviewDate && isSameDay(e.interviewDate))
         .sort((a, b) => (a.interviewDate! < b.interviewDate! ? -1 : 1)),
     [pipeline]
   );

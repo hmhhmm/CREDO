@@ -1,14 +1,15 @@
 import { useMemo, useState } from "react";
 import { View, Text, ScrollView, Pressable, TextInput, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { FileText, Send, RefreshCw, ChevronRight, Check, CalendarPlus, CalendarCheck } from "lucide-react-native";
+import { FileText, Send, RefreshCw, ChevronRight, Check, CalendarPlus, CalendarCheck, Settings } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
-import { STAGE_META, INTERVIEW_STATUS_META, type PipelineEntry } from "../../data/employerData";
+import { STAGE_META, type PipelineEntry } from "../../data/employerData";
 import type { DiscoverCandidate } from "../../data/employerData";
 import { mockCandidates } from "../../data/mockData";
 import { usePipeline } from "../../context/PipelineContext";
+import { useInterviewStages } from "../../context/InterviewStagesContext";
 import { getUpcomingInterviewSlots, formatInterviewDateTime } from "../../utils/interviewSlots";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
@@ -65,7 +66,9 @@ function buildLightTouchMessage(entry: PipelineEntry): string {
 }
 
 export default function PipelineScreen({ navigation }: Props) {
-  const { pipeline, reEngage, markInterviewInvited, scheduleInterview, completeInterview } = usePipeline();
+  const { pipeline, reEngage, markInterviewInvited, scheduleInterview, advanceStage, completeInterview } =
+    usePipeline();
+  const { stages } = useInterviewStages();
   const [sent, setSent] = useState<string | null>(null);
   const [composingId, setComposingId] = useState<string | null>(null);
   const [draftMessage, setDraftMessage] = useState("");
@@ -107,9 +110,9 @@ export default function PipelineScreen({ navigation }: Props) {
   };
 
   const interviewSummary = {
-    invited: pipeline.filter((e) => e.interviewStatus === "invited").length,
-    scheduled: pipeline.filter((e) => e.interviewStatus === "scheduled").length,
-    completed: pipeline.filter((e) => e.interviewStatus === "completed").length,
+    awaitingScheduling: pipeline.filter((e) => e.currentStageId !== null && !e.interviewDate && !e.stageCompletedAt).length,
+    scheduled: pipeline.filter((e) => e.currentStageId !== null && e.interviewDate && !e.stageCompletedAt).length,
+    completed: pipeline.filter((e) => !!e.stageCompletedAt).length,
   };
 
   return (
@@ -117,15 +120,22 @@ export default function PipelineScreen({ navigation }: Props) {
       <ScreenBackground />
       <SafeAreaView style={styles.container} edges={["top"]}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <Text style={styles.heading}>Pipeline</Text>
-          <Text style={styles.subheading}>SimuHire reviews, interviews & re-engagement — behavioral evidence before the first interview.</Text>
+          <View style={styles.headingRow}>
+            <View>
+              <Text style={styles.heading}>Pipeline</Text>
+              <Text style={styles.subheading}>SimuHire reviews, interviews & re-engagement — behavioral evidence before the first interview.</Text>
+            </View>
+            <Pressable onPress={() => navigation.navigate("StageSettings")} style={styles.settingsBtn}>
+              <Settings size={16} color={colors.ink} />
+            </Pressable>
+          </View>
 
           {/* E9 — aggregate interview status, so the "who's where" question doesn't require
               scrolling every card individually. */}
-          {(interviewSummary.invited > 0 || interviewSummary.scheduled > 0 || interviewSummary.completed > 0) && (
+          {(interviewSummary.awaitingScheduling > 0 || interviewSummary.scheduled > 0 || interviewSummary.completed > 0) && (
             <View style={styles.summaryRow}>
-              {interviewSummary.invited > 0 && (
-                <Text style={styles.summaryItem}>{interviewSummary.invited} awaiting interview</Text>
+              {interviewSummary.awaitingScheduling > 0 && (
+                <Text style={styles.summaryItem}>{interviewSummary.awaitingScheduling} awaiting scheduling</Text>
               )}
               {interviewSummary.scheduled > 0 && (
                 <Text style={styles.summaryItem}>{interviewSummary.scheduled} scheduled</Text>
@@ -144,6 +154,27 @@ export default function PipelineScreen({ navigation }: Props) {
               const isSent = sent === e.id;
               const isComposing = composingId === e.id;
               const isTouched = e.stage === "re_engage" && !!e.lastTouchedAt;
+
+              // E9 — round name is employer-configured data (Settings), not a fixed enum;
+              // stageIndex placement decides whether the next action advances to another
+              // round or completes the whole process.
+              const roundIndex = stages.findIndex((s) => s.id === e.currentStageId);
+              const roundName = stages[roundIndex]?.name;
+              const isLastRound = roundIndex === stages.length - 1;
+              const interviewColor = e.stageCompletedAt
+                ? colors.verified
+                : e.currentStageId === null
+                ? colors.slate
+                : e.interviewDate
+                ? "#2F6E8F"
+                : colors.pending;
+              const interviewLabel = e.stageCompletedAt
+                ? `${roundName} · Completed`
+                : e.currentStageId === null
+                ? "Not invited"
+                : e.interviewDate
+                ? `${roundName} · ${formatInterviewDateTime(e.interviewDate)}`
+                : `${roundName} · Awaiting scheduling`;
 
               const handlePress = () => {
                 if (e.stage === "simuhire_done") {
@@ -220,14 +251,12 @@ export default function PipelineScreen({ navigation }: Props) {
                     )}
 
                     {/* E9 Interview Invitation — orthogonal to the stage action above; a
-                        candidate can be e.g. "Shortlisted" and "Interview scheduled" at once. */}
+                        candidate can be e.g. "Shortlisted" and mid-way through the round
+                        sequence at once. Round names come from Settings, not a fixed enum. */}
                     <View style={styles.interviewBlock}>
                       <View style={styles.interviewHead}>
-                        <View style={[styles.interviewDot, { backgroundColor: INTERVIEW_STATUS_META[e.interviewStatus].color }]} />
-                        <Text style={[styles.interviewLabel, { color: INTERVIEW_STATUS_META[e.interviewStatus].color }]}>
-                          {INTERVIEW_STATUS_META[e.interviewStatus].label}
-                          {e.interviewStatus === "scheduled" && e.interviewDate ? ` · ${formatInterviewDateTime(e.interviewDate)}` : ""}
-                        </Text>
+                        <View style={[styles.interviewDot, { backgroundColor: interviewColor }]} />
+                        <Text style={[styles.interviewLabel, { color: interviewColor }]}>{interviewLabel}</Text>
                       </View>
 
                       {schedulingId === e.id ? (
@@ -262,22 +291,36 @@ export default function PipelineScreen({ navigation }: Props) {
                             </Pressable>
                           </View>
                         </View>
-                      ) : e.interviewStatus === "invited" ? (
+                      ) : e.currentStageId === null ? (
+                        <Pressable
+                          style={styles.interviewAction}
+                          onPress={() => stages[0] && markInterviewInvited(e.id, stages[0].id)}
+                          disabled={stages.length === 0}
+                        >
+                          <Send size={14} color={colors.ink} />
+                          <Text style={styles.interviewActionText}>Invite to Interview</Text>
+                        </Pressable>
+                      ) : e.stageCompletedAt ? null : !e.interviewDate ? (
                         <Pressable style={styles.interviewAction} onPress={() => startScheduling(e)}>
                           <CalendarPlus size={14} color={colors.ink} />
                           <Text style={styles.interviewActionText}>Mark scheduled</Text>
                         </Pressable>
-                      ) : e.interviewStatus === "scheduled" ? (
+                      ) : isLastRound ? (
                         <Pressable style={styles.interviewAction} onPress={() => completeInterview(e.id)}>
                           <CalendarCheck size={14} color={colors.ink} />
                           <Text style={styles.interviewActionText}>Mark completed</Text>
                         </Pressable>
-                      ) : e.interviewStatus === "not_invited" ? (
-                        <Pressable style={styles.interviewAction} onPress={() => markInterviewInvited(e.id)}>
-                          <Send size={14} color={colors.ink} />
-                          <Text style={styles.interviewActionText}>Invite to Interview</Text>
-                        </Pressable>
-                      ) : null}
+                      ) : (
+                        stages[roundIndex + 1] && (
+                          <Pressable
+                            style={styles.interviewAction}
+                            onPress={() => advanceStage(e.id, stages[roundIndex + 1].id)}
+                          >
+                            <CalendarCheck size={14} color={colors.ink} />
+                            <Text style={styles.interviewActionText}>Advance to {stages[roundIndex + 1].name}</Text>
+                          </Pressable>
+                        )
+                      )}
                     </View>
                   </View>
                 </GlassCard>
@@ -293,8 +336,19 @@ export default function PipelineScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { padding: 20, paddingBottom: 110, gap: 6 },
+  headingRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 12 },
   heading: { fontFamily: fonts.displayBold, fontSize: 28, color: colors.ink, marginTop: 4 },
-  subheading: { fontFamily: fonts.sans, fontSize: 12, color: colors.slate, marginTop: 4, lineHeight: 17 },
+  subheading: { fontFamily: fonts.sans, fontSize: 12, color: colors.slate, marginTop: 4, lineHeight: 17, flexShrink: 1 },
+  settingsBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "rgba(16,25,43,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 6,
+  },
 
   card: { padding: 16, gap: 10 },
   head: { flexDirection: "row", alignItems: "center", gap: 12 },

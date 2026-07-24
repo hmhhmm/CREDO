@@ -6,6 +6,7 @@ import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import { getConfidenceBand } from "../../utils/confidenceBand";
 import { usePipeline } from "../../context/PipelineContext";
+import { useInterviewStages } from "../../context/InterviewStagesContext";
 import { discoverCandidates } from "../../data/employerData";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
@@ -18,8 +19,9 @@ const scanned = discoverCandidates[0];
 export default function FairModeScreen() {
   const [result, setResult] = useState<typeof scanned | null>(null);
   const { pipeline, inviteToInterview } = usePipeline();
+  const { stages } = useInterviewStages();
   const band = result ? getConfidenceBand(result.trustScore) : null;
-  const invited = result ? pipeline.some((p) => p.candidateId === result.id && p.interviewStatus !== "not_invited") : false;
+  const invited = result ? pipeline.some((p) => p.candidateId === result.id && p.currentStageId !== null) : false;
 
   return (
     <View style={{ flex: 1 }}>
@@ -77,7 +79,10 @@ export default function FairModeScreen() {
               </View>
             </GlassCard>
             {!invited ? (
-              <Pressable style={styles.inviteBtn} onPress={() => result && inviteToInterview(result)}>
+              <Pressable
+                style={styles.inviteBtn}
+                onPress={() => result && stages[0] && inviteToInterview(result, stages[0].id)}
+              >
                 <Send size={15} color={colors.parchment} />
                 <Text style={styles.inviteText}>Invite to Interview</Text>
               </Pressable>

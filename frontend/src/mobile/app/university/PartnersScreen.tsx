@@ -75,7 +75,7 @@ export default function PartnersScreen({ university }: { university: University 
                             trustScore: m.trustScore,
                             stage: "simuhire_done",
                             detail: `Introduced via ${university.name} Internship Marketplace — matched ${m.matchPct}% for ${m.role} at ${m.employer}`,
-                            interviewStatus: "not_invited",
+                            currentStageId: null,
                           })
                         }
                       >

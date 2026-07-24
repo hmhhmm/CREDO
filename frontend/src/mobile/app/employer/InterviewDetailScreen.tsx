@@ -12,9 +12,10 @@ import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import { getConfidenceBand } from "../../utils/confidenceBand";
 import { formatInterviewDateTime } from "../../utils/interviewSlots";
-import { STAGE_META, INTERVIEW_STATUS_META } from "../../data/employerData";
+import { STAGE_META } from "../../data/employerData";
 import { mockCandidates } from "../../data/mockData";
 import { usePipeline } from "../../context/PipelineContext";
+import { useInterviewStages } from "../../context/InterviewStagesContext";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 import type { EmployerHomeStackParamList } from "../../navigation/EmployerHomeStack";
@@ -23,10 +24,13 @@ type Props = NativeStackScreenProps<EmployerHomeStackParamList, "InterviewDetail
 
 export default function InterviewDetailScreen({ route, navigation }: Props) {
   const { entry } = route.params;
-  const { completeInterview } = usePipeline();
+  const { completeInterview, advanceStage } = usePipeline();
+  const { stages } = useInterviewStages();
   const band = getConfidenceBand(entry.trustScore);
   const stage = STAGE_META[entry.stage];
-  const interview = INTERVIEW_STATUS_META[entry.interviewStatus];
+  const stageIndex = stages.findIndex((s) => s.id === entry.currentStageId);
+  const roundName = stages[stageIndex]?.name ?? "Unassigned round";
+  const isLastRound = stageIndex === stages.length - 1;
   const initials = entry.name.split(" ").map((n) => n[0]).join("");
   const [copied, setCopied] = useState(false);
 
@@ -95,8 +99,8 @@ export default function InterviewDetailScreen({ route, navigation }: Props) {
                 <View style={[styles.pill, { borderColor: stage.color }]}>
                   <Text style={[styles.pillText, { color: stage.color }]}>{stage.label}</Text>
                 </View>
-                <View style={[styles.pill, { borderColor: interview.color }]}>
-                  <Text style={[styles.pillText, { color: interview.color }]}>{interview.label}</Text>
+                <View style={[styles.pill, { borderColor: colors.gold }]}>
+                  <Text style={[styles.pillText, { color: colors.gold }]}>{roundName}</Text>
                 </View>
               </View>
             </View>
@@ -114,11 +118,23 @@ export default function InterviewDetailScreen({ route, navigation }: Props) {
             <ArrowRight size={14} color={colors.ink} />
           </Pressable>
 
-          {entry.interviewStatus === "scheduled" && (
-            <Pressable style={styles.completeBtn} onPress={() => completeInterview(entry.id)}>
-              <CalendarCheck size={16} color={colors.parchment} />
-              <Text style={styles.completeBtnText}>Mark completed</Text>
-            </Pressable>
+          {entry.interviewDate && !entry.stageCompletedAt && (
+            isLastRound ? (
+              <Pressable style={styles.completeBtn} onPress={() => completeInterview(entry.id)}>
+                <CalendarCheck size={16} color={colors.parchment} />
+                <Text style={styles.completeBtnText}>Mark completed</Text>
+              </Pressable>
+            ) : (
+              stages[stageIndex + 1] && (
+                <Pressable
+                  style={styles.completeBtn}
+                  onPress={() => advanceStage(entry.id, stages[stageIndex + 1].id)}
+                >
+                  <CalendarCheck size={16} color={colors.parchment} />
+                  <Text style={styles.completeBtnText}>Advance to {stages[stageIndex + 1].name}</Text>
+                </Pressable>
+              )
+            )
           )}
         </ScrollView>
       </SafeAreaView>

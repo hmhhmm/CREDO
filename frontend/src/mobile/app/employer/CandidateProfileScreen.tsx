@@ -1,6 +1,7 @@
-import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
+import { useState } from "react";
+import { View, Text, ScrollView, Pressable, TextInput, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MapPin, TrendingUp, Check, Award, FileText, Send, ThumbsUp, ThumbsDown } from "lucide-react-native";
+import { MapPin, TrendingUp, Check, Award, FileText, Send, ThumbsUp, ThumbsDown, Star } from "lucide-react-native";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import GitHubIcon from "../../components/GitHubIcon";
@@ -50,8 +51,9 @@ const DIMENSION_KEYS = ["adaptability", "communication", "problemSolving", "stre
 
 export default function CandidateProfileScreen({ route }: Props) {
   const { candidate: c } = route.params;
-  const { pipeline, inviteToInterview } = usePipeline();
+  const { pipeline, inviteToInterview, setRating, addComment } = usePipeline();
   const { stages } = useInterviewStages();
+  const [commentDraft, setCommentDraft] = useState("");
 
   // Derived from the shared pipeline, not local state — so status set from here shows up
   // in Pipeline too, and status set in Pipeline (or via a prior visit to this profile)
@@ -217,6 +219,64 @@ export default function CandidateProfileScreen({ route }: Props) {
             </GlassCard>
           )}
 
+          {/* HR rating + comments — capture-and-display only; only makes sense once the
+              candidate is actually being evaluated (already invited to interview). */}
+          {entry && (
+            <GlassCard radius={18}>
+              <View style={styles.block}>
+                <Text style={styles.blockTitle}>HR Notes</Text>
+
+                <View style={styles.starRow}>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Pressable key={n} onPress={() => setRating(entry.id, n)} hitSlop={6}>
+                      <Star
+                        size={22}
+                        color={colors.gold}
+                        fill={(entry.hrRating ?? 0) >= n ? colors.gold : "transparent"}
+                        strokeWidth={1.5}
+                      />
+                    </Pressable>
+                  ))}
+                </View>
+
+                {(entry.hrComments ?? []).length > 0 && (
+                  <View style={styles.commentList}>
+                    {entry.hrComments!.map((cm) => (
+                      <View key={cm.id} style={styles.commentRow}>
+                        <View style={styles.commentHead}>
+                          <Text style={styles.commentAuthor}>{cm.author}</Text>
+                          <Text style={styles.commentDate}>{cm.date}</Text>
+                        </View>
+                        <Text style={styles.commentText}>{cm.text}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                <View style={styles.commentComposeRow}>
+                  <TextInput
+                    style={styles.commentInput}
+                    value={commentDraft}
+                    onChangeText={setCommentDraft}
+                    placeholder="Add a note about this candidate…"
+                    placeholderTextColor={colors.slate}
+                    multiline
+                  />
+                  <Pressable
+                    style={[styles.commentSendBtn, !commentDraft.trim() && styles.commentSendBtnDisabled]}
+                    onPress={() => {
+                      addComment(entry.id, commentDraft);
+                      setCommentDraft("");
+                    }}
+                    disabled={!commentDraft.trim()}
+                  >
+                    <Send size={14} color={colors.parchment} />
+                  </Pressable>
+                </View>
+              </View>
+            </GlassCard>
+          )}
+
           {/* Bottom action — E9 Interview Invitation. SimuHire is compulsory now, so there's
               nothing to invite the candidate to at this stage; the action here is the human
               interview, tracked further in Pipeline. */}
@@ -307,6 +367,36 @@ const styles = StyleSheet.create({
   block: { padding: 18, gap: 12 },
   blockTitle: { fontFamily: fonts.sansSemiBold, fontSize: 13, color: colors.ink },
   emptySlate: { fontFamily: fonts.sans, fontSize: 13, color: colors.slate },
+
+  starRow: { flexDirection: "row", gap: 6 },
+  commentList: { gap: 10 },
+  commentRow: { gap: 3, borderTopWidth: 1, borderTopColor: "rgba(16,25,43,0.06)", paddingTop: 10 },
+  commentHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  commentAuthor: { fontFamily: fonts.sansSemiBold, fontSize: 12, color: colors.ink },
+  commentDate: { fontFamily: fonts.mono, fontSize: 10.5, color: colors.slate },
+  commentText: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.slate, lineHeight: 18 },
+  commentComposeRow: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
+  commentInput: {
+    flex: 1,
+    fontFamily: fonts.sans,
+    fontSize: 13,
+    color: colors.ink,
+    borderWidth: 1,
+    borderColor: "rgba(16,25,43,0.12)",
+    borderRadius: 12,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    minHeight: 40,
+  },
+  commentSendBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.ink,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  commentSendBtnDisabled: { opacity: 0.4 },
 
   // Verified skills bars
   skillsList: { gap: 10 },

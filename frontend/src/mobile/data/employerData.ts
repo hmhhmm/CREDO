@@ -197,6 +197,18 @@ export interface PipelineEntry {
   decision?: "accepted" | "rejected";
   decisionMessage?: string;
   decisionAt?: string;
+  // HR rating + comments — capture-and-display only in this pass. Feeding this into an
+  // actual matching/scoring pipeline is separate, backend work; nothing here computes
+  // against it yet.
+  hrRating?: number; // 1-5
+  hrComments?: HRComment[];
+}
+
+export interface HRComment {
+  id: string;
+  author: string;
+  text: string;
+  date: string;
 }
 
 // Picks a deterministic, varied slice of the real roster to seed each employer's pipeline

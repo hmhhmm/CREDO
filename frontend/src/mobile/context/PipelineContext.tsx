@@ -29,6 +29,9 @@ interface PipelineContextValue {
   completeInterview: (id: string) => void;
   // E-Decision — final accept/reject call, independent of which round the candidate was at.
   recordDecision: (id: string, decision: "accepted" | "rejected", message: string) => void;
+  // E7 — HR rating/comments. Capture-and-display only; see PipelineEntry's hrRating docs.
+  setRating: (id: string, rating: number) => void;
+  addComment: (id: string, text: string) => void;
 }
 
 const PipelineCtx = createContext<PipelineContextValue | null>(null);
@@ -135,6 +138,27 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const setRating = useCallback((id: string, rating: number) => {
+    setAllEntries((prev) => prev.map((p) => (p.id === id ? { ...p, hrRating: rating } : p)));
+  }, []);
+
+  const addComment = useCallback(
+    (id: string, text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed) return;
+      const comment = {
+        id: `c-${Date.now()}`,
+        author: user?.name ?? "You",
+        text: trimmed,
+        date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      };
+      setAllEntries((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, hrComments: [...(p.hrComments ?? []), comment] } : p))
+      );
+    },
+    [user]
+  );
+
   return (
     <PipelineCtx.Provider
       value={{
@@ -148,6 +172,8 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
         advanceStage,
         completeInterview,
         recordDecision,
+        setRating,
+        addComment,
       }}
     >
       {children}

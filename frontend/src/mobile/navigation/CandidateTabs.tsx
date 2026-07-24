@@ -1,14 +1,15 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { Home, ShieldCheck, IdCard, TrendingUp } from "lucide-react-native";
+import { Home, ShieldCheck, IdCard, TrendingUp, Users } from "lucide-react-native";
 import HomeStack from "./HomeStack";
 import VerifyScreen from "../app/candidate/VerifyScreen";
 import CardStack from "./CardStack";
 import GrowStack from "./GrowStack";
+import CommunityScreen from "../app/community/CommunityScreen";
 import SegmentedTabBar from "./SegmentedTabBar";
 
 const Tab = createBottomTabNavigator();
 
-const ICONS = { Home, Verify: ShieldCheck, Card: IdCard, Grow: TrendingUp };
+const ICONS = { Home, Verify: ShieldCheck, Card: IdCard, Grow: TrendingUp, Community: Users };
 
 export default function CandidateTabs({ onSwitchRole }: { onSwitchRole: () => void }) {
   return (
@@ -20,6 +21,7 @@ export default function CandidateTabs({ onSwitchRole }: { onSwitchRole: () => vo
       <Tab.Screen name="Verify" component={VerifyScreen} />
       <Tab.Screen name="Card" component={CardStack} />
       <Tab.Screen name="Grow" component={GrowStack} />
+      <Tab.Screen name="Community" component={CommunityScreen} />
     </Tab.Navigator>
   );
 }

@@ -4,12 +4,13 @@ import PulseScreen from "../app/university/PulseScreen";
 import CohortsScreen from "../app/university/CohortsScreen";
 import OutcomesScreen from "../app/university/OutcomesScreen";
 import PartnersScreen from "../app/university/PartnersScreen";
+import CommunityScreen from "../app/community/CommunityScreen";
 import SegmentedTabBar from "./SegmentedTabBar";
 import type { University } from "../data/universityData";
 
 const Tab = createBottomTabNavigator();
 
-const ICONS = { Pulse: Activity, Cohorts: Users, Outcomes: TrendingUp, Partners: Handshake };
+const ICONS = { Pulse: Activity, Cohorts: Users, Outcomes: TrendingUp, Partners: Handshake, Community: Users };
 
 export default function UniversityTabs({
   university,
@@ -27,6 +28,13 @@ export default function UniversityTabs({
       <Tab.Screen name="Cohorts">{() => <CohortsScreen university={university} />}</Tab.Screen>
       <Tab.Screen name="Outcomes">{() => <OutcomesScreen university={university} />}</Tab.Screen>
       <Tab.Screen name="Partners">{() => <PartnersScreen university={university} />}</Tab.Screen>
+      <Tab.Screen name="Community">
+        {() => (
+          <CommunityScreen
+            identity={{ id: university.id, name: `${university.name} Career Services`, subtitle: university.city, role: "university" }}
+          />
+        )}
+      </Tab.Screen>
     </Tab.Navigator>
   );
 }

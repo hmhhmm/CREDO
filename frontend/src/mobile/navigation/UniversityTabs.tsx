@@ -1,6 +1,6 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Activity, Users, TrendingUp, Handshake } from "lucide-react-native";
-import PulseScreen from "../app/university/PulseScreen";
+import UniversityHomeStack from "./UniversityHomeStack";
 import CohortsScreen from "../app/university/CohortsScreen";
 import OutcomesScreen from "../app/university/OutcomesScreen";
 import PartnersScreen from "../app/university/PartnersScreen";
@@ -23,7 +23,9 @@ export default function UniversityTabs({
       screenOptions={{ headerShown: false }}
       tabBar={(props) => <SegmentedTabBar {...props} icons={ICONS} />}
     >
-      <Tab.Screen name="Pulse">{() => <PulseScreen university={university} onSwitchRole={onSwitchRole} />}</Tab.Screen>
+      <Tab.Screen name="Pulse">
+        {() => <UniversityHomeStack university={university} onSwitchRole={onSwitchRole} />}
+      </Tab.Screen>
       <Tab.Screen name="Cohorts">{() => <CohortsScreen university={university} />}</Tab.Screen>
       <Tab.Screen name="Outcomes">{() => <OutcomesScreen university={university} />}</Tab.Screen>
       <Tab.Screen name="Partners">{() => <PartnersScreen university={university} />}</Tab.Screen>

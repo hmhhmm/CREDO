@@ -1,9 +1,10 @@
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { AlertTriangle, TrendingDown, ArrowRight, LogOut } from "lucide-react-native";
+import { AlertTriangle, TrendingDown, ArrowRight, Settings } from "lucide-react-native";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import ScoreRing from "../../components/shared/ScoreRing";
+import Avatar from "../../components/shared/Avatar";
 import {
   getCampusReadiness,
   getBehavioralBenchmark,
@@ -16,7 +17,7 @@ import {
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 
-export default function PulseScreen({ university, onSwitchRole }: { university: University; onSwitchRole: () => void }) {
+export default function PulseScreen({ university, onOpenSettings }: { university: University; onOpenSettings: () => void }) {
   const campusReadiness = getCampusReadiness(university);
   const behavioralBenchmark = getBehavioralBenchmark(university);
   const skillGaps = getSkillGaps(university);
@@ -29,12 +30,12 @@ export default function PulseScreen({ university, onSwitchRole }: { university: 
       <SafeAreaView style={styles.container} edges={["top"]}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.topRow}>
-            <View>
-              <Text style={styles.eyebrow}>{university.name} · {university.office}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.eyebrow} numberOfLines={1}>{university.name} · {university.office}</Text>
               <Text style={styles.heading}>Campus Pulse</Text>
             </View>
-            <Pressable onPress={onSwitchRole} style={styles.avatarButton}>
-              <Text style={styles.avatarInitial}>{university.short}</Text>
+            <Pressable onPress={onOpenSettings}>
+              <Avatar initial={university.short} fontSize={11} />
             </Pressable>
           </View>
 
@@ -109,9 +110,9 @@ export default function PulseScreen({ university, onSwitchRole }: { university: 
             })}
           </View>
 
-          <Pressable onPress={onSwitchRole} style={styles.switchRoleLink}>
-            <LogOut size={13} color={colors.slate} />
-            <Text style={styles.switchRoleText}>Switch role</Text>
+          <Pressable onPress={onOpenSettings} style={styles.settingsLink}>
+            <Settings size={13} color={colors.slate} />
+            <Text style={styles.settingsText}>Settings</Text>
           </Pressable>
         </ScrollView>
       </SafeAreaView>
@@ -122,13 +123,11 @@ export default function PulseScreen({ university, onSwitchRole }: { university: 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { padding: 20, paddingBottom: 110, gap: 16 },
-  topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 },
   eyebrow: { fontFamily: fonts.mono, fontSize: 11, textTransform: "uppercase", letterSpacing: 1.5, color: colors.slate },
   heading: { fontFamily: fonts.displayBold, fontSize: 28, color: colors.ink, marginTop: 2 },
-  avatarButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.ink, alignItems: "center", justifyContent: "center" },
-  avatarInitial: { fontFamily: fonts.displayBold, fontSize: 16, color: colors.parchment },
-  switchRoleLink: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 2 },
-  switchRoleText: { fontFamily: fonts.mono, fontSize: 12, color: colors.slate },
+  settingsLink: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 2 },
+  settingsText: { fontFamily: fonts.mono, fontSize: 12, color: colors.slate },
 
   heroRow: { flexDirection: "row", alignItems: "center", gap: 16, padding: 22 },
   heroLabel: { fontFamily: fonts.mono, fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, color: colors.slate },

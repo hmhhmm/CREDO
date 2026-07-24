@@ -19,6 +19,7 @@ import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 import type { Candidate } from "../../data/types";
 import type { CardStackParamList } from "../../navigation/CardStack";
+import type { ParentNav } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<CardStackParamList, "CardHome">;
 
@@ -79,17 +80,13 @@ export default function CardScreen({ navigation }: Props) {
   const publicUrl = portfolio?.public_url ?? null;
 
   const goToVerify = () => {
-    (navigation.getParent() as { navigate: (name: string) => void } | undefined)?.navigate("Verify");
+    (navigation.getParent() as ParentNav)?.navigate("Verify");
   };
   const goToPortfolio = () => {
-    (navigation.getParent() as { navigate: (name: string, params?: object) => void } | undefined)?.navigate("Home", {
-      screen: "Portfolio",
-    });
+    (navigation.getParent() as ParentNav)?.navigate("Home", { screen: "Portfolio" });
   };
   const goToSimuHire = () => {
-    (navigation.getParent() as { navigate: (name: string, params?: object) => void } | undefined)?.navigate("Home", {
-      screen: "SimuHire",
-    });
+    (navigation.getParent() as ParentNav)?.navigate("Home", { screen: "SimuHire" });
   };
 
   const handle = (candidate.name || "you").toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 16) || "you";

@@ -9,20 +9,22 @@ import {
   FileStack,
   QrCode,
   ChevronRight,
-  LogOut,
+  Settings,
   Sparkles,
 } from "lucide-react-native";
 import ScoreRing from "../../components/shared/ScoreRing";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
+import Avatar from "../../components/shared/Avatar";
 import { useDemo } from "../../context/DemoContext";
 import { useAuth } from "../../context/AuthContext";
 import { namecardApi, portfolioApi, type PortfolioResponse } from "../../lib/api";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 import type { HomeStackParamList } from "../../navigation/HomeStack";
+import type { ParentNav } from "../../navigation/types";
 
-type Props = NativeStackScreenProps<HomeStackParamList, "HomeMain"> & { onSwitchRole: () => void };
+type Props = NativeStackScreenProps<HomeStackParamList, "HomeMain">;
 
 function greeting(hour: number) {
   if (hour < 12) return "Good morning";
@@ -30,11 +32,8 @@ function greeting(hour: number) {
   return "Good evening";
 }
 
-// Parent tab navigator, used to jump to sibling tabs (Verify / Card) from Home quick actions.
-type ParentNav = { navigate: (name: string) => void } | undefined;
-
-export default function HomeScreen({ navigation, onSwitchRole }: Props) {
-  const { user, logout } = useAuth();
+export default function HomeScreen({ navigation }: Props) {
+  const { user } = useAuth();
   const { liveCandidate, trustScore: demoTrustScore } = useDemo();
   const [realScore, setRealScore] = useState<number | null>(null);
   const [portfolio, setPortfolio] = useState<PortfolioResponse | null>(null);
@@ -74,11 +73,6 @@ export default function HomeScreen({ navigation, onSwitchRole }: Props) {
   const goVerify = () => parent?.navigate("Verify");
   const goCard = () => parent?.navigate("Card");
 
-  const switchRole = async () => {
-    await logout();
-    onSwitchRole();
-  };
-
   return (
     <View style={{ flex: 1 }}>
       <ScreenBackground />
@@ -90,8 +84,8 @@ export default function HomeScreen({ navigation, onSwitchRole }: Props) {
               <Text style={styles.eyebrow}>{greeting(new Date().getHours())}</Text>
               <Text style={styles.heading}>{displayName}</Text>
             </View>
-            <Pressable onPress={switchRole} style={styles.avatarButton}>
-              <Text style={styles.avatarInitial}>{initial}</Text>
+            <Pressable onPress={() => navigation.navigate("Settings")}>
+              <Avatar initial={initial} />
             </Pressable>
           </View>
 
@@ -177,9 +171,9 @@ export default function HomeScreen({ navigation, onSwitchRole }: Props) {
             </View>
           </GlassCard>
 
-          <Pressable onPress={switchRole} style={styles.switchRoleLink}>
-            <LogOut size={13} color={colors.slate} />
-            <Text style={styles.switchRoleText}>Switch role</Text>
+          <Pressable onPress={() => navigation.navigate("Settings")} style={styles.settingsLink}>
+            <Settings size={13} color={colors.slate} />
+            <Text style={styles.settingsText}>Settings</Text>
           </Pressable>
         </ScrollView>
       </SafeAreaView>
@@ -206,15 +200,6 @@ const styles = StyleSheet.create({
   topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginTop: 4 },
   eyebrow: { fontFamily: fonts.mono, fontSize: 11, textTransform: "uppercase", letterSpacing: 2, color: colors.slate },
   heading: { fontFamily: fonts.displayBold, fontSize: 30, color: colors.ink, marginTop: 2 },
-  avatarButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.ink,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarInitial: { fontFamily: fonts.displayBold, fontSize: 16, color: colors.parchment },
 
   heroRow: { flexDirection: "row", alignItems: "center", gap: 16, padding: 22 },
   heroLabel: { fontFamily: fonts.mono, fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, color: colors.slate },
@@ -261,6 +246,6 @@ const styles = StyleSheet.create({
   emptyTitle: { fontFamily: fonts.sansSemiBold, fontSize: 14, color: colors.ink },
   emptyBody: { fontFamily: fonts.sans, fontSize: 12, color: colors.slate, marginTop: 2 },
 
-  switchRoleLink: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 2 },
-  switchRoleText: { fontFamily: fonts.mono, fontSize: 12, color: colors.slate },
+  settingsLink: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 2 },
+  settingsText: { fontFamily: fonts.mono, fontSize: 12, color: colors.slate },
 });

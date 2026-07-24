@@ -13,6 +13,7 @@ import { Children, createContext, useContext, useEffect, useMemo, useRef, useSta
 import { ChevronLeft } from 'lucide-react';
 import { View, Text, Pressable, StyleSheet } from './react-native';
 import { css } from './style';
+import { FALLBACK_TOP_CLEARANCE } from './safe-area-context';
 
 /* ── Contexts ───────────────────────────────────────────────────────────── */
 
@@ -120,7 +121,12 @@ function StackHeader({ options, canGoBack, onBack }) {
           flexDirection: 'row',
           alignItems: 'center',
           gap: 4,
-          height: 52,
+          // FALLBACK_TOP_CLEARANCE, not just env(safe-area-inset-top): that inset is 0 in
+          // a plain browser tab or most emulators (no real notch to report), so a header
+          // relying on it alone sits flush against the very top edge everywhere except a
+          // real notched device. Same constant the intro screen's header row uses.
+          paddingTop: FALLBACK_TOP_CLEARANCE,
+          height: 52 + FALLBACK_TOP_CLEARANCE,
           paddingHorizontal: 12,
           flexShrink: 0,
           zIndex: 2,

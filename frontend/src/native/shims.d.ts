@@ -168,6 +168,9 @@ declare module 'react-native-safe-area-context' {
   export function useSafeAreaFrame(): { x: number; y: number; width: number; height: number };
   export const SafeAreaInsetsContext: Context<EdgeInsets>;
   export const initialWindowMetrics: { insets: EdgeInsets; frame: { x: number; y: number; width: number; height: number } };
+  // Shared fallback top clearance for custom headers, since env(safe-area-inset-top) is
+  // 0 without a real notch (a plain browser tab, most emulators) — see safe-area-context.jsx.
+  export const FALLBACK_TOP_CLEARANCE: number;
 }
 
 declare module '@react-navigation/native' {

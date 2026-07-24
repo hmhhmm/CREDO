@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { View, Text, ScrollView, Pressable, TextInput, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { FileText, Send, RefreshCw, ChevronRight, Check, CalendarPlus, CalendarCheck, Settings, ThumbsUp, ThumbsDown, X } from "lucide-react-native";
+import { Send, RefreshCw, Check, CalendarPlus, CalendarCheck, Settings, ThumbsUp, ThumbsDown, X } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
@@ -46,19 +46,6 @@ function buildCandidate(e: PipelineEntry): DiscoverCandidate {
   };
 }
 
-function actionFor(entry: PipelineEntry): { label: string; Icon: typeof Send } {
-  switch (entry.stage) {
-    case "simuhire_done":
-      return { label: "Review report", Icon: FileText };
-    case "shortlisted":
-      return { label: "View profile", Icon: ChevronRight };
-    case "re_engage":
-      return { label: "Re-engage", Icon: RefreshCw };
-    default:
-      return { label: "View", Icon: ChevronRight };
-  }
-}
-
 // Light-touch default: references the reason logged on the entry rather than repeating a
 // hard "are you available now" invite — re-engagement is meant to read as low-pressure.
 function buildLightTouchMessage(entry: PipelineEntry): string {
@@ -70,7 +57,6 @@ export default function PipelineScreen({ navigation }: Props) {
   const { pipeline, reEngage, markInterviewInvited, scheduleInterview, advanceStage, completeInterview, recordDecision } =
     usePipeline();
   const { stages } = useInterviewStages();
-  const [sent, setSent] = useState<string | null>(null);
   const [composingId, setComposingId] = useState<string | null>(null);
   const [draftMessage, setDraftMessage] = useState("");
   const [schedulingId, setSchedulingId] = useState<string | null>(null);
@@ -171,9 +157,7 @@ export default function PipelineScreen({ navigation }: Props) {
           <View style={{ gap: 12, marginTop: 8 }}>
             {pipeline.map((e) => {
               const stage = STAGE_META[e.stage];
-              const action = actionFor(e);
               const initials = e.name.split(" ").map((n) => n[0]).join("");
-              const isSent = sent === e.id;
               const isComposing = composingId === e.id;
               const isTouched = e.stage === "re_engage" && !!e.lastTouchedAt;
 
@@ -198,17 +182,7 @@ export default function PipelineScreen({ navigation }: Props) {
                 ? `${roundName} · ${formatInterviewDateTime(e.interviewDate)}`
                 : `${roundName} · Awaiting scheduling`;
 
-              const handlePress = () => {
-                if (e.stage === "simuhire_done") {
-                  navigation.navigate("SimuHireReport", { entry: e });
-                } else if (e.stage === "shortlisted") {
-                  navigation.navigate("CandidateProfile", { candidate: buildCandidate(e) });
-                } else if (e.stage === "re_engage") {
-                  startComposing(e);
-                } else {
-                  setSent(e.id);
-                }
-              };
+              const openProfile = () => navigation.navigate("CandidateProfile", { candidate: buildCandidate(e) });
 
               return (
                 <GlassCard key={e.id} radius={20}>
@@ -217,17 +191,17 @@ export default function PipelineScreen({ navigation }: Props) {
                       <View style={styles.avatar}>
                         <Text style={styles.avatarText}>{initials}</Text>
                       </View>
-                      <View style={{ flex: 1 }}>
+                      <Pressable style={{ flex: 1 }} onPress={openProfile}>
                         <Text style={styles.name}>{e.name}</Text>
                         <Text style={styles.meta}>{e.field} · Trust {e.trustScore}</Text>
-                      </View>
+                      </Pressable>
                       <View style={[styles.stagePill, { borderColor: stage.color }]}>
                         <Text style={[styles.stageText, { color: stage.color }]}>{stage.label}</Text>
                       </View>
                     </View>
                     <Text style={styles.detail}>{e.detail}</Text>
 
-                    {isComposing ? (
+                    {e.stage !== "re_engage" ? null : isComposing ? (
                       <View style={{ gap: 8 }}>
                         <GlassCard radius={14}>
                           <TextInput
@@ -260,15 +234,10 @@ export default function PipelineScreen({ navigation }: Props) {
                         <Check size={14} color={colors.verified} strokeWidth={2.5} />
                         <Text style={styles.touchedText}>Touched {e.lastTouchedAt} — following up in your own time</Text>
                       </View>
-                    ) : isSent ? (
-                      <View style={styles.sentRow}>
-                        <Check size={14} color={colors.verified} strokeWidth={2.5} />
-                        <Text style={styles.sentText}>Sent</Text>
-                      </View>
                     ) : (
-                      <Pressable style={styles.action} onPress={handlePress}>
-                        <action.Icon size={14} color={colors.ink} />
-                        <Text style={styles.actionText}>{action.label}</Text>
+                      <Pressable style={styles.action} onPress={() => startComposing(e)}>
+                        <RefreshCw size={14} color={colors.ink} />
+                        <Text style={styles.actionText}>Re-engage</Text>
                       </Pressable>
                     )}
 
@@ -457,14 +426,6 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
   },
   actionText: { fontFamily: fonts.sansSemiBold, fontSize: 13, color: colors.ink },
-  sentRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 7,
-    paddingVertical: 11,
-  },
-  sentText: { fontFamily: fonts.sansSemiBold, fontSize: 13, color: colors.verified },
 
   composeInput: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink, padding: 12, minHeight: 84 },
   composeRow: { flexDirection: "row", gap: 8 },

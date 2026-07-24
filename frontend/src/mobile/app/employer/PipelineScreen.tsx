@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { View, Text, ScrollView, Pressable, TextInput, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { FileText, Send, RefreshCw, ChevronRight, Check, CalendarPlus, CalendarCheck, Settings } from "lucide-react-native";
+import { FileText, Send, RefreshCw, ChevronRight, Check, CalendarPlus, CalendarCheck, Settings, ThumbsUp, ThumbsDown, X } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
@@ -11,6 +11,7 @@ import { mockCandidates } from "../../data/mockData";
 import { usePipeline } from "../../context/PipelineContext";
 import { useInterviewStages } from "../../context/InterviewStagesContext";
 import { getUpcomingInterviewSlots, formatInterviewDateTime } from "../../utils/interviewSlots";
+import { defaultAcceptMessage, defaultRejectMessage } from "../../utils/decisionMessages";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 import type { PipelineStackParamList } from "../../navigation/PipelineStack";
@@ -66,7 +67,7 @@ function buildLightTouchMessage(entry: PipelineEntry): string {
 }
 
 export default function PipelineScreen({ navigation }: Props) {
-  const { pipeline, reEngage, markInterviewInvited, scheduleInterview, advanceStage, completeInterview } =
+  const { pipeline, reEngage, markInterviewInvited, scheduleInterview, advanceStage, completeInterview, recordDecision } =
     usePipeline();
   const { stages } = useInterviewStages();
   const [sent, setSent] = useState<string | null>(null);
@@ -75,6 +76,27 @@ export default function PipelineScreen({ navigation }: Props) {
   const [schedulingId, setSchedulingId] = useState<string | null>(null);
   const [selectedSlotIso, setSelectedSlotIso] = useState<string | null>(null);
   const upcomingSlots = useMemo(() => getUpcomingInterviewSlots(), []);
+  const [decidingId, setDecidingId] = useState<string | null>(null);
+  const [decidingAs, setDecidingAs] = useState<"accepted" | "rejected" | null>(null);
+  const [decisionDraft, setDecisionDraft] = useState("");
+
+  const startDeciding = (entry: PipelineEntry, decision: "accepted" | "rejected") => {
+    setDecidingId(entry.id);
+    setDecidingAs(decision);
+    setDecisionDraft(decision === "accepted" ? defaultAcceptMessage(entry.name) : defaultRejectMessage(entry.name));
+  };
+  const cancelDeciding = () => {
+    setDecidingId(null);
+    setDecidingAs(null);
+    setDecisionDraft("");
+  };
+  const confirmDecision = (entry: PipelineEntry) => {
+    if (!decidingAs || !decisionDraft.trim()) return;
+    recordDecision(entry.id, decidingAs, decisionDraft);
+    setDecidingId(null);
+    setDecidingAs(null);
+    setDecisionDraft("");
+  };
 
   const startComposing = (entry: PipelineEntry) => {
     setComposingId(entry.id);
@@ -323,7 +345,10 @@ export default function PipelineScreen({ navigation }: Props) {
                       )}
                     </View>
 
-                    {e.decision && (
+                    {/* E-Decision — offered once a candidate is actually in the interview
+                        process (any round, not only after the last one), right here on the
+                        card so an employer never has to open a profile just to decide. */}
+                    {e.decision ? (
                       <View
                         style={[
                           styles.decisionBadge,
@@ -339,7 +364,52 @@ export default function PipelineScreen({ navigation }: Props) {
                           {e.decision === "accepted" ? "✓ Accepted" : "✕ Rejected"}
                         </Text>
                       </View>
-                    )}
+                    ) : e.currentStageId !== null ? (
+                      decidingId === e.id ? (
+                        <View style={{ gap: 8, marginTop: 8 }}>
+                          <GlassCard radius={14}>
+                            <TextInput
+                              style={styles.decisionInput}
+                              value={decisionDraft}
+                              onChangeText={setDecisionDraft}
+                              multiline
+                              numberOfLines={3}
+                              textAlignVertical="top"
+                            />
+                          </GlassCard>
+                          <View style={styles.composeRow}>
+                            <Pressable style={styles.composeCancel} onPress={cancelDeciding}>
+                              <X size={13} color={colors.ink} />
+                              <Text style={styles.composeCancelText}>Cancel</Text>
+                            </Pressable>
+                            <Pressable
+                              style={[
+                                styles.composeSend,
+                                { backgroundColor: decidingAs === "accepted" ? colors.verified : colors.alert },
+                                !decisionDraft.trim() && styles.composeSendDisabled,
+                              ]}
+                              onPress={() => confirmDecision(e)}
+                              disabled={!decisionDraft.trim()}
+                            >
+                              <Text style={styles.composeSendText}>
+                                {decidingAs === "accepted" ? "Send acceptance" : "Send rejection"}
+                              </Text>
+                            </Pressable>
+                          </View>
+                        </View>
+                      ) : (
+                        <View style={styles.decisionRow}>
+                          <Pressable style={styles.acceptBtn} onPress={() => startDeciding(e, "accepted")}>
+                            <ThumbsUp size={13} color={colors.verified} />
+                            <Text style={styles.acceptBtnText}>Accept</Text>
+                          </Pressable>
+                          <Pressable style={styles.rejectBtn} onPress={() => startDeciding(e, "rejected")}>
+                            <ThumbsDown size={13} color={colors.alert} />
+                            <Text style={styles.rejectBtnText}>Reject</Text>
+                          </Pressable>
+                        </View>
+                      )
+                    ) : null}
                   </View>
                 </GlassCard>
               );
@@ -436,6 +506,32 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   decisionBadgeText: { fontFamily: fonts.mono, fontSize: 10.5 },
+  decisionInput: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink, padding: 12, minHeight: 72 },
+  decisionRow: { flexDirection: "row", gap: 8, marginTop: 8 },
+  acceptBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderWidth: 1.5,
+    borderColor: colors.verified,
+    borderRadius: 12,
+    paddingVertical: 10,
+  },
+  acceptBtnText: { fontFamily: fonts.sansSemiBold, fontSize: 12.5, color: colors.verified },
+  rejectBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderWidth: 1.5,
+    borderColor: colors.alert,
+    borderRadius: 12,
+    paddingVertical: 10,
+  },
+  rejectBtnText: { fontFamily: fonts.sansSemiBold, fontSize: 12.5, color: colors.alert },
   interviewHead: { flexDirection: "row", alignItems: "center", gap: 7 },
   interviewDot: { width: 7, height: 7, borderRadius: 3.5 },
   interviewLabel: { fontFamily: fonts.mono, fontSize: 11 },

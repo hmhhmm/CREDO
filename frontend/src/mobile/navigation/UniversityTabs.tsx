@@ -2,9 +2,9 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useLocation } from "react-router-dom";
 import { Activity, Users, TrendingUp, Handshake } from "lucide-react-native";
 import UniversityHomeStack from "./UniversityHomeStack";
-import CohortsScreen from "../app/university/CohortsScreen";
-import OutcomesScreen from "../app/university/OutcomesScreen";
-import PartnersScreen from "../app/university/PartnersScreen";
+import CohortsStack from "./CohortsStack";
+import OutcomesStack from "./OutcomesStack";
+import PartnersStack from "./PartnersStack";
 import CommunityScreen from "../app/community/CommunityScreen";
 import SegmentedTabBar from "./SegmentedTabBar";
 import type { University } from "../data/universityData";
@@ -41,9 +41,9 @@ export default function UniversityTabs({
       <Tab.Screen name="Pulse">
         {() => <UniversityHomeStack university={university} onSwitchRole={onSwitchRole} />}
       </Tab.Screen>
-      <Tab.Screen name="Cohorts">{() => <CohortsScreen university={university} />}</Tab.Screen>
-      <Tab.Screen name="Outcomes">{() => <OutcomesScreen university={university} />}</Tab.Screen>
-      <Tab.Screen name="Partners">{() => <PartnersScreen university={university} />}</Tab.Screen>
+      <Tab.Screen name="Cohorts">{() => <CohortsStack university={university} />}</Tab.Screen>
+      <Tab.Screen name="Outcomes">{() => <OutcomesStack university={university} />}</Tab.Screen>
+      <Tab.Screen name="Partners">{() => <PartnersStack university={university} />}</Tab.Screen>
       <Tab.Screen name="Community">
         {() => (
           <CommunityScreen

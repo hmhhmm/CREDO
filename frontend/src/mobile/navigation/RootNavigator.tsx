@@ -7,6 +7,8 @@ import { DemoProvider } from "../context/DemoContext";
 import { PipelineProvider } from "../context/PipelineContext";
 import { InterviewStagesProvider } from "../context/InterviewStagesContext";
 import { SkillFeedbackProvider } from "../context/SkillFeedbackContext";
+import { CredentialIssuerProvider } from "../context/CredentialIssuerContext";
+import { CurriculumActionProvider } from "../context/CurriculumActionContext";
 import { CommunityProvider } from "../context/CommunityContext";
 import { AuthProvider, useAuth } from "../context/AuthContext";
 import AuthGate from "../app/auth/AuthGate";
@@ -132,13 +134,17 @@ export default function RootNavigator() {
           <DemoProvider>
             <InterviewStagesProvider>
               <SkillFeedbackProvider>
-                <CommunityProvider>
-                  <PipelineProvider>
-                    <NavigationContainer>
-                      <RoleStackNavigator />
-                    </NavigationContainer>
-                  </PipelineProvider>
-                </CommunityProvider>
+                <CredentialIssuerProvider>
+                  <CurriculumActionProvider>
+                    <CommunityProvider>
+                      <PipelineProvider>
+                        <NavigationContainer>
+                          <RoleStackNavigator />
+                        </NavigationContainer>
+                      </PipelineProvider>
+                    </CommunityProvider>
+                  </CurriculumActionProvider>
+                </CredentialIssuerProvider>
               </SkillFeedbackProvider>
             </InterviewStagesProvider>
           </DemoProvider>

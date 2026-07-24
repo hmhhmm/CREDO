@@ -1,13 +1,17 @@
-import { View, Text, ScrollView, StyleSheet } from "react-native";
+import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Wallet, MessageCircle } from "lucide-react-native";
+import { Wallet, MessageCircle, ChevronRight } from "lucide-react-native";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import { getOutcomeStats, getAlumniCheckins, getLifelongWallet, type University } from "../../data/universityData";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import type { OutcomesStackParamList } from "../../navigation/OutcomesStack";
 
-export default function OutcomesScreen({ university }: { university: University }) {
+type Props = NativeStackScreenProps<OutcomesStackParamList, "OutcomesMain"> & { university: University };
+
+export default function OutcomesScreen({ university, navigation }: Props) {
   const outcomeStats = getOutcomeStats(university);
   const alumniCheckins = getAlumniCheckins(university);
   const lifelongWallet = getLifelongWallet(university);
@@ -52,7 +56,11 @@ export default function OutcomesScreen({ university }: { university: University 
           <GlassCard radius={18}>
             <View style={styles.checkinList}>
               {alumniCheckins.map((a, i) => (
-                <View key={a.window} style={[styles.checkin, i > 0 && styles.divider]}>
+                <Pressable
+                  key={a.window}
+                  style={[styles.checkin, i > 0 && styles.divider]}
+                  onPress={() => navigation.navigate("AlumniDetail", { window: a.window })}
+                >
                   <View style={styles.checkinIcon}>
                     <MessageCircle size={14} color={colors.ink} />
                   </View>
@@ -63,7 +71,8 @@ export default function OutcomesScreen({ university }: { university: University 
                     </View>
                     <Text style={styles.checkinNote}>{a.note}</Text>
                   </View>
-                </View>
+                  <ChevronRight size={16} color={colors.slate} />
+                </Pressable>
               ))}
             </View>
           </GlassCard>

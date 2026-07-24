@@ -20,10 +20,13 @@ export function studentsOf(university: University) {
 }
 
 // ── U1 Campus Pulse: headline readiness ─────────────────────────────────────────
+// Average trust score across every candidate whose `university` field matches — no
+// historical/time-series data exists in the dataset, so there's no real "vs last
+// semester" figure to show (a prior version fabricated one; removed).
 export function getCampusReadiness(university: University) {
   const myStudents = studentsOf(university);
   const score = myStudents.length ? Math.round(myStudents.reduce((s, c) => s + c.trustScore, 0) / myStudents.length) : 0;
-  return { score, trend: "+6 vs last semester", cohortSize: myStudents.length };
+  return { score, cohortSize: myStudents.length };
 }
 
 // ── U4 Behavioral Benchmark: SimuHire dimensions aggregated ─────────────────────
@@ -31,6 +34,14 @@ export interface BenchmarkDimension {
   name: string;
   score: number;
 }
+const DIMENSION_LABELS: Record<string, string> = {
+  adaptability: "Adaptability",
+  communication: "Communication",
+  problemSolving: "Problem-Solving",
+  stressResponse: "Stress Response",
+  systemsThinking: "Systems Thinking",
+};
+
 export function getBehavioralBenchmark(university: University): BenchmarkDimension[] {
   const simuHireStudents = studentsOf(university).filter((c) => c.simuHire.completed && c.simuHire.dimensions);
   const avg = (key: string) => {
@@ -38,13 +49,20 @@ export function getBehavioralBenchmark(university: University): BenchmarkDimensi
     const total = simuHireStudents.reduce((s, c) => s + (c.simuHire.dimensions?.[key] ?? 0), 0);
     return Math.round(total / simuHireStudents.length);
   };
-  return [
-    { name: "Adaptability", score: avg("adaptability") },
-    { name: "Communication", score: avg("communication") },
-    { name: "Problem-Solving", score: avg("problemSolving") },
-    { name: "Stress Response", score: avg("stressResponse") },
-    { name: "Systems Thinking", score: avg("systemsThinking") },
-  ];
+  return Object.entries(DIMENSION_LABELS).map(([key, name]) => ({ name, score: avg(key) }));
+}
+
+// U4 detail: which real students' completed SimuHire sessions feed a given dimension.
+export function getBenchmarkDetail(university: University, dimensionName: string) {
+  const contributors = studentsOf(university).filter((c) => c.simuHire.completed && c.simuHire.dimensions);
+  const key = Object.entries(DIMENSION_LABELS).find(([, label]) => label === dimensionName)?.[0];
+  const scored = key
+    ? contributors
+        .map((c) => ({ name: c.name, score: c.simuHire.dimensions?.[key] }))
+        .filter((s): s is { name: string; score: number } => typeof s.score === "number")
+    : [];
+  const benchmark = getBehavioralBenchmark(university).find((d) => d.name === dimensionName) ?? null;
+  return { dimensionName, benchmark, contributors: scored };
 }
 
 // ── U2 Curriculum Gap Detector: skills failing verification ─────────────────────
@@ -94,6 +112,25 @@ export function getCurriculumActions(skillGaps: SkillGap[]): CurriculumAction[] 
   return skillGaps.map((g) => ({ skill: g.skill, action: ACTIONS[g.skill] })).filter((a): a is CurriculumAction => !!a.action);
 }
 
+// Course code prefix -> field, so a skill gap can be traced back to the cohort it
+// affects (course codes already encode this: CS3040, SE2010, DS2200, ...).
+const COURSE_PREFIX_FIELD: Record<string, string> = {
+  CS: "Computer Science",
+  SE: "Software Engineering",
+  DS: "Data Science",
+};
+
+export function getSkillGapDetail(university: University, skill: string) {
+  const skillGaps = getSkillGaps(university);
+  const gap = skillGaps.find((g) => g.skill === skill) ?? null;
+  const action = getCurriculumActions(skillGaps).find((a) => a.skill === skill) ?? null;
+  const prefix = gap?.taughtIn.match(/^([A-Z]+)/)?.[1];
+  const field = prefix ? COURSE_PREFIX_FIELD[prefix] : undefined;
+  const cohort = field ? getCohorts(university).find((c) => c.programme === `BSc ${field}`) ?? null : null;
+  const affectedStudents = gap && cohort ? Math.round((cohort.students * (100 - gap.verifyRate)) / 100) : null;
+  return { gap, action, cohort, affectedStudents };
+}
+
 // ── U7 Adaptive Readiness + U5 Credential Issuer: per-programme cohorts ──────────
 export interface Cohort {
   programme: string;
@@ -101,7 +138,10 @@ export interface Cohort {
   readiness: number;
   students: number;
   verifiedPct: number; // % with at least one verified artifact
-  issuerActive: boolean; // U5: uni issues credentials into the ledger for this programme
+  // U5: whether this programme HAS a verified credential artifact the university could
+  // issue — a capability, not an action taken. Whether the university actually issued one
+  // lives in CredentialIssuerContext (see getEligibleCredentials below), not here.
+  eligibleForIssuance: boolean;
 }
 export function getCohorts(university: University): Cohort[] {
   const myStudents = studentsOf(university);
@@ -118,9 +158,28 @@ export function getCohorts(university: University): Cohort[] {
       readiness,
       students: students.length,
       verifiedPct,
-      issuerActive: students.some((c) => c.artifacts.some((a) => a.type === "credential" && a.status === "verified")),
+      eligibleForIssuance: students.some((c) => c.artifacts.some((a) => a.type === "credential" && a.status === "verified")),
     };
   });
+}
+
+// U5 detail: verified credential artifacts this programme's students hold, that the
+// university COULD issue into the ledger — derived from the shared candidate roster.
+// Whether any of these have actually been issued is tracked separately in
+// CredentialIssuerContext, since that's a real user action, not derivable data.
+export function getEligibleCredentials(university: University, programme: string) {
+  const subject = programme.replace(/^BSc\s*/, "");
+  return studentsOf(university)
+    .filter((c) => c.field === subject)
+    .flatMap((c) => c.artifacts.filter((a) => a.type === "credential").map((a) => ({ candidate: c.name, artifact: a })));
+}
+
+export function getCohortDetail(university: University, programme: string) {
+  const cohort = getCohorts(university).find((c) => c.programme === programme) ?? null;
+  const subject = programme.replace(/^BSc\s*/, "");
+  const students = studentsOf(university).filter((c) => c.field === subject);
+  const eligible = cohort?.eligibleForIssuance ? getEligibleCredentials(university, programme) : [];
+  return { cohort, students, eligible };
 }
 
 // ── U3 Early Intervention Alert: derived from cohorts + skillGaps above ─────────
@@ -138,7 +197,17 @@ export function getInterventionAlert(cohorts: Cohort[], skillGaps: SkillGap[]): 
   if (atRisk.length === 0) return null;
 
   const worst = atRisk.reduce((a, b) => (b.readiness < a.readiness ? b : a));
-  const lowestGaps = [...skillGaps].sort((a, b) => a.verifyRate - b.verifyRate).slice(0, 2);
+
+  // Only cite skills actually taught within the flagged programme (matched via the same
+  // course-code prefix used by getSkillGapDetail) — a prior version cited the
+  // university's worst 2 skills overall, which could name skills unrelated to this
+  // programme's own curriculum.
+  const subject = worst.programme.replace(/^BSc\s*/, "");
+  const relevantGaps = skillGaps.filter((g) => {
+    const prefix = g.taughtIn.match(/^([A-Z]+)/)?.[1];
+    return prefix ? COURSE_PREFIX_FIELD[prefix] === subject : false;
+  });
+  const lowestGaps = [...relevantGaps].sort((a, b) => a.verifyRate - b.verifyRate).slice(0, 2);
   const skillNames = lowestGaps.map((g) => g.skill.toLowerCase()).join(" and ") || "several core skills";
 
   return {
@@ -176,6 +245,28 @@ export function getAlumniCheckins(university: University): AlumniCheckin[] {
     { window: "1 year", responded: Math.max(1, Math.round(grads.length * 0.5)), note: "91% retention; salary tracking above benchmark" },
     { window: "3 years", responded: Math.max(1, Math.round(grads.length * 0.25)), note: "68% still in-field; 24% moved into leadership" },
   ];
+}
+
+// U10 detail: illustrative anonymised follow-up signals per check-in window.
+const ALUMNI_SIGNALS: Record<string, string[]> = {
+  "6 months": [
+    "Most placements landed within 2 verified-skill matches on Discover",
+    "No reported gap between verified skills and day-one role expectations",
+  ],
+  "1 year": [
+    "Salary tracking 8% above the field-match benchmark for verified hires",
+    "Two re-verified a new certification within their first year",
+  ],
+  "3 years": [
+    "24% moved into leadership — all had re-verified at least one new skill since graduating",
+    "Remaining in-field alumni still show an active Lifelong Wallet",
+  ],
+};
+
+export function getAlumniDetail(university: University, window: string) {
+  const checkin = getAlumniCheckins(university).find((a) => a.window === window) ?? null;
+  const signals = ALUMNI_SIGNALS[window] ?? [];
+  return { checkin, signals };
 }
 
 // U8 Lifelong Learning Wallet — a small summary line

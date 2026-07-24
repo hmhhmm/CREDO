@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { AlertTriangle, TrendingDown, ArrowRight, Settings, GraduationCap } from "lucide-react-native";
+import { AlertTriangle, TrendingDown, Activity, ChevronRight, Settings, GraduationCap } from "lucide-react-native";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import ScoreRing from "../../components/shared/ScoreRing";
@@ -9,23 +9,39 @@ import {
   getCampusReadiness,
   getBehavioralBenchmark,
   getSkillGaps,
-  getCurriculumActions,
   getCohorts,
   getInterventionAlert,
   type University,
 } from "../../data/universityData";
 import { useSkillFeedback } from "../../context/SkillFeedbackContext";
+import { getConfidenceBand } from "../../utils/confidenceBand";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import type { UniversityHomeStackParamList } from "../../navigation/UniversityHomeStack";
 
-export default function PulseScreen({ university, onOpenSettings }: { university: University; onOpenSettings: () => void }) {
+type Props = {
+  university: University;
+  onOpenSettings: () => void;
+  navigation: NativeStackScreenProps<UniversityHomeStackParamList, "PulseMain">["navigation"];
+};
+
+export default function PulseScreen({ university, onOpenSettings, navigation }: Props) {
   const campusReadiness = getCampusReadiness(university);
   const behavioralBenchmark = getBehavioralBenchmark(university);
   const skillGaps = getSkillGaps(university);
-  const curriculumActions = getCurriculumActions(skillGaps);
   const interventionAlert = getInterventionAlert(getCohorts(university), skillGaps);
   const { feedbackFor } = useSkillFeedback();
   const employerFeedback = feedbackFor(university.name);
+
+  // Teaser lines only — the full lists live in their own hub screens now, reached by
+  // tapping through. Pulse's job is "is everything OK at a glance," not hosting two
+  // entire features inline.
+  const worstGap = skillGaps[0] ?? null;
+  const sortedBenchmark = [...behavioralBenchmark].sort((a, b) => b.score - a.score);
+  const strongest = sortedBenchmark[0] ?? null;
+  const weakest = sortedBenchmark[sortedBenchmark.length - 1] ?? null;
+  const readinessBand = getConfidenceBand(campusReadiness.score);
 
   return (
     <View style={{ flex: 1 }}>
@@ -47,8 +63,8 @@ export default function PulseScreen({ university, onOpenSettings }: { university
             <View style={styles.heroRow}>
               <View style={{ flex: 1, gap: 4 }}>
                 <Text style={styles.heroLabel}>Cohort Readiness Score</Text>
-                <Text style={styles.heroTrend}>{campusReadiness.trend}</Text>
-                <Text style={styles.heroCaption}>Across {campusReadiness.cohortSize.toLocaleString()} students, anonymised & aggregated</Text>
+                <Text style={[styles.heroTrend, { color: readinessBand.hex }]}>{readinessBand.label}</Text>
+                <Text style={styles.heroCaption}>Averaged across {campusReadiness.cohortSize.toLocaleString()} students in this cohort</Text>
               </View>
               <ScoreRing score={campusReadiness.score} size="lg" />
             </View>
@@ -66,52 +82,44 @@ export default function PulseScreen({ university, onOpenSettings }: { university
             </View>
           )}
 
-          {/* U4 — Behavioral Benchmark */}
-          <Text style={styles.sectionLabel}>Behavioral Benchmark</Text>
-          <GlassCard radius={18}>
-            <View style={styles.benchList}>
-              {behavioralBenchmark.map((d) => (
-                <View key={d.name} style={styles.benchItem}>
-                  <View style={styles.benchRow}>
-                    <Text style={styles.benchName}>{d.name}</Text>
-                    <Text style={styles.benchScore}>{d.score}</Text>
-                  </View>
-                  <View style={styles.track}>
-                    <View style={[styles.fill, { width: `${d.score}%` }]} />
-                  </View>
+          {/* U4 teaser — full Behavioral Benchmark lives in its own hub */}
+          <Pressable onPress={() => navigation.navigate("BenchmarkHub")}>
+            <GlassCard radius={18}>
+              <View style={styles.teaserCard}>
+                <View style={styles.teaserIcon}>
+                  <Activity size={16} color={colors.ink} />
                 </View>
-              ))}
-            </View>
-          </GlassCard>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.teaserTitle}>Behavioral Benchmark</Text>
+                  {strongest && weakest && (
+                    <Text style={styles.teaserBody}>
+                      {strongest.name} leads at {strongest.score} · {weakest.name} lags at {weakest.score}
+                    </Text>
+                  )}
+                </View>
+                <ChevronRight size={16} color={colors.slate} />
+              </View>
+            </GlassCard>
+          </Pressable>
 
-          {/* U2 — Curriculum Gap Detector, paired with U9's closed-loop response */}
-          <Text style={styles.sectionLabel}>Curriculum Gap Detector</Text>
-          <View style={{ gap: 12 }}>
-            {skillGaps.map((g) => {
-              const response = curriculumActions.find((a) => a.skill === g.skill);
-              return (
-                <GlassCard key={g.skill} radius={18}>
-                  <View style={styles.gapCard}>
-                    <View style={styles.gapHead}>
-                      <TrendingDown size={15} color={colors.alert} />
-                      <Text style={styles.gapSkill}>{g.skill}</Text>
-                      <Text style={styles.gapRate}>{g.verifyRate}% verify</Text>
-                    </View>
-                    <Text style={styles.gapTaught}>Taught in {g.taughtIn}</Text>
-                    <View style={styles.track}>
-                      <View style={[styles.fill, { width: `${g.verifyRate}%`, backgroundColor: colors.alert }]} />
-                    </View>
-                    {response && (
-                      <View style={styles.actionRow}>
-                        <ArrowRight size={13} color={colors.verified} />
-                        <Text style={styles.actionText}>{response.action}</Text>
-                      </View>
-                    )}
-                  </View>
-                </GlassCard>
-              );
-            })}
-          </View>
+          {/* U2 teaser — full Curriculum Gap Detector lives in its own hub */}
+          <Pressable onPress={() => navigation.navigate("CurriculumGapHub")}>
+            <GlassCard radius={18}>
+              <View style={styles.teaserCard}>
+                <View style={styles.teaserIcon}>
+                  <TrendingDown size={16} color={colors.alert} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.teaserTitle}>Curriculum Gap Detector</Text>
+                  <Text style={styles.teaserBody}>
+                    {skillGaps.length} skill{skillGaps.length === 1 ? "" : "s"} failing verification
+                    {worstGap ? ` · worst: ${worstGap.skill} at ${worstGap.verifyRate}%` : ""}
+                  </Text>
+                </View>
+                <ChevronRight size={16} color={colors.slate} />
+              </View>
+            </GlassCard>
+          </Pressable>
 
           {/* E9 Bridge C — skill gaps employers flagged for specific students, closing the
               loop from an individual hire back to the curriculum, separate from the
@@ -169,22 +177,16 @@ const styles = StyleSheet.create({
 
   sectionLabel: { fontFamily: fonts.mono, fontSize: 11, textTransform: "uppercase", letterSpacing: 2, color: colors.slate },
 
-  benchList: { padding: 16, gap: 12 },
-  benchItem: { gap: 5 },
-  benchRow: { flexDirection: "row", justifyContent: "space-between" },
-  benchName: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.ink },
-  benchScore: { fontFamily: fonts.mono, fontSize: 13, color: colors.ink },
-  track: { height: 5, backgroundColor: "rgba(16,25,43,0.08)", borderRadius: 3, overflow: "hidden" },
-  fill: { height: "100%", backgroundColor: colors.verified, borderRadius: 3 },
+  teaserCard: { flexDirection: "row", alignItems: "center", gap: 12, padding: 16 },
+  teaserIcon: { width: 34, height: 34, borderRadius: 12, backgroundColor: "rgba(16,25,43,0.06)", alignItems: "center", justifyContent: "center" },
+  teaserTitle: { fontFamily: fonts.sansSemiBold, fontSize: 14, color: colors.ink },
+  teaserBody: { fontFamily: fonts.sans, fontSize: 12, color: colors.slate, marginTop: 2, lineHeight: 16 },
 
+  // Reused by the Employer Feedback section below (E9 Bridge C) — not a full skill-gap
+  // list anymore, that moved to CurriculumGapScreen.
   gapCard: { padding: 16, gap: 7 },
   gapHead: { flexDirection: "row", alignItems: "center", gap: 8 },
   gapSkill: { flex: 1, fontFamily: fonts.sansSemiBold, fontSize: 14, color: colors.ink },
-  gapRate: { fontFamily: fonts.mono, fontSize: 12, color: colors.alert },
-  gapTaught: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.slate },
-  actionRow: { flexDirection: "row", alignItems: "flex-start", gap: 7, marginTop: 2 },
-  actionText: { flex: 1, fontFamily: fonts.sansMedium, fontSize: 11.5, color: colors.verified, lineHeight: 16 },
-
   feedbackDate: { fontFamily: fonts.mono, fontSize: 11, color: colors.slate },
   feedbackBody: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink, lineHeight: 18 },
   feedbackMeta: { fontFamily: fonts.mono, fontSize: 11, color: colors.slate },

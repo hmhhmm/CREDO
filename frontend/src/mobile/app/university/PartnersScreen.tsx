@@ -1,15 +1,26 @@
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ArrowRight, Building2, Check } from "lucide-react-native";
+import { ArrowRight, Building2, Check, ChevronRight } from "lucide-react-native";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import { getConfidenceBand } from "../../utils/confidenceBand";
-import { getInternshipMatches, type University } from "../../data/universityData";
+import { getInternshipMatches, type University, type InternshipMatch } from "../../data/universityData";
+import { mockCandidates } from "../../data/mockData";
 import { usePipeline } from "../../context/PipelineContext";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
+import type { DiscoverCandidate } from "../../data/employerData";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import type { PartnersStackParamList } from "../../navigation/PartnersStack";
 
-export default function PartnersScreen({ university }: { university: University }) {
+type Props = NativeStackScreenProps<PartnersStackParamList, "PartnersMain"> & { university: University };
+
+function buildDiscoverCandidate(m: InternshipMatch): DiscoverCandidate {
+  const full = mockCandidates.find((c) => c.id === m.candidateId)!;
+  return { ...full, trajectory: `${m.matchPct}% match for ${m.role} at ${m.employer}` };
+}
+
+export default function PartnersScreen({ university, navigation }: Props) {
   const { addToPipeline, isInPipelineFor } = usePipeline();
   const internshipMatches = getInternshipMatches(university);
 
@@ -28,34 +39,41 @@ export default function PartnersScreen({ university }: { university: University 
               return (
                 <GlassCard key={m.id} radius={20}>
                   <View style={styles.card}>
-                    <View style={styles.matchHead}>
-                      <Text style={styles.matchPct}>{m.matchPct}% match</Text>
-                    </View>
-
-                    <View style={styles.pairRow}>
-                      {/* Student */}
-                      <View style={styles.side}>
-                        <View style={styles.avatar}>
-                          <Text style={styles.avatarText}>{m.student.split(" ").map((n) => n[0]).join("")}</Text>
-                        </View>
-                        <Text style={styles.name} numberOfLines={1}>{m.student}</Text>
-                        <Text style={styles.subtext} numberOfLines={1}>{m.programme}</Text>
-                        <View style={[styles.scorePill, { borderColor: band.hex }]}>
-                          <Text style={[styles.scoreText, { color: band.hex }]}>Trust {m.trustScore}</Text>
+                    <Pressable
+                      onPress={() => navigation.navigate("CandidateProfile", { candidate: buildDiscoverCandidate(m) })}
+                    >
+                      <View style={styles.matchHead}>
+                        <Text style={styles.matchPct}>{m.matchPct}% match</Text>
+                        <View style={styles.matchChevron}>
+                          <ChevronRight size={14} color={colors.slate} />
                         </View>
                       </View>
 
-                      <ArrowRight size={18} color={colors.gold} />
-
-                      {/* Employer */}
-                      <View style={styles.side}>
-                        <View style={styles.empIcon}>
-                          <Building2 size={18} color={colors.ink} />
+                      <View style={styles.pairRow}>
+                        {/* Student */}
+                        <View style={styles.side}>
+                          <View style={styles.avatar}>
+                            <Text style={styles.avatarText}>{m.student.split(" ").map((n) => n[0]).join("")}</Text>
+                          </View>
+                          <Text style={styles.name} numberOfLines={1}>{m.student}</Text>
+                          <Text style={styles.subtext} numberOfLines={1}>{m.programme}</Text>
+                          <View style={[styles.scorePill, { borderColor: band.hex }]}>
+                            <Text style={[styles.scoreText, { color: band.hex }]}>Trust {m.trustScore}</Text>
+                          </View>
                         </View>
-                        <Text style={styles.name} numberOfLines={1}>{m.employer}</Text>
-                        <Text style={styles.subtext} numberOfLines={2}>{m.role}</Text>
+
+                        <ArrowRight size={18} color={colors.gold} />
+
+                        {/* Employer */}
+                        <View style={styles.side}>
+                          <View style={styles.empIcon}>
+                            <Building2 size={18} color={colors.ink} />
+                          </View>
+                          <Text style={styles.name} numberOfLines={1}>{m.employer}</Text>
+                          <Text style={styles.subtext} numberOfLines={2}>{m.role}</Text>
+                        </View>
                       </View>
-                    </View>
+                    </Pressable>
 
                     {introduced ? (
                       <View style={styles.introducedRow}>
@@ -101,7 +119,8 @@ const styles = StyleSheet.create({
   subheading: { fontFamily: fonts.sans, fontSize: 12, color: colors.slate, marginTop: 4, lineHeight: 17 },
 
   card: { padding: 16, gap: 12 },
-  matchHead: { alignItems: "center" },
+  matchHead: { flexDirection: "row", alignItems: "center", justifyContent: "center" },
+  matchChevron: { position: "absolute", right: 0 },
   matchPct: { fontFamily: fonts.mono, fontSize: 11, color: colors.verified, letterSpacing: 0.5 },
   pairRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   side: { flex: 1, alignItems: "center", gap: 3 },

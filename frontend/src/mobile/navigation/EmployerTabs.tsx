@@ -25,11 +25,11 @@ export default function EmployerTabs({ onSwitchRole }: { onSwitchRole: () => voi
   return (
     <Tab.Navigator
       screenOptions={{ headerShown: false }}
-      tabBar={(props) => <SegmentedTabBar {...props} icons={ICONS} labels={LABELS} />}
+      tabBar={(props) => <SegmentedTabBar {...props} icons={ICONS} labels={LABELS} centerRoute="FairMode" />}
     >
       <Tab.Screen name="Home">{() => <EmployerHomeStack onSwitchRole={onSwitchRole} />}</Tab.Screen>
-      <Tab.Screen name="FairMode" component={FairModeScreen} />
       <Tab.Screen name="Discover" component={DiscoverStack} />
+      <Tab.Screen name="FairMode" component={FairModeScreen} />
       <Tab.Screen name="Pipeline" component={PipelineStack} />
     </Tab.Navigator>
   );

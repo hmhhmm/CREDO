@@ -5,7 +5,10 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { DemoProvider } from "../context/DemoContext";
 import { PipelineProvider } from "../context/PipelineContext";
-import { AuthProvider } from "../context/AuthContext";
+import { InterviewStagesProvider } from "../context/InterviewStagesContext";
+import { SkillFeedbackProvider } from "../context/SkillFeedbackContext";
+import { CommunityProvider } from "../context/CommunityContext";
+import { AuthProvider, useAuth } from "../context/AuthContext";
 import AuthGate from "../app/auth/AuthGate";
 import UniversityAuthGate from "../app/auth/UniversityAuthGate";
 import IntroScreen from "../app/intro/IntroScreen";
@@ -56,6 +59,7 @@ function AuthedTabs({ role, onSwitchRole }: { role: "candidate" | "employer"; on
 function RoleStackNavigator() {
   const location = useLocation();
   const routerNavigate = useRouterNavigate();
+  const { logout } = useAuth();
 
   // /app -> Intro, /app/roles -> RoleSelect, /app/candidate -> CandidateTabs, etc.
   // Anything unrecognized (including a bare /app) falls back to Intro.
@@ -69,6 +73,16 @@ function RoleStackNavigator() {
     navigate(screen);
     const path = SCREEN_TO_PATH[screen];
     if (path && path !== location.pathname) routerNavigate(path);
+  };
+
+  // Switching role for Candidate/Employer must actually log out — AuthGate only shows
+  // LoginScreen when there's no user, and the persisted token otherwise survives navigating
+  // back to RoleSelect, silently skipping login on the way back in (so a different email
+  // could never be tried). University isn't logged out here — it holds its own local
+  // session in UniversityAuthGate, not AuthContext.
+  const switchRoleFromAuthed = async (navigate: (name: string) => void) => {
+    await logout();
+    goTo(navigate, "RoleSelect");
   };
 
   return (
@@ -89,12 +103,12 @@ function RoleStackNavigator() {
       </Stack.Screen>
       <Stack.Screen name="CandidateTabs">
         {({ navigation }) => (
-          <AuthedTabs role="candidate" onSwitchRole={() => goTo(navigation.navigate, "RoleSelect")} />
+          <AuthedTabs role="candidate" onSwitchRole={() => switchRoleFromAuthed(navigation.navigate)} />
         )}
       </Stack.Screen>
       <Stack.Screen name="EmployerTabs">
         {({ navigation }) => (
-          <AuthedTabs role="employer" onSwitchRole={() => goTo(navigation.navigate, "RoleSelect")} />
+          <AuthedTabs role="employer" onSwitchRole={() => switchRoleFromAuthed(navigation.navigate)} />
         )}
       </Stack.Screen>
       <Stack.Screen name="UniversityTabs">
@@ -116,11 +130,17 @@ export default function RootNavigator() {
       <SafeAreaProvider>
         <AuthProvider>
           <DemoProvider>
-            <PipelineProvider>
-              <NavigationContainer>
-                <RoleStackNavigator />
-              </NavigationContainer>
-            </PipelineProvider>
+            <InterviewStagesProvider>
+              <SkillFeedbackProvider>
+                <CommunityProvider>
+                  <PipelineProvider>
+                    <NavigationContainer>
+                      <RoleStackNavigator />
+                    </NavigationContainer>
+                  </PipelineProvider>
+                </CommunityProvider>
+              </SkillFeedbackProvider>
+            </InterviewStagesProvider>
           </DemoProvider>
         </AuthProvider>
       </SafeAreaProvider>

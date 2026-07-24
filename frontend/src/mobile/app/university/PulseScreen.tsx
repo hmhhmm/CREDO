@@ -1,6 +1,6 @@
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { AlertTriangle, TrendingDown, ArrowRight, Settings } from "lucide-react-native";
+import { AlertTriangle, TrendingDown, ArrowRight, Settings, GraduationCap } from "lucide-react-native";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import ScoreRing from "../../components/shared/ScoreRing";
@@ -14,6 +14,7 @@ import {
   getInterventionAlert,
   type University,
 } from "../../data/universityData";
+import { useSkillFeedback } from "../../context/SkillFeedbackContext";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 
@@ -23,6 +24,8 @@ export default function PulseScreen({ university, onOpenSettings }: { university
   const skillGaps = getSkillGaps(university);
   const curriculumActions = getCurriculumActions(skillGaps);
   const interventionAlert = getInterventionAlert(getCohorts(university), skillGaps);
+  const { feedbackFor } = useSkillFeedback();
+  const employerFeedback = feedbackFor(university.name);
 
   return (
     <View style={{ flex: 1 }}>
@@ -110,6 +113,30 @@ export default function PulseScreen({ university, onOpenSettings }: { university
             })}
           </View>
 
+          {/* E9 Bridge C — skill gaps employers flagged for specific students, closing the
+              loop from an individual hire back to the curriculum, separate from the
+              auto-detected Curriculum Gap Detector above. */}
+          {employerFeedback.length > 0 && (
+            <>
+              <Text style={styles.sectionLabel}>Employer Feedback</Text>
+              <View style={{ gap: 12 }}>
+                {employerFeedback.map((f) => (
+                  <GlassCard key={f.id} radius={18}>
+                    <View style={styles.gapCard}>
+                      <View style={styles.gapHead}>
+                        <GraduationCap size={15} color={colors.gold} />
+                        <Text style={styles.gapSkill}>{f.skill}</Text>
+                        <Text style={styles.feedbackDate}>{f.date}</Text>
+                      </View>
+                      <Text style={styles.feedbackBody}>{f.note}</Text>
+                      <Text style={styles.feedbackMeta}>{f.candidateName} · {f.employerName}</Text>
+                    </View>
+                  </GlassCard>
+                ))}
+              </View>
+            </>
+          )}
+
           <Pressable onPress={onOpenSettings} style={styles.settingsLink}>
             <Settings size={13} color={colors.slate} />
             <Text style={styles.settingsText}>Settings</Text>
@@ -157,4 +184,8 @@ const styles = StyleSheet.create({
   gapTaught: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.slate },
   actionRow: { flexDirection: "row", alignItems: "flex-start", gap: 7, marginTop: 2 },
   actionText: { flex: 1, fontFamily: fonts.sansMedium, fontSize: 11.5, color: colors.verified, lineHeight: 16 },
+
+  feedbackDate: { fontFamily: fonts.mono, fontSize: 11, color: colors.slate },
+  feedbackBody: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.ink, lineHeight: 18 },
+  feedbackMeta: { fontFamily: fonts.mono, fontSize: 11, color: colors.slate },
 });

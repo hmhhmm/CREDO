@@ -245,7 +245,13 @@ function candidateListExcluding(id: string): CandidateSummary[] {
   return allCandidates.filter((c) => c.id !== id).map(candidateToSummary);
 }
 
-let mockJobs: JobListingResponse[] = allJobs.map(jobToResponse);
+// Tracks which employer owns each job — JobListingResponse itself has no employer_id field
+// (a real backend would scope by auth token without the client needing to see it), so this
+// mock layer keeps that association alongside the response instead of losing it.
+let mockJobs: { employerId: string; job: JobListingResponse }[] = allJobs.map((j) => ({
+  employerId: j.employerId,
+  job: jobToResponse(j),
+}));
 
 // SimuHire — a fully scripted session so the whole flow works offline.
 const SIMUHIRE_SCRIPT: { interviewer: string; stakeholder?: string; stage: string }[] = [
@@ -433,9 +439,13 @@ export const mockApi = {
     }),
   simuhireShare: (_sessionId: string, shared: boolean) => delay({ session_id: "sess-mock", candidate_shared: shared }),
 
-  jobsList: (): Promise<JobListingResponse[]> => delay([...mockJobs]),
+  jobsList: async (): Promise<JobListingResponse[]> => {
+    const employer = await currentEmployer();
+    return delay(mockJobs.filter((mj) => mj.employerId === employer.id).map((mj) => mj.job));
+  },
 
-  jobsCreate: (payload: JobCreatePayload): Promise<JobListingResponse> => {
+  jobsCreate: async (payload: JobCreatePayload): Promise<JobListingResponse> => {
+    const employer = await currentEmployer();
     const newJob: JobListingResponse = {
       id: `job-${Date.now()}`,
       title: payload.title,
@@ -448,13 +458,13 @@ export const mockApi = {
       status: "open",
       created_at: new Date().toISOString(),
     };
-    mockJobs = [newJob, ...mockJobs];
+    mockJobs = [{ employerId: employer.id, job: newJob }, ...mockJobs];
     return delay(newJob);
   },
 
   jobsClose: (id: string): Promise<JobListingResponse> => {
-    mockJobs = mockJobs.map((j) => (j.id === id ? { ...j, status: "closed" } : j));
-    const updated = mockJobs.find((j) => j.id === id);
+    mockJobs = mockJobs.map((mj) => (mj.job.id === id ? { ...mj, job: { ...mj.job, status: "closed" } } : mj));
+    const updated = mockJobs.find((mj) => mj.job.id === id)?.job;
     if (!updated) throw new Error("Job not found");
     return delay(updated);
   },

@@ -6,8 +6,10 @@ import { Check, TrendingUp, X } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
+import VerificationGlance from "../../components/shared/VerificationGlance";
+import FullyVerifiedStamp from "../../components/shared/FullyVerifiedStamp";
 import { getConfidenceBand } from "../../utils/confidenceBand";
-import { discoverCandidates, type DiscoverCandidate } from "../../data/employerData";
+import { discoverCandidates, getVerificationCompleteness, type DiscoverCandidate } from "../../data/employerData";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 import type { DiscoverStackParamList } from "../../navigation/DiscoverStack";
@@ -17,6 +19,7 @@ type Props = NativeStackScreenProps<DiscoverStackParamList, "DiscoverMain">;
 function CandidateCard({ c, onPress }: { c: DiscoverCandidate; onPress: () => void }) {
   const band = getConfidenceBand(c.trustScore);
   const initials = c.name.split(" ").map((n) => n[0]).join("");
+  const completeness = getVerificationCompleteness(c);
   return (
     <Pressable onPress={onPress}>
     <GlassCard radius={20}>
@@ -34,6 +37,11 @@ function CandidateCard({ c, onPress }: { c: DiscoverCandidate; onPress: () => vo
           <View style={[styles.scoreRing, { borderColor: band.hex }]}>
             <Text style={[styles.scoreText, { color: band.hex }]}>{c.trustScore}</Text>
           </View>
+        </View>
+
+        {/* E1 — verification glimpse: pattern over reading */}
+        <View style={styles.verifyRow}>
+          {completeness.isFullyVerified ? <FullyVerifiedStamp /> : <VerificationGlance completeness={completeness} />}
         </View>
 
         {/* E1 — verified skills */}
@@ -73,6 +81,20 @@ export default function DiscoverScreen({ route, navigation }: Props) {
 
   const removeSkill = (skill: string) => setActiveSkills((prev) => prev.filter((s) => s !== skill));
 
+  // E2 Smart Matching: rank by how well each candidate matches the active skill filter, not
+  // just trust score — verified matches count double claimed ones, so a candidate who's
+  // actually verified a required skill outranks one who's merely claimed it, consistent with
+  // the rest of the product treating "verified" and "claimed" as different tiers of trust.
+  // With no active filter, every match score is 0 and this collapses to a pure trust-score
+  // sort, same as before.
+  const matchScore = (c: DiscoverCandidate) =>
+    activeSkills.reduce((score, sk) => {
+      const skLower = sk.toLowerCase();
+      if (c.verifiedSkills.some((vs) => vs.name.toLowerCase() === skLower)) return score + 2;
+      if ((c.claimedSkills ?? []).some((cs) => cs.toLowerCase() === skLower)) return score + 1;
+      return score;
+    }, 0);
+
   const list = useMemo(
     () =>
       discoverCandidates
@@ -85,7 +107,7 @@ export default function DiscoverScreen({ route, navigation }: Props) {
                 (c.claimedSkills ?? []).some((cs) => cs.toLowerCase() === sk.toLowerCase())
               )
         )
-        .sort((a, b) => b.trustScore - a.trustScore),
+        .sort((a, b) => matchScore(b) - matchScore(a) || b.trustScore - a.trustScore),
     [verifiedOnly, activeSkills]
   );
 
@@ -155,6 +177,7 @@ const styles = StyleSheet.create({
   scoreRing: { width: 42, height: 42, borderRadius: 21, borderWidth: 2, alignItems: "center", justifyContent: "center" },
   scoreText: { fontFamily: fonts.mono, fontSize: 13 },
 
+  verifyRow: { flexDirection: "row" },
   skillRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   skillChip: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(31,122,92,0.1)", borderRadius: 100, paddingVertical: 3, paddingHorizontal: 9 },
   skillText: { fontFamily: fonts.mono, fontSize: 10, color: colors.verified },

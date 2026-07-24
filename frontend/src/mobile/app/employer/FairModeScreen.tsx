@@ -5,6 +5,8 @@ import { ScanLine, Check, Send, X } from "lucide-react-native";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import { getConfidenceBand } from "../../utils/confidenceBand";
+import { usePipeline } from "../../context/PipelineContext";
+import { useInterviewStages } from "../../context/InterviewStagesContext";
 import { discoverCandidates } from "../../data/employerData";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
@@ -16,8 +18,10 @@ const scanned = discoverCandidates[0];
 
 export default function FairModeScreen() {
   const [result, setResult] = useState<typeof scanned | null>(null);
-  const [invited, setInvited] = useState(false);
+  const { pipeline, inviteToInterview } = usePipeline();
+  const { stages } = useInterviewStages();
   const band = result ? getConfidenceBand(result.trustScore) : null;
+  const invited = result ? pipeline.some((p) => p.candidateId === result.id && p.currentStageId !== null) : false;
 
   return (
     <View style={{ flex: 1 }}>
@@ -75,17 +79,20 @@ export default function FairModeScreen() {
               </View>
             </GlassCard>
             {!invited ? (
-              <Pressable style={styles.inviteBtn} onPress={() => setInvited(true)}>
+              <Pressable
+                style={styles.inviteBtn}
+                onPress={() => result && stages[0] && inviteToInterview(result, stages[0].id)}
+              >
                 <Send size={15} color={colors.parchment} />
-                <Text style={styles.inviteText}>Send SimuHire invite</Text>
+                <Text style={styles.inviteText}>Invite to Interview</Text>
               </Pressable>
             ) : (
               <View style={styles.inviteSent}>
                 <Check size={14} color={colors.verified} strokeWidth={3} />
-                <Text style={styles.inviteSentText}>SimuHire invite sent</Text>
+                <Text style={styles.inviteSentText}>Interview invited</Text>
               </View>
             )}
-            <Pressable style={styles.resetBtn} onPress={() => { setResult(null); setInvited(false); }}>
+            <Pressable style={styles.resetBtn} onPress={() => setResult(null)}>
               <X size={13} color={colors.slate} />
               <Text style={styles.resetText}>Scan another</Text>
             </Pressable>

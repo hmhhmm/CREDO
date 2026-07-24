@@ -10,6 +10,7 @@
 // Pass an icon map keyed by route name.
 import { View, Pressable, Text, StyleSheet, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useLocation, useNavigate as useRouterNavigate } from "react-router-dom";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import type { LucideIcon } from "lucide-react-native";
 import { colors } from "../theme/colors";
@@ -23,12 +24,27 @@ export default function SegmentedTabBar({
   navigation,
   icons,
   labels,
-}: BottomTabBarProps & { icons: Record<string, LucideIcon>; labels?: Record<string, string> }) {
+  centerRoute,
+  basePath,
+}: BottomTabBarProps & {
+  icons: Record<string, LucideIcon>;
+  labels?: Record<string, string>;
+  // TnG-style layout: this route renders as a big, raised circular button in the middle
+  // of the pill instead of an inline tab, with the remaining routes split left/right of it
+  // in registration order. Phone width only — the desktop rail stays a plain vertical list.
+  centerRoute?: string;
+  // When set, each tab press also pushes `${basePath}/${route.name.toLowerCase()}` so every
+  // top-level tab has its own shareable, direct-loadable URL — mirrors the pattern
+  // RootNavigator uses for the role tabs themselves, one level down.
+  basePath?: string;
+}) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const desktop = width >= DESKTOP_MIN_WIDTH;
   const bottom = insets.bottom > 0 ? insets.bottom + 4 : 18;
   const first = Object.values(icons)[0];
+  const location = useLocation();
+  const routerNavigate = useRouterNavigate();
 
   const tabs = state.routes.map((route, index) => {
     const focused = state.index === index;
@@ -37,9 +53,18 @@ export default function SegmentedTabBar({
     const onPress = () => {
       const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
       if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+      if (basePath) {
+        const path = `${basePath}/${route.name.toLowerCase()}`;
+        if (path !== location.pathname) routerNavigate(path);
+      }
     };
-    return { key: route.key, focused, Icon, label, onPress };
+    return { key: route.key, name: route.name, focused, Icon, label, onPress };
   });
+
+  const centerIndex = centerRoute ? tabs.findIndex((t) => t.name === centerRoute) : -1;
+  const center = centerIndex >= 0 ? tabs[centerIndex] : null;
+  const leftTabs = center ? tabs.slice(0, centerIndex) : tabs;
+  const rightTabs = center ? tabs.slice(centerIndex + 1) : [];
 
   if (desktop) {
     return (
@@ -61,6 +86,51 @@ export default function SegmentedTabBar({
               <Text style={[styles.railLabel, focused && styles.railLabelActive]}>{label}</Text>
             </Pressable>
           ))}
+        </View>
+      </View>
+    );
+  }
+
+  if (center) {
+    return (
+      <View style={[styles.wrap, { bottom }]} pointerEvents="box-none">
+        <View style={styles.pillWithCenter}>
+          <View style={styles.pillSide}>
+            {leftTabs.map(({ key, focused, Icon, label, onPress }) => (
+              <Pressable
+                key={key}
+                onPress={onPress}
+                style={[styles.tab, focused && styles.tabActive]}
+                accessibilityRole="button"
+                accessibilityState={focused ? { selected: true } : {}}
+              >
+                <Icon size={20} color={focused ? colors.ink : "rgba(245,237,224,0.7)"} />
+                {focused && <Text style={styles.activeLabel}>{label}</Text>}
+              </Pressable>
+            ))}
+          </View>
+          <Pressable
+            onPress={center.onPress}
+            style={styles.centerButton}
+            accessibilityRole="button"
+            accessibilityState={center.focused ? { selected: true } : {}}
+          >
+            <center.Icon size={26} color={colors.ink} strokeWidth={2.25} />
+          </Pressable>
+          <View style={styles.pillSide}>
+            {rightTabs.map(({ key, focused, Icon, label, onPress }) => (
+              <Pressable
+                key={key}
+                onPress={onPress}
+                style={[styles.tab, focused && styles.tabActive]}
+                accessibilityRole="button"
+                accessibilityState={focused ? { selected: true } : {}}
+              >
+                <Icon size={20} color={focused ? colors.ink : "rgba(245,237,224,0.7)"} />
+                {focused && <Text style={styles.activeLabel}>{label}</Text>}
+              </Pressable>
+            ))}
+          </View>
         </View>
       </View>
     );
@@ -120,6 +190,43 @@ const styles = StyleSheet.create({
   },
   tabActive: { width: "auto", paddingHorizontal: 18, backgroundColor: colors.gold },
   activeLabel: { fontFamily: fonts.sansSemiBold, fontSize: 13, color: colors.ink },
+
+  // ── Phone: TnG-style pill with a raised center button ──────────────────
+  pillWithCenter: {
+    width: "84%",
+    maxWidth: 440,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: colors.ink,
+    borderRadius: 32,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: "rgba(201,166,70,0.28)",
+    shadowColor: "rgba(16,25,43,0.4)",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 1,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  pillSide: { flexDirection: "row", alignItems: "center", gap: 4 },
+  centerButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.gold,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: -28,
+    borderWidth: 4,
+    borderColor: colors.parchment,
+    shadowColor: "rgba(16,25,43,0.5)",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 1,
+    shadowRadius: 14,
+    elevation: 12,
+  },
 
   // ── Desktop: fixed left rail ────────────────────────────────────────────
   rail: {

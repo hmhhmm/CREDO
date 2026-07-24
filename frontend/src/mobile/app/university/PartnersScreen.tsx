@@ -10,7 +10,7 @@ import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 
 export default function PartnersScreen({ university }: { university: University }) {
-  const { pipeline, addToPipeline } = usePipeline();
+  const { addToPipeline, isInPipelineFor } = usePipeline();
   const internshipMatches = getInternshipMatches(university);
 
   return (
@@ -24,7 +24,7 @@ export default function PartnersScreen({ university }: { university: University 
           <View style={{ gap: 12, marginTop: 8 }}>
             {internshipMatches.map((m) => {
               const band = getConfidenceBand(m.trustScore);
-              const introduced = pipeline.some((p) => p.candidateId === m.candidateId);
+              const introduced = isInPipelineFor(m.employerId, m.candidateId);
               return (
                 <GlassCard key={m.id} radius={20}>
                   <View style={styles.card}>
@@ -67,13 +67,16 @@ export default function PartnersScreen({ university }: { university: University 
                         style={styles.pushBtn}
                         onPress={() =>
                           addToPipeline({
-                            id: `intro-${m.candidateId}`,
+                            id: `${m.employerId}-intro-${m.candidateId}`,
+                            employerId: m.employerId,
                             candidateId: m.candidateId,
                             name: m.student,
                             field: m.programme.replace(/^BSc\s*/, ""),
                             trustScore: m.trustScore,
-                            stage: "invited",
+                            openToWork: true, // getInternshipMatches only surfaces openToWork candidates
+                            stage: "simuhire_done",
                             detail: `Introduced via ${university.name} Internship Marketplace — matched ${m.matchPct}% for ${m.role} at ${m.employer}`,
+                            currentStageId: null,
                           })
                         }
                       >

@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { SlidersHorizontal, Users, X } from 'lucide-react'
 import NamecardCard from '../components/NamecardCard'
-import { mockCandidates } from '../data/mockData'
+import { candidatesApi, ApiError } from '../lib/api'
+import { candidateFromApi } from '../lib/adapters'
 
 const allSkills = ['Python', 'Machine Learning', 'SQL', 'React', 'Node.js', 'TypeScript', 'Docker']
 
@@ -12,6 +13,41 @@ export default function EmployerCandidates() {
   const [verifiedSkillsOnly, setVerifiedSkillsOnly] = useState(true) // default: match verified skills only
   const [selectedSkills, setSelectedSkills] = useState([])
   const [minScore, setMinScore] = useState(0)
+
+  const [candidates, setCandidates] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    // verifiedSkillsOnly is refined client-side below — the backend's skill_tags filter
+    // matches against verified ∪ claimed skills and has no way to ask for verified-only
+    // per-skill matching.
+    candidatesApi
+      .list({
+        verifiedOnly,
+        minTrustScore: minScore > 0 ? minScore : undefined,
+        simuhireCompleted: simuHireOnly || undefined,
+        skillTags: selectedSkills.length > 0 ? selectedSkills : undefined,
+        pageSize: 100,
+      })
+      .then(summaries => {
+        if (cancelled) return
+        setCandidates(summaries.map(candidateFromApi))
+        setError('')
+      })
+      .catch(err => {
+        if (cancelled) return
+        setError(err instanceof ApiError ? err.message : 'Could not load candidates. Is the backend running?')
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+      setLoading(true)
+    }
+  }, [verifiedOnly, simuHireOnly, selectedSkills, minScore])
 
   const toggleSkill = (skill) => {
     setSelectedSkills(prev =>
@@ -28,22 +64,10 @@ export default function EmployerCandidates() {
 
   const hasFilters = verifiedOnly || simuHireOnly || selectedSkills.length > 0 || minScore > 0
 
-  const filtered = mockCandidates
-    .filter(c => !verifiedOnly || c.verifiedSkills.length > 0)
-    .filter(c => !simuHireOnly || (c.simuHire?.completed && c.simuHire?.shared))
-    .filter(c => c.trustScore >= minScore)
-    .filter(c => selectedSkills.length === 0 || selectedSkills.some(s => {
-      const inVerified = c.verifiedSkills.some(vs => vs.name === s)
-      const inClaimed = c.claimedSkills?.includes(s)
-      return verifiedSkillsOnly ? inVerified : (inVerified || inClaimed)
-    }))
-    .sort((a, b) => {
-      if (a.simuHire?.completed && !b.simuHire?.completed) return -1
-      if (!a.simuHire?.completed && b.simuHire?.completed) return 1
-      if (a.verifiedSkills.length > 0 && b.verifiedSkills.length === 0) return -1
-      if (a.verifiedSkills.length === 0 && b.verifiedSkills.length > 0) return 1
-      return b.trustScore - a.trustScore
-    })
+  const filtered = candidates
+    .filter(c => selectedSkills.length === 0 || !verifiedSkillsOnly || selectedSkills.some(s =>
+      c.verifiedSkills.some(vs => vs.name === s)
+    ))
 
   const activeChips = [
     verifiedOnly && { label: 'Verified Only', clear: () => setVerifiedOnly(false) },
@@ -163,7 +187,15 @@ export default function EmployerCandidates() {
             </div>
           )}
 
-          {filtered.length === 0 ? (
+          {error ? (
+            <div className="text-center py-16">
+              <p className="text-alert text-sm">{error}</p>
+            </div>
+          ) : loading ? (
+            <div className="text-center py-16">
+              <p className="text-slate text-sm">Loading candidates…</p>
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="text-center py-16">
               <p className="text-slate text-sm">No candidates match your filters.</p>
               <button onClick={clearAll} className="text-xs text-ink font-medium hover:underline mt-2 block mx-auto">

@@ -2,17 +2,40 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { User, Building2, Eye, EyeOff } from 'lucide-react'
 import GitHubIcon from '../components/GitHubIcon'
+import { authApi, ApiError } from '../lib/api'
+import { tokenStore } from '../lib/tokenStore'
 
 export default function Register() {
   const [role, setRole] = useState(null)
   const [consent, setConsent] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [companyName, setCompanyName] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
   const navigate = useNavigate()
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    if (role === 'candidate') navigate('/dashboard')
-    else navigate('/employer')
+    setError('')
+    setSubmitting(true)
+    try {
+      const tokens = await authApi.register({
+        name,
+        email,
+        password,
+        role,
+        ...(role === 'employer' ? { company_name: companyName } : {}),
+      })
+      tokenStore.setTokens(tokens.access_token, tokens.refresh_token)
+      navigate(role === 'employer' ? '/employer' : '/dashboard')
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Something went wrong. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -50,6 +73,9 @@ export default function Register() {
 
         {role && (
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <p className="text-xs text-alert bg-alert/10 border border-alert/30 rounded-card px-3 py-2">{error}</p>
+            )}
             {/* GitHub OAuth — leads for candidates */}
             {role === 'candidate' && (
               <>
@@ -72,11 +98,11 @@ export default function Register() {
               <>
                 <div>
                   <label className="text-xs font-medium text-slate uppercase tracking-wider block mb-1.5">Full Name</label>
-                  <input className="w-full border border-line rounded-card px-3 py-2 text-sm bg-parchment text-ink focus:outline-none focus:border-ink placeholder-slate" placeholder="Ahmad Farid" required />
+                  <input value={name} onChange={e => setName(e.target.value)} className="w-full border border-line rounded-card px-3 py-2 text-sm bg-parchment text-ink focus:outline-none focus:border-ink placeholder-slate" placeholder="Ahmad Farid" required />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-slate uppercase tracking-wider block mb-1.5">Email</label>
-                  <input type="email" className="w-full border border-line rounded-card px-3 py-2 text-sm bg-parchment text-ink focus:outline-none focus:border-ink placeholder-slate" placeholder="you@example.com" required />
+                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full border border-line rounded-card px-3 py-2 text-sm bg-parchment text-ink focus:outline-none focus:border-ink placeholder-slate" placeholder="you@example.com" required />
                 </div>
               </>
             )}
@@ -86,15 +112,15 @@ export default function Register() {
               <>
                 <div>
                   <label className="text-xs font-medium text-slate uppercase tracking-wider block mb-1.5">Full Name</label>
-                  <input className="w-full border border-line rounded-card px-3 py-2 text-sm bg-parchment text-ink focus:outline-none focus:border-ink placeholder-slate" placeholder="Amirul Hassan" required />
+                  <input value={name} onChange={e => setName(e.target.value)} className="w-full border border-line rounded-card px-3 py-2 text-sm bg-parchment text-ink focus:outline-none focus:border-ink placeholder-slate" placeholder="Amirul Hassan" required />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-slate uppercase tracking-wider block mb-1.5">Email</label>
-                  <input type="email" className="w-full border border-line rounded-card px-3 py-2 text-sm bg-parchment text-ink focus:outline-none focus:border-ink placeholder-slate" placeholder="you@company.com" required />
+                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full border border-line rounded-card px-3 py-2 text-sm bg-parchment text-ink focus:outline-none focus:border-ink placeholder-slate" placeholder="you@company.com" required />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-slate uppercase tracking-wider block mb-1.5">Company Name</label>
-                  <input className="w-full border border-line rounded-card px-3 py-2 text-sm bg-parchment text-ink focus:outline-none focus:border-ink placeholder-slate" placeholder="TechCorp Malaysia" required />
+                  <input value={companyName} onChange={e => setCompanyName(e.target.value)} className="w-full border border-line rounded-card px-3 py-2 text-sm bg-parchment text-ink focus:outline-none focus:border-ink placeholder-slate" placeholder="TechCorp Malaysia" required />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -129,6 +155,8 @@ export default function Register() {
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
                   className="w-full border border-line rounded-card px-3 py-2 pr-10 text-sm bg-parchment text-ink focus:outline-none focus:border-ink"
                   placeholder="Min. 8 characters"
                   minLength={8}
@@ -156,10 +184,10 @@ export default function Register() {
 
             <button
               type="submit"
-              disabled={!consent}
+              disabled={!consent || submitting}
               className="w-full bg-ink text-parchment py-2.5 rounded-card text-sm font-medium hover:bg-opacity-90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Create account
+              {submitting ? 'Creating account…' : 'Create account'}
             </button>
           </form>
         )}

@@ -5,7 +5,7 @@ import { Send, RefreshCw, Check, CalendarPlus, CalendarCheck, Settings, ThumbsUp
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
-import { STAGE_META, type PipelineEntry } from "../../data/employerData";
+import { STAGE_META, sortPipelineForAttention, type PipelineEntry } from "../../data/employerData";
 import type { DiscoverCandidate } from "../../data/employerData";
 import { mockCandidates } from "../../data/mockData";
 import { usePipeline } from "../../context/PipelineContext";
@@ -62,6 +62,9 @@ export default function PipelineScreen({ navigation }: Props) {
   const [schedulingId, setSchedulingId] = useState<string | null>(null);
   const [selectedSlotIso, setSelectedSlotIso] = useState<string | null>(null);
   const upcomingSlots = useMemo(() => getUpcomingInterviewSlots(), []);
+  // E8 — engaged/open-to-work candidates resurface to the top instead of sitting wherever
+  // they landed; decided (accepted/rejected) candidates sink to the bottom.
+  const sortedPipeline = useMemo(() => sortPipelineForAttention(pipeline), [pipeline]);
   const [decidingId, setDecidingId] = useState<string | null>(null);
   const [decidingAs, setDecidingAs] = useState<"accepted" | "rejected" | null>(null);
   const [decisionDraft, setDecisionDraft] = useState("");
@@ -155,7 +158,7 @@ export default function PipelineScreen({ navigation }: Props) {
           )}
 
           <View style={{ gap: 12, marginTop: 8 }}>
-            {pipeline.map((e) => {
+            {sortedPipeline.map((e) => {
               const stage = STAGE_META[e.stage];
               const initials = e.name.split(" ").map((n) => n[0]).join("");
               const isComposing = composingId === e.id;
@@ -184,6 +187,11 @@ export default function PipelineScreen({ navigation }: Props) {
 
               const openProfile = () => navigation.navigate("CandidateProfile", { candidate: buildCandidate(e) });
 
+              // Why this card resurfaced to the top — visible, not a silent reorder.
+              const attentionReasons = !e.decision
+                ? [e.openToWork && "Open to work", e.lastTouchedAt && "Re-engaged"].filter(Boolean).join(" · ")
+                : "";
+
               return (
                 <GlassCard key={e.id} radius={20}>
                   <View style={styles.card}>
@@ -199,6 +207,13 @@ export default function PipelineScreen({ navigation }: Props) {
                         <Text style={[styles.stageText, { color: stage.color }]}>{stage.label}</Text>
                       </View>
                     </View>
+
+                    {attentionReasons !== "" && (
+                      <View style={styles.attentionBadge}>
+                        <Text style={styles.attentionBadgeText}>↑ {attentionReasons}</Text>
+                      </View>
+                    )}
+
                     <Text style={styles.detail}>{e.detail}</Text>
 
                     {e.stage !== "re_engage" ? null : isComposing ? (
@@ -416,6 +431,14 @@ const styles = StyleSheet.create({
   stagePill: { borderWidth: 1, borderRadius: 100, paddingVertical: 3, paddingHorizontal: 9 },
   stageText: { fontFamily: fonts.mono, fontSize: 10 },
   detail: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.slate, lineHeight: 18 },
+  attentionBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(217,164,65,0.14)",
+    borderRadius: 100,
+    paddingVertical: 3,
+    paddingHorizontal: 9,
+  },
+  attentionBadgeText: { fontFamily: fonts.mono, fontSize: 10, color: colors.pending },
   action: {
     flexDirection: "row",
     alignItems: "center",

@@ -73,6 +73,7 @@ export default function PartnersScreen({ university }: { university: University 
                             name: m.student,
                             field: m.programme.replace(/^BSc\s*/, ""),
                             trustScore: m.trustScore,
+                            openToWork: true, // getInternshipMatches only surfaces openToWork candidates
                             stage: "simuhire_done",
                             detail: `Introduced via ${university.name} Internship Marketplace — matched ${m.matchPct}% for ${m.role} at ${m.employer}`,
                             currentStageId: null,

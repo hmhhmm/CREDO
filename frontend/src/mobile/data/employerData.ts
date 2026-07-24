@@ -169,6 +169,7 @@ export interface PipelineEntry {
   name: string;
   field: string;
   trustScore: number;
+  openToWork: boolean; // E8 — resurfacing signal; see sortPipelineForAttention below
   stage: PipelineStage;
   detail: string;
   simuHire?: {
@@ -224,6 +225,7 @@ export function pipelineEntryFromCandidate(c: Candidate, employerId: string): Pi
     name: c.name,
     field: c.field,
     trustScore: c.trustScore,
+    openToWork: c.openToWork,
     stage: "simuhire_done",
     detail: c.simuHire.type
       ? `SimuHire ${c.simuHire.type} · ${c.simuHire.overallScore}/100 — report ready to review`
@@ -249,6 +251,7 @@ export function getPipelineSeedFor(employer: Employer): PipelineEntry[] {
       name: withSimuHire[0].name,
       field: withSimuHire[0].field,
       trustScore: withSimuHire[0].trustScore,
+      openToWork: withSimuHire[0].openToWork,
       stage: "simuhire_done",
       detail: `SimuHire ${withSimuHire[0].simuHire.type} · ${withSimuHire[0].simuHire.overallScore}/100 — report ready to review`,
       simuHire: {
@@ -265,6 +268,7 @@ export function getPipelineSeedFor(employer: Employer): PipelineEntry[] {
       name: withSimuHire[1].name,
       field: withSimuHire[1].field,
       trustScore: withSimuHire[1].trustScore,
+      openToWork: withSimuHire[1].openToWork,
       stage: "simuhire_done",
       detail: `SimuHire ${withSimuHire[1].simuHire.type} · ${withSimuHire[1].simuHire.overallScore}/100 — report ready to review`,
       simuHire: {
@@ -281,6 +285,7 @@ export function getPipelineSeedFor(employer: Employer): PipelineEntry[] {
       name: shortlistCandidate.name,
       field: shortlistCandidate.field,
       trustScore: shortlistCandidate.trustScore,
+      openToWork: shortlistCandidate.openToWork,
       stage: "shortlisted",
       detail: `Shortlisted for ${demoJobs[0]?.title ?? "an open role"} — verified ${shortlistCandidate.verifiedSkills[0]?.name ?? "skills"}`,
       currentStageId: DEFAULT_INTERVIEW_STAGES[1].id, // "1st Round" — scheduled, mid-funnel
@@ -301,11 +306,28 @@ export function getPipelineSeedFor(employer: Employer): PipelineEntry[] {
       name: reEngageCandidate.name,
       field: reEngageCandidate.field,
       trustScore: reEngageCandidate.trustScore,
+      openToWork: reEngageCandidate.openToWork,
       stage: "re_engage",
       detail: "Said no in March — timing may have changed, worth a light touch",
       currentStageId: null,
     },
   ];
+}
+
+// E8 — resurfaces candidates who deserve a second look instead of leaving them wherever
+// they happened to land: anyone who's actually engaged (a re-engagement touch went out and
+// hasn't gone nowhere) or is open to work again sorts to the top. A final decision
+// (accepted/rejected) means there's nothing left to act on, so those sink to the bottom
+// regardless of the other two signals — "needs attention" isn't the same as "still open."
+// Stable sort (Array.prototype.sort is spec-guaranteed stable) keeps relative order within
+// each bucket, so this doesn't reshuffle unrelated cards on every render.
+export function sortPipelineForAttention(entries: PipelineEntry[]): PipelineEntry[] {
+  const bucketFor = (e: PipelineEntry): number => {
+    if (e.decision) return 2;
+    if (e.lastTouchedAt || e.openToWork) return 0;
+    return 1;
+  };
+  return [...entries].sort((a, b) => bucketFor(a) - bucketFor(b));
 }
 
 export const STAGE_META: Record<PipelineStage, { label: string; color: string }> = {

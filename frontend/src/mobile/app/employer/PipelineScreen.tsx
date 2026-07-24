@@ -65,6 +65,30 @@ export default function PipelineScreen({ navigation }: Props) {
   // E8 — engaged/open-to-work candidates resurface to the top instead of sitting wherever
   // they landed; decided (accepted/rejected) candidates sink to the bottom.
   const sortedPipeline = useMemo(() => sortPipelineForAttention(pipeline), [pipeline]);
+
+  // E10 — filter by round so an employer can jump straight to "who's at 2nd Round" instead
+  // of scrolling every card. Options are generated from the employer's own configured
+  // stages (Settings), not a fixed list — filtering only makes sense against real rounds.
+  const [activeFilter, setActiveFilter] = useState<string>("all");
+  const filterOptions = useMemo(
+    () => [
+      { id: "all", label: "All", count: pipeline.length },
+      { id: "not_invited", label: "Not Invited", count: pipeline.filter((e) => e.currentStageId === null).length },
+      ...stages.map((s) => ({
+        id: s.id,
+        label: s.name,
+        count: pipeline.filter((e) => e.currentStageId === s.id).length,
+      })),
+      { id: "decided", label: "Decided", count: pipeline.filter((e) => !!e.decision).length },
+    ],
+    [pipeline, stages]
+  );
+  const filteredPipeline = useMemo(() => {
+    if (activeFilter === "all") return sortedPipeline;
+    if (activeFilter === "not_invited") return sortedPipeline.filter((e) => e.currentStageId === null);
+    if (activeFilter === "decided") return sortedPipeline.filter((e) => !!e.decision);
+    return sortedPipeline.filter((e) => e.currentStageId === activeFilter);
+  }, [sortedPipeline, activeFilter]);
   const [decidingId, setDecidingId] = useState<string | null>(null);
   const [decidingAs, setDecidingAs] = useState<"accepted" | "rejected" | null>(null);
   const [decisionDraft, setDecisionDraft] = useState("");
@@ -157,8 +181,31 @@ export default function PipelineScreen({ navigation }: Props) {
             </View>
           )}
 
+          {/* E10 — filter by round, generated from the employer's own configured stages. */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
+            <View style={styles.filterRow}>
+              {filterOptions.map((opt) => {
+                const active = activeFilter === opt.id;
+                return (
+                  <Pressable
+                    key={opt.id}
+                    style={[styles.filterChip, active && styles.filterChipActive]}
+                    onPress={() => setActiveFilter(opt.id)}
+                  >
+                    <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                      {opt.label} ({opt.count})
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </ScrollView>
+
           <View style={{ gap: 12, marginTop: 8 }}>
-            {sortedPipeline.map((e) => {
+            {filteredPipeline.length === 0 && (
+              <Text style={styles.emptyFilterText}>No candidates match this filter.</Text>
+            )}
+            {filteredPipeline.map((e) => {
               const stage = STAGE_META[e.stage];
               const initials = e.name.split(" ").map((n) => n[0]).join("");
               const isComposing = composingId === e.id;
@@ -478,6 +525,20 @@ const styles = StyleSheet.create({
   touchedText: { flex: 1, fontFamily: fonts.sansSemiBold, fontSize: 12.5, color: colors.verified },
 
   summaryRow: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 8 },
+
+  filterScroll: { marginTop: 12 },
+  filterRow: { flexDirection: "row", gap: 8, paddingRight: 4 },
+  filterChip: {
+    borderWidth: 1,
+    borderColor: "rgba(16,25,43,0.12)",
+    borderRadius: 100,
+    paddingVertical: 7,
+    paddingHorizontal: 13,
+  },
+  filterChipActive: { backgroundColor: colors.ink, borderColor: colors.ink },
+  filterChipText: { fontFamily: fonts.mono, fontSize: 11, color: colors.ink },
+  filterChipTextActive: { color: colors.parchment },
+  emptyFilterText: { fontFamily: fonts.sans, fontSize: 13, color: colors.slate, textAlign: "center", paddingVertical: 24 },
   summaryItem: { fontFamily: fonts.mono, fontSize: 11, color: colors.slate },
 
   interviewBlock: { borderTopWidth: 1, borderTopColor: "rgba(16,25,43,0.08)", paddingTop: 10, marginTop: 2 },

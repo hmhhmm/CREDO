@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { View, Text, ScrollView, Pressable, TextInput, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Send, RefreshCw, Check, CalendarPlus, CalendarCheck, Settings, ThumbsUp, ThumbsDown, X } from "lucide-react-native";
+import { Send, RefreshCw, Check, CalendarPlus, CalendarCheck, Settings, ThumbsUp, ThumbsDown, X, Sparkles } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
@@ -83,6 +83,13 @@ export default function PipelineScreen({ navigation }: Props) {
     ],
     [pipeline, stages]
   );
+  // AI-style suggestion — candidates who became open to work again and haven't been
+  // re-engaged yet. Capped at 2 so it stays a nudge, not another list to scroll through.
+  const reEngageSuggestions = useMemo(
+    () => pipeline.filter((e) => e.openToWork && !e.decision && !e.lastTouchedAt).slice(0, 2),
+    [pipeline]
+  );
+
   const filteredPipeline = useMemo(() => {
     if (activeFilter === "all") return sortedPipeline;
     if (activeFilter === "not_invited") return sortedPipeline.filter((e) => e.currentStageId === null);
@@ -181,6 +188,32 @@ export default function PipelineScreen({ navigation }: Props) {
             </View>
           )}
 
+          {/* AI-style nudge — same visual language as Home's "Live signals" cards, driven
+              by real Pipeline data instead of static copy. */}
+          {reEngageSuggestions.length > 0 && (
+            <View style={{ gap: 10, marginTop: 12 }}>
+              {reEngageSuggestions.map((e) => (
+                <GlassCard key={`suggest-${e.id}`} radius={18}>
+                  <View style={styles.suggestionCard}>
+                    <View style={styles.suggestionHead}>
+                      <View style={styles.suggestionDot}>
+                        <Sparkles size={12} color="#fff" strokeWidth={2.5} />
+                      </View>
+                      <Text style={styles.suggestionLabel}>Suggested</Text>
+                    </View>
+                    <Text style={styles.suggestionBody}>
+                      <Text style={styles.suggestionName}>{e.name}</Text> has open to work now — consider re-engaging them.
+                    </Text>
+                    <Pressable style={styles.suggestionAction} onPress={() => startComposing(e)}>
+                      <RefreshCw size={13} color={colors.ink} />
+                      <Text style={styles.suggestionActionText}>Re-engage</Text>
+                    </Pressable>
+                  </View>
+                </GlassCard>
+              ))}
+            </View>
+          )}
+
           {/* E10 — filter by round, generated from the employer's own configured stages. */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
             <View style={styles.filterRow}>
@@ -263,7 +296,7 @@ export default function PipelineScreen({ navigation }: Props) {
 
                     <Text style={styles.detail}>{e.detail}</Text>
 
-                    {e.stage !== "re_engage" ? null : isComposing ? (
+                    {isComposing ? (
                       <View style={{ gap: 8 }}>
                         <GlassCard radius={14}>
                           <TextInput
@@ -291,7 +324,7 @@ export default function PipelineScreen({ navigation }: Props) {
                           </Pressable>
                         </View>
                       </View>
-                    ) : isTouched ? (
+                    ) : e.stage !== "re_engage" ? null : isTouched ? (
                       <View style={styles.touchedRow}>
                         <Check size={14} color={colors.verified} strokeWidth={2.5} />
                         <Text style={styles.touchedText}>Touched {e.lastTouchedAt} — following up in your own time</Text>
@@ -525,6 +558,33 @@ const styles = StyleSheet.create({
   touchedText: { flex: 1, fontFamily: fonts.sansSemiBold, fontSize: 12.5, color: colors.verified },
 
   summaryRow: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 8 },
+
+  suggestionCard: { padding: 16, gap: 8 },
+  suggestionHead: { flexDirection: "row", alignItems: "center", gap: 8 },
+  suggestionDot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.gold,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  suggestionLabel: { fontFamily: fonts.mono, fontSize: 10, textTransform: "uppercase", letterSpacing: 1.5, color: colors.slate },
+  suggestionBody: { fontFamily: fonts.sans, fontSize: 13, color: colors.ink, lineHeight: 19 },
+  suggestionName: { fontFamily: fonts.sansSemiBold },
+  suggestionAction: {
+    flexDirection: "row",
+    alignSelf: "flex-start",
+    alignItems: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: "rgba(16,25,43,0.12)",
+    borderRadius: 100,
+    paddingVertical: 7,
+    paddingHorizontal: 13,
+    marginTop: 2,
+  },
+  suggestionActionText: { fontFamily: fonts.sansSemiBold, fontSize: 12.5, color: colors.ink },
 
   filterScroll: { marginTop: 12 },
   filterRow: { flexDirection: "row", gap: 8, paddingRight: 4 },

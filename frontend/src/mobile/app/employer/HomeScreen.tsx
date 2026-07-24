@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { View, Text, ScrollView, Pressable, ActivityIndicator, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { AlertTriangle, Clock, TrendingUp, LogOut, Briefcase, MapPin, Check } from "lucide-react-native";
+import { AlertTriangle, Clock, TrendingUp, LogOut, Briefcase, MapPin, Check, CalendarClock } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
@@ -10,6 +10,8 @@ import { getEmployerIdentity, getDashboardStats, signals, type SignalLevel } fro
 import { demoEmployer, type Employer } from "../../data/generateDataset";
 import { currentEmployer } from "../../lib/mockApi";
 import { jobsApi, ApiError, type JobListingResponse } from "../../lib/api";
+import { usePipeline } from "../../context/PipelineContext";
+import { isSameDay, formatInterviewDateTime } from "../../utils/interviewSlots";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 import type { EmployerHomeStackParamList } from "../../navigation/EmployerHomeStack";
@@ -64,6 +66,16 @@ export default function EmployerHomeScreen({ navigation, onSwitchRole }: Props) 
   const identity = getEmployerIdentity(employer);
   const dashboardStats = getDashboardStats(employer);
 
+  // E4 — today's scheduled interviews, sorted earliest first so the next one is always on top.
+  const { pipeline } = usePipeline();
+  const todaysInterviews = useMemo(
+    () =>
+      pipeline
+        .filter((e) => e.interviewStatus === "scheduled" && e.interviewDate && isSameDay(e.interviewDate))
+        .sort((a, b) => (a.interviewDate! < b.interviewDate! ? -1 : 1)),
+    [pipeline]
+  );
+
   return (
     <View style={{ flex: 1 }}>
       <ScreenBackground />
@@ -91,6 +103,34 @@ export default function EmployerHomeScreen({ navigation, onSwitchRole }: Props) 
               </GlassCard>
             ))}
           </View>
+
+          {/* Today's Interviews — the one thing that's actually time-sensitive on this
+              screen, so it sits right under the stats strip. */}
+          {todaysInterviews.length > 0 && (
+            <>
+              <Text style={styles.sectionLabel}>Today's Interviews</Text>
+              <View style={{ gap: 10 }}>
+                {todaysInterviews.map((entry) => (
+                  <Pressable key={entry.id} onPress={() => navigation.navigate("InterviewDetail", { entry })}>
+                    <GlassCard radius={18}>
+                      <View style={styles.interviewRow}>
+                        <View style={styles.interviewTimeChip}>
+                          <CalendarClock size={12} color={colors.ink} />
+                          <Text style={styles.interviewTimeText}>
+                            {formatInterviewDateTime(entry.interviewDate!).split(", ").slice(-1)[0]}
+                          </Text>
+                        </View>
+                        <View style={{ flex: 1, gap: 2 }}>
+                          <Text style={styles.interviewName}>{entry.name}</Text>
+                          <Text style={styles.interviewField}>{entry.field}</Text>
+                        </View>
+                      </View>
+                    </GlassCard>
+                  </Pressable>
+                ))}
+              </View>
+            </>
+          )}
 
           {/* Job Posting — preview a few open roles before drilling into the full list */}
           <View style={styles.jobsHeadRow}>
@@ -237,6 +277,20 @@ const styles = StyleSheet.create({
   statHint: { fontFamily: fonts.sans, fontSize: 9, color: colors.slate, textAlign: "center" },
 
   sectionLabel: { fontFamily: fonts.mono, fontSize: 11, textTransform: "uppercase", letterSpacing: 2, color: colors.slate },
+
+  interviewRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14 },
+  interviewTimeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "rgba(16,25,43,0.06)",
+    borderRadius: 100,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  interviewTimeText: { fontFamily: fonts.mono, fontSize: 11, color: colors.ink },
+  interviewName: { fontFamily: fonts.sansSemiBold, fontSize: 14, color: colors.ink },
+  interviewField: { fontFamily: fonts.mono, fontSize: 11, color: colors.slate },
 
   jobsHeadRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   seeAllLink: { paddingVertical: 2 },

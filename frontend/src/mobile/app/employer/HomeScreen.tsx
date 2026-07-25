@@ -63,10 +63,10 @@ export default function EmployerHomeScreen({ navigation }: Props) {
   }, []);
 
   const identity = getEmployerIdentity(employer);
-  const dashboardStats = getDashboardStats(employer);
 
   // E4 — today's scheduled interviews, sorted earliest first so the next one is always on top.
   const { pipeline } = usePipeline();
+  const dashboardStats = getDashboardStats(employer, pipeline);
   const todaysInterviews = useMemo(
     () =>
       pipeline

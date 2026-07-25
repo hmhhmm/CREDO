@@ -5,7 +5,7 @@
 import { useState } from "react";
 import { View, Text, ScrollView, Pressable, Linking, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Calendar, ArrowRight, CalendarCheck, Video, Copy, Check as CheckIcon } from "lucide-react-native";
+import { Calendar, ArrowRight, Video, Copy, Check as CheckIcon } from "lucide-react-native";
 import * as Clipboard from "expo-clipboard";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../components/shared/ScreenBackground";
@@ -14,7 +14,6 @@ import { getConfidenceBand } from "../../utils/confidenceBand";
 import { formatInterviewDateTime } from "../../utils/interviewSlots";
 import { STAGE_META } from "../../data/employerData";
 import { mockCandidates } from "../../data/mockData";
-import { usePipeline } from "../../context/PipelineContext";
 import { useInterviewStages } from "../../context/InterviewStagesContext";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
@@ -24,13 +23,11 @@ type Props = NativeStackScreenProps<EmployerHomeStackParamList, "InterviewDetail
 
 export default function InterviewDetailScreen({ route, navigation }: Props) {
   const { entry } = route.params;
-  const { completeInterview, advanceStage } = usePipeline();
   const { stages } = useInterviewStages();
   const band = getConfidenceBand(entry.trustScore);
   const stage = STAGE_META[entry.stage];
   const stageIndex = stages.findIndex((s) => s.id === entry.currentStageId);
   const roundName = stages[stageIndex]?.name ?? "Unassigned round";
-  const isLastRound = stageIndex === stages.length - 1;
   const initials = entry.name.split(" ").map((n) => n[0]).join("");
   const [copied, setCopied] = useState(false);
 
@@ -89,9 +86,6 @@ export default function InterviewDetailScreen({ route, navigation }: Props) {
                   <Pressable style={styles.meetingIconBtn} onPress={copyMeetingLink}>
                     {copied ? <CheckIcon size={14} color={colors.verified} /> : <Copy size={14} color={colors.ink} />}
                   </Pressable>
-                  <Pressable style={styles.meetingJoinBtn} onPress={() => Linking.openURL(entry.meetingLink!)}>
-                    <Text style={styles.meetingJoinText}>Join</Text>
-                  </Pressable>
                 </View>
               )}
 
@@ -118,23 +112,11 @@ export default function InterviewDetailScreen({ route, navigation }: Props) {
             <ArrowRight size={14} color={colors.ink} />
           </Pressable>
 
-          {entry.interviewDate && !entry.stageCompletedAt && (
-            isLastRound ? (
-              <Pressable style={styles.completeBtn} onPress={() => completeInterview(entry.id)}>
-                <CalendarCheck size={16} color={colors.parchment} />
-                <Text style={styles.completeBtnText}>Mark completed</Text>
-              </Pressable>
-            ) : (
-              stages[stageIndex + 1] && (
-                <Pressable
-                  style={styles.completeBtn}
-                  onPress={() => advanceStage(entry.id, stages[stageIndex + 1].id)}
-                >
-                  <CalendarCheck size={16} color={colors.parchment} />
-                  <Text style={styles.completeBtnText}>Advance to {stages[stageIndex + 1].name}</Text>
-                </Pressable>
-              )
-            )
+          {entry.meetingLink && !entry.stageCompletedAt && (
+            <Pressable style={styles.joinBtn} onPress={() => Linking.openURL(entry.meetingLink!)}>
+              <Video size={16} color={colors.parchment} />
+              <Text style={styles.joinBtnText}>Join Meeting</Text>
+            </Pressable>
           )}
         </ScrollView>
       </SafeAreaView>
@@ -179,8 +161,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  meetingJoinBtn: { backgroundColor: colors.ink, borderRadius: 100, paddingVertical: 8, paddingHorizontal: 14 },
-  meetingJoinText: { fontFamily: fonts.sansSemiBold, fontSize: 12.5, color: colors.parchment },
 
   pillRow: { flexDirection: "row", gap: 8 },
   pill: { borderWidth: 1, borderRadius: 100, paddingVertical: 4, paddingHorizontal: 10 },
@@ -202,7 +182,7 @@ const styles = StyleSheet.create({
   },
   profileLinkText: { fontFamily: fonts.sansSemiBold, fontSize: 13.5, color: colors.ink },
 
-  completeBtn: {
+  joinBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -211,5 +191,5 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingVertical: 15,
   },
-  completeBtnText: { fontFamily: fonts.sansSemiBold, fontSize: 14, color: colors.parchment },
+  joinBtnText: { fontFamily: fonts.sansSemiBold, fontSize: 14, color: colors.parchment },
 });

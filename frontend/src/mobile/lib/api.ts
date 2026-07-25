@@ -158,6 +158,43 @@ export const jobsApi = {
     MOCK_MODE ? mock().jobsClose(id) : request<JobListingResponse>(`/jobs/${id}/close`, { method: "PATCH" }),
 };
 
+// ── Jobs feed (Candidate) ─────────────────────────────────────────────────────
+// The backend's GET /jobs is already unscoped — every employer's open listings, no auth
+// required (see backend/app/routers/jobs.py) — so the candidate side reads the exact same
+// endpoint real employers post to, not a separate seeded list.
+//
+// NOTE ON SCHEMA DRIFT: the backend's real JobListing (models/job_listing.py, schemas/job.py)
+// and this file's existing JobListingResponse (used by jobsApi/JobCreateScreen) have already
+// diverged — the backend has {employer_id, company, require_verified, require_simuhire},
+// the frontend type above has {location, salary_min/max, employment_type, status}, and
+// neither has all of the other's fields. That mismatch predates this feed and isn't fixed
+// here. The fields below the divider are real-backend fields today; location/salary/type/
+// status are not — they're marked optional and populated only in mock mode from the richer
+// seeded dataset, so the UI can show them when available without claiming the real API
+// sends them yet.
+export interface JobFeedListing {
+  id: string;
+  employer_id: string;
+  title: string;
+  company: string;
+  required_skills: string[] | null;
+  require_verified: boolean;
+  require_simuhire: boolean;
+  description: string | null;
+  created_at: string;
+  // Mock-only enrichment — undefined when read from the real backend.
+  location?: string;
+  employment_type?: EmploymentType;
+  salary_min?: number | null;
+  salary_max?: number | null;
+  status?: JobStatus;
+}
+
+export const jobsFeedApi = {
+  list: async (): Promise<JobFeedListing[]> =>
+    MOCK_MODE ? mock().jobsFeedList() : request<JobFeedListing[]>("/jobs"),
+};
+
 // ── Namecard (Candidate Card tab) ────────────────────────────────────────────
 export interface SkillEntry {
   skill: string;

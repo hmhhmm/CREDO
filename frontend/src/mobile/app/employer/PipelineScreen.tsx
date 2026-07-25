@@ -55,7 +55,7 @@ function buildLightTouchMessage(entry: PipelineEntry): string {
 }
 
 export default function PipelineScreen({ navigation }: Props) {
-  const { pipeline, reEngage, markInterviewInvited, scheduleInterview, advanceStage, completeInterview, recordDecision } =
+  const { pipeline, reEngage, markInterviewInvited, scheduleInterview, advanceStage, completeInterview, recordDecision, markViewed } =
     usePipeline();
   const { stages } = useInterviewStages();
   const [composingId, setComposingId] = useState<string | null>(null);
@@ -270,7 +270,10 @@ export default function PipelineScreen({ navigation }: Props) {
                 ? `${roundName} · ${formatInterviewDateTime(e.interviewDate)}`
                 : `${roundName} · Awaiting scheduling`;
 
-              const openProfile = () => navigation.navigate("CandidateProfile", { candidate: buildCandidate(e) });
+              const openProfile = () => {
+                markViewed(e.id);
+                navigation.navigate("CandidateProfile", { candidate: buildCandidate(e) });
+              };
 
               // Why this card resurfaced to the top — visible, not a silent reorder.
               const attentionReasons = !e.decision

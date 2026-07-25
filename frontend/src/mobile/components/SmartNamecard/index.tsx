@@ -74,11 +74,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: "hidden",
     backfaceVisibility: "hidden",
-    // Identity-glass treatment: gold hairline border (the blur layer of the identity
+    // Identity-glass treatment: ink/black hairline border (the blur layer of the identity
     // variant is invisible behind this card's opaque navy gradient, so the border and
-    // the specular sheen inside Front/Back are the visible parts).
+    // the specular sheen inside Front/Back are the visible parts). Gold stays as the
+    // internal accent language (wordmark, monogram, badges) — only the outer edge is black.
     borderWidth: 1,
-    borderColor: "rgba(201,166,70,0.35)",
+    borderColor: "rgba(16,25,43,0.5)",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,

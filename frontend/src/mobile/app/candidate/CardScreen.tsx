@@ -4,17 +4,18 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import * as Clipboard from "expo-clipboard";
-import { QrCode, Link2, Share2, ShieldCheck, ChevronRight, Plus, Check } from "lucide-react-native";
+import { QrCode, Link2, Share2, ShieldCheck, ChevronRight, ChevronDown, Plus, Check, ScanLine, X, Briefcase } from "lucide-react-native";
 import SmartNamecard from "../../components/SmartNamecard";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
-import CardStrength from "../../components/namecard/CardStrength";
 import CardAudience from "../../components/namecard/CardAudience";
 import CardDistribution from "../../components/namecard/CardDistribution";
 import { useDemo } from "../../context/DemoContext";
 import { useAuth } from "../../context/AuthContext";
+import { useSavedCompanyCards, type SavedCompanyCard } from "../../context/SavedCompanyCardsContext";
 import { namecardApi, portfolioApi, ApiError, type PortfolioResponse } from "../../lib/api";
 import { namecardResponseToCandidate, artifactResponsesToArtifacts } from "../../lib/adapters";
+import { allEmployers, type Employer } from "../../data/generateDataset";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 import type { Candidate } from "../../data/types";
@@ -31,11 +32,13 @@ function shortHash(hash: string | null) {
 export default function CardScreen({ navigation }: Props) {
   const { user } = useAuth();
   const { liveCandidate } = useDemo();
+  const { savedCardsFor, removeCard } = useSavedCompanyCards();
   const [realCandidate, setRealCandidate] = useState<Candidate | null>(null);
   const [portfolio, setPortfolio] = useState<PortfolioResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [fullTimeline, setFullTimeline] = useState(false);
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -75,19 +78,22 @@ export default function CardScreen({ navigation }: Props) {
     : { ...liveCandidate, name: realCandidate?.name ?? liveCandidate.name };
 
   const skills = candidate.verifiedSkills;
-  const timeline = portfolio?.timeline.slice(0, 3) ?? [];
+  const fullTimelineList = portfolio?.timeline ?? [];
+  const timeline = fullTimeline ? fullTimelineList : fullTimelineList.slice(0, 3);
   const ledger = portfolio?.ledger_summary ?? null;
   const publicUrl = portfolio?.public_url ?? null;
+
+  // Saved company cards — resolved against the real employer roster (same allEmployers data
+  // every other role reads from), not a separate fabricated list.
+  type SavedCardEntry = { card: SavedCompanyCard; employer: Employer };
+  const savedCards: SavedCardEntry[] = (user ? savedCardsFor(user.id) : [])
+    .map((card) => ({ card, employer: allEmployers.find((e) => e.id === card.employerId) }))
+    .filter((entry): entry is SavedCardEntry => !!entry.employer);
 
   const goToVerify = () => {
     (navigation.getParent() as ParentNav)?.navigate("Verify");
   };
-  const goToPortfolio = () => {
-    (navigation.getParent() as ParentNav)?.navigate("Home", { screen: "Portfolio" });
-  };
-  const goToSimuHire = () => {
-    (navigation.getParent() as ParentNav)?.navigate("Home", { screen: "SimuHire" });
-  };
+  const goScanCompany = () => navigation.navigate("FairMode");
 
   const handle = (candidate.name || "you").toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 16) || "you";
 
@@ -124,15 +130,6 @@ export default function CardScreen({ navigation }: Props) {
               <View style={styles.cardWrap}>
                 <SmartNamecard candidate={candidate} onEmptyCta={goToVerify} />
               </View>
-
-              {/* 1b — Card strength (drives the candidate back into Verify / SimuHire) */}
-              <CardStrength
-                candidate={candidate}
-                ledgerCount={ledger?.entry_count ?? 0}
-                onVerify={goToVerify}
-                onSimuHire={goToSimuHire}
-                onPortfolio={goToPortfolio}
-              />
 
               {/* 2 — Verified Skills */}
               <Text style={styles.sectionLabel}>Verified Skills</Text>
@@ -187,10 +184,16 @@ export default function CardScreen({ navigation }: Props) {
                   ) : (
                     <Text style={styles.emptyBody}>Verified artifacts will appear here as your history grows.</Text>
                   )}
-                  <Pressable onPress={goToPortfolio} style={styles.inlineLink} hitSlop={8}>
-                    <Text style={styles.inlineLinkText}>View full portfolio</Text>
-                    <ChevronRight size={13} color={colors.ink} />
-                  </Pressable>
+                  {fullTimelineList.length > 3 && (
+                    <Pressable onPress={() => setFullTimeline((v) => !v)} style={styles.inlineLink} hitSlop={8}>
+                      <Text style={styles.inlineLinkText}>
+                        {fullTimeline ? "Show less" : `View full portfolio (${fullTimelineList.length})`}
+                      </Text>
+                      <View style={fullTimeline ? styles.chevronFlipped : undefined}>
+                        <ChevronDown size={13} color={colors.ink} />
+                      </View>
+                    </Pressable>
+                  )}
                 </View>
               </GlassCard>
 
@@ -240,6 +243,54 @@ export default function CardScreen({ navigation }: Props) {
                   </GlassCard>
                 </Pressable>
               </View>
+
+              {/* 5b — Saved Company Cards: a folder of employer namecards scanned at a fair
+                  (candidate-side counterpart to the employer's own scan-and-save flow),
+                  resolved against the real seeded employer roster. */}
+              <View style={styles.sectionHeaderRow}>
+                <Text style={styles.sectionLabel}>Saved Company Cards</Text>
+                <Pressable onPress={goScanCompany} style={styles.scanLink} hitSlop={8}>
+                  <ScanLine size={12} color={colors.ink} />
+                  <Text style={styles.scanLinkText}>Scan</Text>
+                </Pressable>
+              </View>
+              {savedCards.length === 0 ? (
+                <GlassCard radius={18}>
+                  <Pressable onPress={goScanCompany} style={styles.emptySkills}>
+                    <View style={styles.emptyIcon}>
+                      <Briefcase size={16} color={colors.gold} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.emptyTitle}>No company cards yet</Text>
+                      <Text style={styles.emptyBody}>Scan an employer&apos;s CREDO code at a fair to save it here.</Text>
+                    </View>
+                    <ChevronRight size={16} color={colors.slate} />
+                  </Pressable>
+                </GlassCard>
+              ) : (
+                <View style={{ gap: 10 }}>
+                  {savedCards.map(({ card, employer }) => (
+                    <GlassCard key={card.employerId} radius={16}>
+                      <View style={styles.companyCardRow}>
+                        <View style={styles.companyAvatar}>
+                          <Text style={styles.companyAvatarText}>{employer.initial}</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.companyName} numberOfLines={1}>{employer.name}</Text>
+                          <Text style={styles.companyMeta} numberOfLines={1}>{employer.industry} · {employer.city}</Text>
+                        </View>
+                        <Pressable
+                          onPress={() => user && removeCard(user.id, employer.id)}
+                          style={styles.companyRemoveBtn}
+                          hitSlop={8}
+                        >
+                          <X size={13} color={colors.slate} />
+                        </Pressable>
+                      </View>
+                    </GlassCard>
+                  ))}
+                </View>
+              )}
 
               {/* 6 — Audience & privacy (candidate control over the verified identity) */}
               <Text style={styles.sectionLabel}>Audience & Privacy</Text>
@@ -307,6 +358,7 @@ const styles = StyleSheet.create({
     borderTopColor: "rgba(16,25,43,0.08)",
   },
   inlineLinkText: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.ink },
+  chevronFlipped: { transform: [{ rotate: "180deg" }] },
 
   auditRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 16 },
   auditText: { flex: 1, fontFamily: fonts.mono, fontSize: 12, color: colors.ink },
@@ -315,4 +367,29 @@ const styles = StyleSheet.create({
   shareOption: { flex: 1 },
   shareInner: { alignItems: "center", gap: 7, paddingVertical: 16 },
   shareLabel: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.ink },
+
+  sectionHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 10 },
+  scanLink: { flexDirection: "row", alignItems: "center", gap: 4 },
+  scanLinkText: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.ink },
+
+  companyCardRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14 },
+  companyAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "rgba(16,25,43,0.06)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  companyAvatarText: { fontFamily: fonts.displayBold, fontSize: 14, color: colors.ink },
+  companyName: { fontFamily: fonts.sansSemiBold, fontSize: 13.5, color: colors.ink },
+  companyMeta: { fontFamily: fonts.mono, fontSize: 10.5, color: colors.slate, marginTop: 1 },
+  companyRemoveBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(16,25,43,0.05)",
+  },
 });

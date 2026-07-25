@@ -5,6 +5,8 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { DemoProvider } from "../context/DemoContext";
 import { PipelineProvider } from "../context/PipelineContext";
+import { SavedJobsProvider } from "../context/SavedJobsContext";
+import { SavedCompanyCardsProvider } from "../context/SavedCompanyCardsContext";
 import { InterviewStagesProvider } from "../context/InterviewStagesContext";
 import { SkillFeedbackProvider } from "../context/SkillFeedbackContext";
 import { CredentialIssuerProvider } from "../context/CredentialIssuerContext";
@@ -138,9 +140,13 @@ export default function RootNavigator() {
                   <CurriculumActionProvider>
                     <CommunityProvider>
                       <PipelineProvider>
-                        <NavigationContainer>
-                          <RoleStackNavigator />
-                        </NavigationContainer>
+                        <SavedJobsProvider>
+                          <SavedCompanyCardsProvider>
+                            <NavigationContainer>
+                              <RoleStackNavigator />
+                            </NavigationContainer>
+                          </SavedCompanyCardsProvider>
+                        </SavedJobsProvider>
                       </PipelineProvider>
                     </CommunityProvider>
                   </CurriculumActionProvider>

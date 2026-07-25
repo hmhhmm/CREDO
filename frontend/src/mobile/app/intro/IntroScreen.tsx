@@ -1,13 +1,14 @@
 // The app's front door — page 1 of 2, page 2 being RoleSelectScreen at /app/roles.
 //
-// Second rewrite: the first two drafts were both a single long vertical scroll (first
-// dark, then light) with paragraph-level explanations of the trust model. Rejected both
-// times — nobody opening an app wants to read an essay before they can tap anything.
-// Real onboarding across polished consumer apps (Duolingo, Revolut, Cash App, Linear)
-// converges on the same shape: a short swipeable carousel, 3 slides, one idea per slide,
-// a headline under ten words and one line of subtext — never a paragraph — with dot
-// indicators and a skip affordance, reaching the actual CTA in a couple of taps/swipes.
-// This rebuild follows that shape instead of inventing a new one.
+// Third rewrite: expanded from 3 slides to 5 to carry two more ideas the shorter version
+// couldn't fit — real-time application visibility (Smart Talent Matching, E2, plus the
+// employer-side Re-Engagement Pipeline, E6, that keeps a "no" from going silent) and the
+// AI Career Coach (C8) + SimuHire (C5) pairing. Every slide still holds to the rule the
+// second rewrite established: one idea, a headline under ten words, one line of subtext,
+// never a paragraph — five terse slides, not three terse ones padded into five verbose ones.
+// Note on scope honesty: there is no built "guaranteed response" SLA feature in this system
+// (checked — not in the charter's 13-feature list, not implemented anywhere in the repo), so
+// slide 3 promises visibility into real matching/re-engagement state, not a fictional guarantee.
 import { useEffect, useRef, useState } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView, FALLBACK_TOP_CLEARANCE } from "react-native-safe-area-context";
@@ -23,12 +24,18 @@ import {
   Wrench,
   MessagesSquare,
   Repeat,
+  Search,
+  Handshake,
+  MessageCircle,
+  Sparkles,
 } from "lucide-react-native";
 import ScreenBackground from "../../components/shared/ScreenBackground";
+import GlassCard from "../../components/shared/GlassCard";
+import VerifiedBadge from "../../components/shared/VerifiedBadge";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 
-const SLIDE_COUNT = 3;
+const SLIDE_COUNT = 5;
 
 const PILLARS = [
   { key: "knowledge", label: "Knowledge", icon: BookOpen },
@@ -41,6 +48,12 @@ const ROLES = [
   { key: "candidate", label: "Candidate", body: "Prove what you built", icon: GraduationCap },
   { key: "employer", label: "Employer", body: "See who's real", icon: Briefcase },
   { key: "university", label: "University", body: "Watch it work", icon: Building2 },
+] as const;
+
+const MATCH_STAGES = [
+  { key: "matched", label: "Matched to roles", Icon: Search, done: true },
+  { key: "reviewed", label: "Seen by employer", Icon: Handshake, done: true },
+  { key: "reengaged", label: "Re-engaged, not dropped", Icon: MessageCircle, done: false },
 ] as const;
 
 export default function IntroScreen({ onGetStarted }: { onGetStarted: () => void }) {
@@ -66,6 +79,8 @@ export default function IntroScreen({ onGetStarted }: { onGetStarted: () => void
     if (i !== index) setIndex(i);
   };
 
+  const ctaLabel = ["Next", "Next", "Next", "Next", "Choose your side"][index];
+
   return (
     <View style={{ flex: 1 }}>
       <ScreenBackground />
@@ -88,54 +103,76 @@ export default function IntroScreen({ onGetStarted }: { onGetStarted: () => void
           onScroll={onScroll}
           scrollEventThrottle={32}
         >
+          {/* Slide 0 — landing frame: Career OS, not a job board. */}
           <Slide>
             <RingGlow />
             <View style={styles.eyebrowRow}>
               <ShieldCheck size={13} color={colors.verified} />
-              <Text style={styles.eyebrow}>Verified career identity</Text>
+              <Text style={styles.eyebrow}>Your lifetime career OS</Text>
             </View>
+            <Text style={styles.headline}>
+              Built on <Text style={styles.headlineGold}>verified proof.</Text>
+            </Text>
+            <Text style={styles.subtext}>Not a job board. A system that stays with you.</Text>
+          </Slide>
+
+          {/* Slide 1 — Smart Namecard (C3): proof beats claims. */}
+          <Slide>
             <Text style={styles.headline}>
               Proof beats <Text style={styles.headlineGold}>claims.</Text>
             </Text>
-            <Text style={styles.subtext}>
-              A student's honest three years of work looks, on paper, identical to a
-              fabricated résumé. CREDO checks which one is true.
-            </Text>
+            <Text style={styles.subtext}>A fabricated résumé reads identical to an honest one — until it's checked.</Text>
+
+            <GlassCard style={styles.proofCard}>
+              <View style={styles.comparisonRow}>
+                <View style={styles.comparisonCol}>
+                  <Text style={styles.comparisonLabel}>Résumé</Text>
+                  <VerifiedBadge status="not_started" />
+                </View>
+                <Text style={styles.vsText}>vs</Text>
+                <View style={styles.comparisonCol}>
+                  <Text style={styles.comparisonLabel}>Smart Namecard</Text>
+                  <VerifiedBadge status="verified" />
+                </View>
+              </View>
+            </GlassCard>
           </Slide>
 
+          {/* Slide 2 — Smart Talent Matching (E2) + Re-Engagement Pipeline (E6): real
+              visibility into where an application stands, not a fabricated SLA. */}
           <Slide>
-            <Text style={styles.headline}>Checked,{"\n"}not self-reported.</Text>
-            <Text style={styles.subtext}>What a claim goes through before it becomes proof.</Text>
+            <Text style={styles.headline}>Know where{"\n"}you stand.</Text>
+            <Text style={styles.subtext}>Matching and re-engagement happen in the open, not a black box.</Text>
 
-            {/* Flow: a bare claim -> four checks -> a verified credential. The transform
-                is the actual thing worth showing, not just the four words on their own. */}
-            <View style={styles.flow}>
-              <View style={styles.flowChipMuted}>
-                <Text style={styles.flowChipMutedText}>"I know React"</Text>
-              </View>
-
-              <FlowArrow />
-
-              <View style={styles.pillarGrid}>
-                {PILLARS.map((p) => (
-                  <View key={p.key} style={styles.pillarChip}>
-                    <View style={styles.pillarChipIcon}>
-                      <p.icon size={16} color={colors.ink} />
-                    </View>
-                    <Text style={styles.pillarChipLabel}>{p.label}</Text>
+            <GlassCard style={styles.trackerCard}>
+              {MATCH_STAGES.map((s) => (
+                <View key={s.key} style={styles.trackerRow}>
+                  <View style={[styles.trackerIconWrap, s.done && styles.trackerIconWrapDone]}>
+                    <s.Icon size={14} color={s.done ? colors.parchment : colors.slate} />
                   </View>
-                ))}
-              </View>
-
-              <FlowArrow />
-
-              <View style={styles.flowChipVerified}>
-                <ShieldCheck size={14} color={colors.parchment} />
-                <Text style={styles.flowChipVerifiedText}>Verified · 87</Text>
-              </View>
-            </View>
+                  <Text style={[styles.trackerLabel, !s.done && styles.trackerLabelMuted]}>{s.label}</Text>
+                </View>
+              ))}
+            </GlassCard>
           </Slide>
 
+          {/* Slide 3 — AI Career Coach (C8) + SimuHire (C5): coaching baked into applying. */}
+          <Slide>
+            <Text style={styles.headline}>Learn while{"\n"}you apply.</Text>
+            <Text style={styles.subtext}>An AI coach and a practice interview, not just a submit button.</Text>
+
+            <GlassCard style={styles.coachCard}>
+              <View style={styles.coachTagRow}>
+                <Sparkles size={12} color={colors.gold} />
+                <Text style={styles.coachTag}>AI Career Coach</Text>
+              </View>
+              <Text style={styles.coachQuote}>
+                "Strong problem-solving in your last SimuHire round — let's tighten how you structure the answer."
+              </Text>
+            </GlassCard>
+          </Slide>
+
+          {/* Slide 4 — the triangle: candidate/employer/university, unchanged from before. */}
           <Slide>
             <Text style={styles.headline}>Built for whoever{"\n"}needs the truth.</Text>
             <Text style={styles.subtext}>One platform, three sides of the same problem.</Text>
@@ -162,7 +199,7 @@ export default function IntroScreen({ onGetStarted }: { onGetStarted: () => void
           >
             {({ pressed }) => (
               <View style={[styles.ctaButton, pressed && { opacity: 0.85 }]}>
-                <Text style={styles.ctaButtonText}>{index === SLIDE_COUNT - 1 ? "Choose your side" : "Next"}</Text>
+                <Text style={styles.ctaButtonText}>{ctaLabel}</Text>
                 <ArrowRight size={16} color={colors.parchment} />
               </View>
             )}
@@ -189,14 +226,6 @@ function RoleChip({ icon: Icon, label, body }: { icon: typeof GraduationCap; lab
       </View>
       <Text style={styles.roleChipLabel}>{label}</Text>
       <Text style={styles.roleChipBody}>{body}</Text>
-    </View>
-  );
-}
-
-function FlowArrow() {
-  return (
-    <View style={styles.flowArrow}>
-      <ArrowDown size={14} color={colors.slate} />
     </View>
   );
 }
@@ -270,45 +299,30 @@ const styles = StyleSheet.create({
     maxWidth: 340,
   },
 
-  flow: { alignItems: "center", gap: 10, marginTop: 8 },
-  flowArrow: { opacity: 0.6 },
+  proofCard: { marginTop: 8, width: 300, padding: 18 },
+  comparisonRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  comparisonCol: { alignItems: "center", gap: 8, flex: 1 },
+  comparisonLabel: { fontFamily: fonts.sansSemiBold, fontSize: 12.5, color: colors.ink },
+  vsText: { fontFamily: fonts.mono, fontSize: 11, color: colors.slate, marginHorizontal: 8 },
 
-  flowChipMuted: {
-    paddingVertical: 9,
-    paddingHorizontal: 16,
-    borderRadius: 999,
-    backgroundColor: "rgba(16,25,43,0.05)",
-    borderWidth: 1,
-    borderColor: "rgba(16,25,43,0.09)",
-    borderStyle: "dashed",
-  },
-  flowChipMutedText: { fontFamily: fonts.mono, fontSize: 12.5, color: colors.slate, fontStyle: "italic" },
-
-  flowChipVerified: {
-    flexDirection: "row",
+  trackerCard: { marginTop: 8, width: 300, padding: 18, gap: 12 },
+  trackerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  trackerIconWrap: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     alignItems: "center",
-    gap: 7,
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 999,
-    backgroundColor: colors.verified,
+    justifyContent: "center",
+    backgroundColor: "rgba(16,25,43,0.08)",
   },
-  flowChipVerifiedText: { fontFamily: fonts.sansSemiBold, fontSize: 13, color: colors.parchment },
+  trackerIconWrapDone: { backgroundColor: colors.verified },
+  trackerLabel: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.ink },
+  trackerLabelMuted: { color: colors.slate },
 
-  pillarGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 8, maxWidth: 280 },
-  pillarChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.55)",
-    borderWidth: 1,
-    borderColor: "rgba(16,25,43,0.08)",
-  },
-  pillarChipIcon: { width: 22, height: 22, alignItems: "center", justifyContent: "center" },
-  pillarChipLabel: { fontFamily: fonts.sansMedium, fontSize: 12.5, color: colors.ink },
+  coachCard: { marginTop: 8, width: 300, padding: 18, gap: 10 },
+  coachTagRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  coachTag: { fontFamily: fonts.mono, fontSize: 10.5, textTransform: "uppercase", letterSpacing: 1.5, color: colors.gold },
+  coachQuote: { fontFamily: fonts.sans, fontSize: 13, fontStyle: "italic", lineHeight: 19, color: colors.ink },
 
   roleChipRow: { flexDirection: "row", gap: 14, marginTop: 6 },
   roleChip: { alignItems: "center", gap: 8, width: 92 },

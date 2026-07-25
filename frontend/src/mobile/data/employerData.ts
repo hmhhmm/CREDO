@@ -138,7 +138,13 @@ export const discoverCandidates: DiscoverCandidate[] = allCandidates.map((c) => 
 // "explorers," correspondingly lower trust scores) — that's expected variance across the
 // full roster, not something Pipeline needs to track a waiting-stage for. There is
 // deliberately no "invited"/"awaiting SimuHire" stage anymore.
-export type PipelineStage = "simuhire_done" | "shortlisted" | "re_engage";
+//
+// "applied" is the one candidate-initiated stage in this set — every other stage is a
+// reason the *employer* added someone (found via Discover/Fair Mode, SimuHire review,
+// re-engagement). It's what a candidate's own "Apply with Smart Namecard" tap creates: a
+// real PipelineEntry the employer sees on their Pipeline (bucketed under "Not Invited"
+// until they act on it), not a fabricated candidate-only status.
+export type PipelineStage = "applied" | "simuhire_done" | "shortlisted" | "re_engage";
 
 // E9 Interview Invitation — orthogonal to `stage`, not folded into it: a candidate can be
 // `shortlisted` and separately partway through the interview round sequence at the same
@@ -190,6 +196,12 @@ export interface PipelineEntry {
   interviewDate?: string;
   meetingLink?: string;
   stageCompletedAt?: string;
+  // Transparency timestamps (candidate-facing Application Status) — set at real moments,
+  // not synthesized at render time. appliedAt is stamped when a candidate-initiated
+  // application is created; hrViewedAt the first time the employer opens that candidate's
+  // profile from Pipeline (see PipelineScreen's openProfile / PipelineContext.markViewed).
+  appliedAt?: string;
+  hrViewedAt?: string;
   // E-Decision — the final call on a candidate, independent of which round they're at when
   // it's made (an employer can reject mid-process, not only after the last round). Message
   // is always stored, whether the HR user sent the default template or a custom one — the
@@ -255,6 +267,26 @@ export function pipelineEntryFromCandidate(c: Candidate, employerId: string): Pi
         ? { type: c.simuHire.type, overallScore: c.simuHire.overallScore, dimensions: c.simuHire.dimensions }
         : undefined,
     currentStageId: null,
+  };
+}
+
+// Candidate-initiated application — "Apply with Smart Namecard" on a job card. Distinct
+// from pipelineEntryFromCandidate (an employer sourcing someone): here the candidate is the
+// actor, currentStageId stays null (not yet reviewed by the employer), and detail names the
+// specific role applied to rather than a SimuHire summary.
+export function pipelineEntryFromApplication(c: Candidate, employerId: string, jobTitle: string): PipelineEntry {
+  return {
+    id: `${employerId}-p-${c.id}`,
+    employerId,
+    candidateId: c.id,
+    name: c.name,
+    field: c.field,
+    trustScore: c.trustScore,
+    openToWork: c.openToWork,
+    stage: "applied",
+    detail: `Applied for ${jobTitle} via Smart Namecard`,
+    currentStageId: null,
+    appliedAt: new Date().toISOString(),
   };
 }
 
@@ -351,6 +383,7 @@ export function sortPipelineForAttention(entries: PipelineEntry[]): PipelineEntr
 }
 
 export const STAGE_META: Record<PipelineStage, { label: string; color: string }> = {
+  applied: { label: "Applied", color: "#C17A3D" },
   simuhire_done: { label: "SimuHire done", color: "#1F7A5C" },
   shortlisted: { label: "Shortlisted", color: "#2F6E8F" },
   re_engage: { label: "Re-engage", color: "#6B7785" },

@@ -217,3 +217,36 @@
   scroll-snap-align: start;
   scroll-snap-stop: always;
 }
+
+/* SimuHireChatScreen's message list sits between a header and a docked input box, not
+   as the whole screen — the shared .rn-scroll-content's min-height:100% (meant for
+   full-page ScrollViews with sparse content, e.g. Home/Verify, so they still fill the
+   viewport) fights that layout here: it stretches the content div to fill the entire
+   flex:1 scroll area even when there's only one short message, leaving a large blank
+   gap between the last bubble and the input box docked below it. This screen's content
+   should size to its own messages and let the ScrollView's overflow do the rest. */
+.rn-chat-scroll .rn-scroll-content {
+  min-height: auto;
+}
+
+/* Verification Ledger accordion (VerifyScreen) — Animated.View's shim only tweens
+   `transform` (see react-native-reanimated.jsx), not height, so a height-based
+   expand/collapse needs its own CSS transition rather than going through Reanimated.
+   max-height is animated instead of height because the expanded content's real height
+   isn't known upfront; the cap (600px) is comfortably above any realistic detail panel. */
+.rn-accordion-panel {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 320ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease;
+}
+.rn-accordion-panel.rn-accordion-open {
+  max-height: 600px;
+  opacity: 1;
+}
+
+/* Taller variant for panels whose content isn't capped at "one artifact's detail" — e.g.
+   VerifyScreen's inline Audit Trail, a full hash chain that can run to many entries. */
+.rn-accordion-panel.rn-accordion-tall.rn-accordion-open {
+  max-height: 3000px;
+}

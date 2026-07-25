@@ -246,9 +246,15 @@ export default function SimuHireChatScreen({ navigation, route }: Props) {
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, []);
 
-  // Keep the newest message in view
+  // Keep the newest message in view. block: "nearest" is deliberate — the default
+  // ("center") tries to vertically center this element within *every* scrollable
+  // ancestor it finds, including .app-shell (overflow: hidden, but still a valid
+  // scrollIntoView target per spec even with no visible scrollbar). On a short
+  // conversation that scrolled .app-shell itself down by ~270px, shifting the whole
+  // screen up and exposing blank space below the input box and tab bar. "nearest"
+  // only moves the minimum needed within the message list's own ScrollView.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView?.({ behavior: "smooth" });
+    bottomRef.current?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
   }, [turns, streamingTurn]);
 
   useEffect(() => () => clearInterval(streamTimer.current), []);
@@ -477,7 +483,7 @@ export default function SimuHireChatScreen({ navigation, route }: Props) {
         {/* Body: conversation (+ side panel on wide screens) */}
         <View style={{ flex: 1, flexDirection: "row" }}>
           <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-            <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
+            <ScrollView className="rn-chat-scroll" contentContainerStyle={{ padding: 16, gap: 10 }}>
               {turns.map((turn, i) => renderBubble(turn, i))}
               {busy && !streamingTurn && (
                 <View style={[styles.bubble, styles.bubbleInterviewer]}>

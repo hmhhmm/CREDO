@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
     width: 44,
     borderRadius: 22,
   },
-  tabActive: { width: "auto", paddingHorizontal: 18, backgroundColor: colors.gold },
+  tabActive: { width: "auto", paddingHorizontal: 18, backgroundColor: colors.goldMuted },
   activeLabel: { fontFamily: fonts.sansSemiBold, fontSize: 13, color: colors.ink },
 
   // ── Phone: TnG-style pill with a raised center button ──────────────────
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 10,
   },
-  railTabActive: { backgroundColor: colors.gold },
+  railTabActive: { backgroundColor: colors.goldMuted },
   railLabel: { fontFamily: fonts.sansMedium, fontSize: 14, color: "rgba(245,237,224,0.72)" },
   railLabelActive: { fontFamily: fonts.sansSemiBold, color: colors.ink },
 });

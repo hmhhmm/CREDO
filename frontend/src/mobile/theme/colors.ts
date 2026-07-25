@@ -13,6 +13,18 @@ export const colors = {
   navy: "#10192B",
   gold: "#C9A646",
   white: "#FFFFFF",
+  // Muted variant of gold — for large solid fills (the tab bar's active pill) where the
+  // full-saturation gold reads as a bright flat block rather than the soft accent it is
+  // everywhere else it's used (icon tints, badges, borders at low opacity). Same hue,
+  // pulled down in saturation/lightness; contrast vs ink text still 7.2:1 (well over the
+  // ~3:1 large-text minimum), so the tab label stays fully legible.
+  goldMuted: "#B9A472",
+  // Third accent identity — warm terracotta, distinct from gold (more yellow) and alert
+  // (more crimson/pink). Validated via the dataviz skill's CVD-separation check against
+  // verified-green (ΔE 8.1 protan, passes) before adding — see scripts/validate_palette.js.
+  // Reserved for AI-coaching/SimuHire surfaces so they read as their own identity rather
+  // than reusing gold (jobs) or green (verified) for an unrelated concept.
+  terracotta: "#C17A3D",
 };
 
 // Gradient ground + glass surface tokens — CREDO's cream/gold identity rendered with the

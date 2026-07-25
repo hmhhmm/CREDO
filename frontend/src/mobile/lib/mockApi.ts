@@ -27,6 +27,7 @@ import type {
   SimulationType,
   JobListingResponse,
   JobCreatePayload,
+  JobFeedListing,
   TimelineNode,
 } from "./api";
 import { allCandidates, allEmployers, allJobs, demoCandidate, demoEmployer } from "../data/generateDataset";
@@ -442,6 +443,35 @@ export const mockApi = {
   jobsList: async (): Promise<JobListingResponse[]> => {
     const employer = await currentEmployer();
     return delay(mockJobs.filter((mj) => mj.employerId === employer.id).map((mj) => mj.job));
+  },
+
+  // Candidate-facing feed: every open job across every employer, including ones created
+  // live via jobsCreate during this session — mockJobs is the single source both read,
+  // so an employer posting a role in the demo actually surfaces on the candidate side.
+  jobsFeedList: async (): Promise<JobFeedListing[]> => {
+    return delay(
+      mockJobs
+        .filter((mj) => mj.job.status === "open")
+        .map((mj) => {
+          const employer = allEmployers.find((e) => e.id === mj.employerId);
+          return {
+            id: mj.job.id,
+            employer_id: mj.employerId,
+            title: mj.job.title,
+            company: employer?.name ?? "Unknown company",
+            required_skills: mj.job.required_skills.map((s) => s.name),
+            require_verified: mj.job.required_skills.some((s) => s.verified_only),
+            require_simuhire: false,
+            description: mj.job.description,
+            created_at: mj.job.created_at,
+            location: mj.job.location,
+            employment_type: mj.job.employment_type,
+            salary_min: mj.job.salary_min,
+            salary_max: mj.job.salary_max,
+            status: mj.job.status,
+          };
+        })
+    );
   },
 
   jobsCreate: async (payload: JobCreatePayload): Promise<JobListingResponse> => {

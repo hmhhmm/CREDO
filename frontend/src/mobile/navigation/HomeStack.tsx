@@ -1,6 +1,8 @@
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import HomeScreen from "../app/candidate/HomeScreen";
 import PortfolioScreen from "../app/candidate/PortfolioScreen";
+import JobMatchesScreen from "../app/candidate/JobMatchesScreen";
+import ApplicationStatusScreen from "../app/candidate/ApplicationStatusScreen";
 import CandidateSettingsScreen from "../app/candidate/SettingsScreen";
 import SimuHireStack from "./SimuHireStack";
 import { candidateHeaderOptions } from "./headerOptions";
@@ -8,6 +10,8 @@ import { candidateHeaderOptions } from "./headerOptions";
 export type HomeStackParamList = {
   HomeMain: undefined;
   Portfolio: undefined;
+  JobMatches: { initialTab?: "matched" | "popular" } | undefined;
+  ApplicationStatus: undefined;
   SimuHire: undefined;
   Settings: undefined;
 };
@@ -19,6 +23,8 @@ export default function HomeStack({ onSwitchRole }: { onSwitchRole: () => void }
     <Stack.Navigator screenOptions={candidateHeaderOptions}>
       <Stack.Screen name="HomeMain" component={HomeScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Portfolio" component={PortfolioScreen} options={{ title: "Living Portfolio" }} />
+      <Stack.Screen name="JobMatches" component={JobMatchesScreen} options={{ title: "Jobs" }} />
+      <Stack.Screen name="ApplicationStatus" component={ApplicationStatusScreen} options={{ title: "Application Status" }} />
       <Stack.Screen name="SimuHire" component={SimuHireStack} options={{ headerShown: false }} />
       <Stack.Screen name="Settings" options={{ title: "Settings" }}>
         {({ navigation }) => <CandidateSettingsScreen navigation={navigation} onSwitchRole={onSwitchRole} />}

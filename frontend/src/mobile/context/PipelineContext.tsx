@@ -7,7 +7,12 @@
 // role/logging in as a different employer shows that employer's own Pipeline, not one
 // shared array everyone sees the same view of.
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { getPipelineSeedFor, pipelineEntryFromCandidate, type PipelineEntry } from "../data/employerData";
+import {
+  getPipelineSeedFor,
+  pipelineEntryFromCandidate,
+  pipelineEntryFromApplication,
+  type PipelineEntry,
+} from "../data/employerData";
 import { allEmployers } from "../data/generateDataset";
 import { useAuth } from "./AuthContext";
 import type { Candidate } from "../data/types";
@@ -19,6 +24,21 @@ interface PipelineContextValue {
   // (University's Partners screen checking "was this candidate introduced to *this*
   // employer") and so can't use the current-employer-filtered `pipeline` above.
   isInPipelineFor: (employerId: string, candidateId: string) => boolean;
+  // Cross-employer query for the Candidate side — every entry across every employer that
+  // references this candidate, regardless of which employer is currently logged in. Real
+  // employer actions (invite/schedule/advance/decide) land in the same allEntries array
+  // this reads from, so a candidate's Application Status is live employer state, not mock
+  // preview content.
+  pipelineForCandidate: (candidateId: string) => PipelineEntry[];
+  // Candidate-initiated — "Apply with Smart Namecard" on a job card. employerId is passed
+  // explicitly (unlike inviteToInterview, which reads it from the acting employer's own
+  // session) because the actor here is the candidate, not an employer. Returns false if an
+  // entry already exists for this candidate/employer pair (already applied or already
+  // sourced by that employer some other way) so the caller can show "Already applied."
+  applyToJob: (candidate: Candidate, employerId: string, jobTitle: string) => boolean;
+  // Stamps hrViewedAt the first time an employer opens this candidate's profile — real
+  // event, not a synthesized "2 hours ago." No-ops if already viewed (first view wins).
+  markViewed: (id: string) => void;
   reEngage: (id: string, message: string) => void;
   // E9 Interview Invitation — stageId always comes from the caller (which already has
   // useInterviewStages()), so this context stays decoupled from stage configuration.
@@ -70,6 +90,28 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
       allEntries.some((p) => p.employerId === targetEmployerId && p.candidateId === candidateId),
     [allEntries]
   );
+
+  const pipelineForCandidate = useCallback(
+    (candidateId: string) => allEntries.filter((p) => p.candidateId === candidateId),
+    [allEntries]
+  );
+
+  const applyToJob = useCallback((candidate: Candidate, targetEmployerId: string, jobTitle: string): boolean => {
+    let applied = false;
+    setAllEntries((prev) => {
+      const existing = prev.find((p) => p.employerId === targetEmployerId && p.candidateId === candidate.id);
+      if (existing) return prev;
+      applied = true;
+      return [pipelineEntryFromApplication(candidate, targetEmployerId, jobTitle), ...prev];
+    });
+    return applied;
+  }, []);
+
+  const markViewed = useCallback((id: string) => {
+    setAllEntries((prev) =>
+      prev.map((p) => (p.id === id && !p.hrViewedAt ? { ...p, hrViewedAt: new Date().toISOString() } : p))
+    );
+  }, []);
 
   // Records a light-touch message on the entry itself (lastTouchedAt/lastTouchMessage)
   // instead of a screen-local flag, so the touch survives navigation away and back.
@@ -165,6 +207,9 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
         pipeline,
         addToPipeline,
         isInPipelineFor,
+        pipelineForCandidate,
+        applyToJob,
+        markViewed,
         reEngage,
         inviteToInterview,
         markInterviewInvited,

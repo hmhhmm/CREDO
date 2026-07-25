@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { View, Text, ScrollView, Pressable, ActivityIndicator, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
-import { Plus, MapPin, Check } from "lucide-react-native";
+import { Plus, MapPin, Check, ArrowRight } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
@@ -65,6 +65,10 @@ function JobCard({ job, onPress }: { job: JobListingResponse; onPress: () => voi
               ))}
             </View>
           )}
+
+          <View style={styles.arrow}>
+            <ArrowRight size={14} color={colors.ink} />
+          </View>
         </View>
       </GlassCard>
     </Pressable>
@@ -145,6 +149,15 @@ const styles = StyleSheet.create({
   skillRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   skillChip: { flexDirection: "row", alignItems: "center", gap: 4, borderRadius: 100, paddingVertical: 3, paddingHorizontal: 9 },
   skillText: { fontFamily: fonts.mono, fontSize: 10 },
+  arrow: {
+    alignSelf: "flex-end",
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "rgba(16,25,43,0.06)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
   emptyCard: { padding: 24, gap: 8, alignItems: "center" },
   emptyTitle: { fontFamily: fonts.displayBold, fontSize: 16, color: colors.ink },

@@ -12,7 +12,21 @@ export type ScannerStatus = "idle" | "requesting" | "scanning" | "denied" | "uns
 export function useQrScanner(active: boolean) {
   const [status, setStatus] = useState<ScannerStatus>("idle");
   const [decoded, setDecoded] = useState<string | null>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
+  // A plain useRef doesn't notify us when the <video> element mounts, and the element
+  // only mounts once status flips to "scanning" — which happens in the same
+  // getUserMedia().then() that tries to attach the stream, so the element isn't in the DOM
+  // yet at that point. A state-backed callback ref re-renders when the node appears, so the
+  // attach effect below can run again once it's actually there, regardless of which of
+  // "stream ready" / "element mounted" happens first.
+  const [videoEl, setVideoEl] = useState<HTMLVideoElement | null>(null);
+  // Kept in sync with videoEl but read from the rAF loop, which runs outside React's render
+  // cycle and would otherwise close over a stale (null) videoEl from the render that
+  // scheduled it.
+  const videoElRef = useRef<HTMLVideoElement | null>(null);
+  const videoRef = useCallback((node: HTMLVideoElement | null) => {
+    videoElRef.current = node;
+    setVideoEl(node);
+  }, []);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
@@ -25,7 +39,7 @@ export function useQrScanner(active: boolean) {
   }, []);
 
   const tick = useCallback(() => {
-    const video = videoRef.current;
+    const video = videoElRef.current;
     if (!video || video.readyState !== video.HAVE_ENOUGH_DATA) {
       rafRef.current = requestAnimationFrame(tick);
       return;
@@ -72,7 +86,10 @@ export function useQrScanner(active: boolean) {
           return;
         }
         streamRef.current = stream;
-        if (videoRef.current) videoRef.current.srcObject = stream;
+        // The <video> element only mounts once status becomes "scanning" — which this call
+        // itself triggers — so it isn't in the DOM yet here. The effect below attaches the
+        // stream once the element actually appears.
+        if (videoElRef.current) videoElRef.current.srcObject = stream;
         setStatus("scanning");
         rafRef.current = requestAnimationFrame(tick);
       })
@@ -85,6 +102,13 @@ export function useQrScanner(active: boolean) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- tick/stop are stable via useCallback with fixed deps
   }, [active]);
+
+  // Covers the case the inline attach above misses: the stream resolved before the <video>
+  // element existed, so by the time it mounts (status flips to "scanning") the srcObject
+  // assignment needs to happen here instead, now that the node is actually available.
+  useEffect(() => {
+    if (videoEl && streamRef.current) videoEl.srcObject = streamRef.current;
+  }, [videoEl]);
 
   const reset = useCallback(() => {
     setDecoded(null);

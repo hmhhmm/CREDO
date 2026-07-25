@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
   modeTabText: { fontFamily: fonts.sansSemiBold, fontSize: 12, color: colors.slate },
   modeTabTextActive: { color: colors.parchment },
 
-  qrWrap: { flex: 1, alignItems: "center", justifyContent: "center", gap: 20, marginTop: 20 },
+  qrWrap: { alignItems: "center", gap: 20, marginTop: 40 },
   qrCard: {
     padding: 24,
     backgroundColor: "#fff",

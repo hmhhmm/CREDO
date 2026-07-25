@@ -196,6 +196,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
     paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: "rgba(16,25,43,0.12)",
+    borderRadius: 16,
   },
   profileLinkText: { fontFamily: fonts.sansSemiBold, fontSize: 13.5, color: colors.ink },
 

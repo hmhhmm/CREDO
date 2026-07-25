@@ -24,14 +24,28 @@ export interface DashboardStat {
   value: string;
   hint: string;
 }
-export function getDashboardStats(employer: Employer): DashboardStat[] {
+// `pipeline` is this employer's own slice of PipelineContext (passed in rather than read
+// here, since this file has no context access) — "In pipeline" and "Hired (Q)" are live
+// counts off real entries, not fixed demo numbers.
+export function getDashboardStats(employer: Employer, pipeline: PipelineEntry[]): DashboardStat[] {
   const myJobs = allJobs.filter((j) => j.employerId === employer.id);
   const openJobs = myJobs.filter((j) => j.status === "open");
   const verifiedOnlyJobs = openJobs.filter((j) => j.requiredSkills.some((s) => s.verifiedOnly));
+
+  const inPipeline = pipeline.filter((p) => !p.decision);
+  const simuHireDone = inPipeline.filter((p) => p.simuHire).length;
+
+  const hired = pipeline.filter((p) => p.decision === "accepted");
+  const hiredVerified = hired.filter((p) => p.trustScore >= 80).length;
+
   return [
     { label: "Active roles", value: String(openJobs.length), hint: `${verifiedOnlyJobs.length} verified-only` },
-    { label: "In pipeline", value: "18", hint: "6 SimuHire done" },
-    { label: "Hired (Q)", value: "5", hint: "all verified" },
+    { label: "In pipeline", value: String(inPipeline.length), hint: `${simuHireDone} SimuHire done` },
+    {
+      label: "Hired (Q)",
+      value: String(hired.length),
+      hint: hired.length === 0 ? "none yet" : hiredVerified === hired.length ? "all verified" : `${hiredVerified} verified`,
+    },
   ];
 }
 

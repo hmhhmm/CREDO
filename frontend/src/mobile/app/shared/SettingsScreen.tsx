@@ -3,11 +3,12 @@
 // shell (identity hero, section layout, "Log out" treatment) is identical everywhere
 // rather than three near-duplicate screens.
 //
-// Deliberately links out to real controls that already exist elsewhere (Card's Audience &
-// Privacy, Life Chapter preferences) instead of rebuilding them here — there is no
-// profile-update endpoint in mockApi.ts, so a second, disconnected "edit" UI would just be
-// decoration. openToWork is the one field wired to real (if unpersisted) local state,
-// since it's genuinely a boolean flip with nowhere else to live.
+// Deliberately links out to real controls that already exist elsewhere (Candidate's own
+// Audience & Privacy screen, Card's Share section, Life Chapter preferences) instead of
+// rebuilding them here — there is no profile-update endpoint in mockApi.ts, so a second,
+// disconnected "edit" UI would just be decoration. openToWork is the one field wired to
+// real (if unpersisted) local state, since it's genuinely a boolean flip with nowhere else
+// to live.
 import { View, Text, ScrollView, Pressable, Switch, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LogOut, ArrowLeftRight, Info, ChevronRight } from "lucide-react-native";
@@ -72,7 +73,7 @@ export default function SettingsScreen({
       <ScreenBackground />
       {/* This screen is always reached via a header-shown stack screen (the native
           header itself now reserves top clearance — see StackHeader in navigation.jsx),
-          so only the bottom edge needs handling here, matching PortfolioScreen and every
+          so only the bottom edge needs handling here, matching VerifyScreen and every
           other header-shown screen in the app. */}
       <SafeAreaView style={styles.container} edges={["bottom"]}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -132,7 +133,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   // 110, not an arbitrary smaller value — matches every other screen's clearance for the
   // floating tab bar, which stays visible on pushed stack screens throughout this app
-  // (see PortfolioScreen). A smaller value here left Log Out sitting behind the bar.
+  // (see VerifyScreen). A smaller value here left Log Out sitting behind the bar.
   scroll: { padding: 20, paddingBottom: 110, gap: 24 },
 
   identityCard: { alignItems: "center", gap: 12, paddingTop: 8, paddingBottom: 4 },

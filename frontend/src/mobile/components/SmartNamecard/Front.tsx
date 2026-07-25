@@ -65,9 +65,6 @@ export default function Front({ candidate, onEmptyCta }: { candidate: Candidate;
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
-      {/* Gold accent stripe */}
-      <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, backgroundColor: C_GOLD, opacity: 0.65 }} />
-
       {/* Decorative concentric rings */}
       <View pointerEvents="none" style={[styles.ring, { top: -115, right: -115, width: 230, height: 230, borderColor: "rgba(201,166,70,0.18)" }]} />
       <View pointerEvents="none" style={[styles.ring, { top: -78, right: -78, width: 156, height: 156, borderColor: "rgba(201,166,70,0.10)" }]} />

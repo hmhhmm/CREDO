@@ -1,12 +1,15 @@
-// Distribution — get the verified card *out* into the world.
-//
-// A vanity handle, wallet pass / NFC / print entry points, a social export, and a
-// ready-to-paste email signature. Copy actions use the clipboard; the physical exports
-// are demo stubs that confirm inline (no capture/hardware wired up yet).
+// Share + Distribution — one combined card covering every way the verified namecard leaves
+// the app: the immediate share actions (QR, copy link, native share sheet) at the top, then
+// the vanity handle, wallet pass / NFC / print entry points, and a ready-to-paste email
+// signature below. Previously two separate sections ("Share" inline in CardScreen.tsx, and
+// this component under its own "Distribution" heading) — merged into one because they're the
+// same job (get the card out into the world) and reading as two adjacent sections was
+// redundant. Copy actions use the clipboard; the physical exports are demo stubs that
+// confirm inline (no capture/hardware wired up yet).
 import { useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import * as Clipboard from "expo-clipboard";
-import { AtSign, Check, Wallet, Nfc, Printer, ImageDown, Mail } from "lucide-react-native";
+import { AtSign, Check, Wallet, Nfc, Printer, ImageDown, Mail, QrCode, ScanLine, Share2 } from "lucide-react-native";
 import GlassCard from "../shared/GlassCard";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
@@ -15,9 +18,13 @@ interface Props {
   handle: string;
   name: string;
   tagline: string; // e.g. field / headline
+  onShowQr: () => void;
+  onScan: () => void;
+  onShare: () => void;
+  linkAvailable: boolean;
 }
 
-export default function CardDistribution({ handle, name, tagline }: Props) {
+export default function CardDistribution({ handle, name, tagline, onShowQr, onScan, onShare, linkAvailable }: Props) {
   const [done, setDone] = useState<string | null>(null);
 
   const vanityUrl = `credo.id/@${handle}`;
@@ -40,9 +47,25 @@ export default function CardDistribution({ handle, name, tagline }: Props) {
     { key: "print", label: "Print card", Icon: Printer, onPress: () => flash("print"), doneLabel: "Queued" },
   ];
 
+  const shareRow = [
+    { key: "qr", label: "Show QR", Icon: QrCode, onPress: onShowQr, disabled: false },
+    { key: "scan", label: "Scan", Icon: ScanLine, onPress: onScan, disabled: false },
+    { key: "share", label: "Share", Icon: Share2, onPress: onShare, disabled: !linkAvailable },
+  ];
+
   return (
     <GlassCard radius={18}>
       <View style={styles.wrap}>
+        {/* Immediate share actions */}
+        <View style={styles.shareRow}>
+          {shareRow.map(({ key, label, Icon, onPress, disabled }) => (
+            <Pressable key={key} style={styles.shareTile} onPress={onPress} disabled={disabled}>
+              <Icon size={18} color={colors.ink} />
+              <Text style={styles.shareTileLabel}>{label}</Text>
+            </Pressable>
+          ))}
+        </View>
+
         {/* Vanity handle */}
         <Pressable style={styles.vanityRow} onPress={() => copy("vanity", vanityUrl)}>
           <View style={styles.vanityIcon}>
@@ -89,6 +112,23 @@ export default function CardDistribution({ handle, name, tagline }: Props) {
 
 const styles = StyleSheet.create({
   wrap: { padding: 18, gap: 14 },
+  // Gold identity throughout — previously only the vanity-handle row used the app's
+  // gold-tinted treatment while shareTile/tile/sigBlock sat in a flat neutral-grey wash
+  // that read as unfinished next to the rest of the app. All four blocks now share the
+  // same rgba(201,166,70,...) family, at the same opacities, so the whole card reads as
+  // one cohesive surface.
+  shareRow: { flexDirection: "row", gap: 10 },
+  shareTile: {
+    flex: 1,
+    alignItems: "center",
+    gap: 7,
+    paddingVertical: 16,
+    borderRadius: 12,
+    backgroundColor: "rgba(201,166,70,0.07)",
+    borderWidth: 1,
+    borderColor: "rgba(201,166,70,0.22)",
+  },
+  shareTileLabel: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.ink },
   vanityRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -118,18 +158,18 @@ const styles = StyleSheet.create({
     gap: 7,
     paddingVertical: 15,
     borderRadius: 12,
-    backgroundColor: "rgba(16,25,43,0.03)",
+    backgroundColor: "rgba(201,166,70,0.07)",
     borderWidth: 1,
-    borderColor: "rgba(16,25,43,0.08)",
+    borderColor: "rgba(201,166,70,0.22)",
   },
   tileLabel: { fontFamily: fonts.sansMedium, fontSize: 12.5, color: colors.ink },
   sigBlock: {
     gap: 10,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: "rgba(16,25,43,0.03)",
+    backgroundColor: "rgba(201,166,70,0.07)",
     borderWidth: 1,
-    borderColor: "rgba(16,25,43,0.08)",
+    borderColor: "rgba(201,166,70,0.22)",
   },
   sigHead: { flexDirection: "row", alignItems: "center", gap: 7 },
   sigTitle: { fontFamily: fonts.sansSemiBold, fontSize: 13, color: colors.ink },

@@ -3,12 +3,10 @@ import { View, Text, Pressable, ScrollView, ActivityIndicator, Share, StyleSheet
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect } from "@react-navigation/native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import * as Clipboard from "expo-clipboard";
-import { QrCode, Link2, Share2, ShieldCheck, ChevronRight, ChevronDown, Plus, Check, ScanLine, X, Briefcase } from "lucide-react-native";
+import { ChevronRight, ChevronDown, Plus, ScanLine, X, Briefcase } from "lucide-react-native";
 import SmartNamecard from "../../components/SmartNamecard";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
-import CardAudience from "../../components/namecard/CardAudience";
 import CardDistribution from "../../components/namecard/CardDistribution";
 import { useDemo } from "../../context/DemoContext";
 import { useAuth } from "../../context/AuthContext";
@@ -24,11 +22,6 @@ import type { ParentNav } from "../../navigation/types";
 
 type Props = NativeStackScreenProps<CardStackParamList, "CardHome">;
 
-function shortHash(hash: string | null) {
-  if (!hash) return "—";
-  return `${hash.slice(0, 8)}···${hash.slice(-4)}`;
-}
-
 export default function CardScreen({ navigation }: Props) {
   const { user } = useAuth();
   const { liveCandidate } = useDemo();
@@ -37,7 +30,6 @@ export default function CardScreen({ navigation }: Props) {
   const [portfolio, setPortfolio] = useState<PortfolioResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
   const [fullTimeline, setFullTimeline] = useState(false);
 
   const load = useCallback(async () => {
@@ -80,7 +72,6 @@ export default function CardScreen({ navigation }: Props) {
   const skills = candidate.verifiedSkills;
   const fullTimelineList = portfolio?.timeline ?? [];
   const timeline = fullTimeline ? fullTimelineList : fullTimelineList.slice(0, 3);
-  const ledger = portfolio?.ledger_summary ?? null;
   const publicUrl = portfolio?.public_url ?? null;
 
   // Saved company cards — resolved against the real employer roster (same allEmployers data
@@ -91,18 +82,11 @@ export default function CardScreen({ navigation }: Props) {
     .filter((entry): entry is SavedCardEntry => !!entry.employer);
 
   const goToVerify = () => {
-    (navigation.getParent() as ParentNav)?.navigate("Verify");
+    (navigation.getParent() as ParentNav)?.navigate("Portfolio");
   };
-  const goScanCompany = () => navigation.navigate("FairMode");
+  const goScanCompany = () => navigation.navigate("FairMode", { initialMode: "scan" });
 
   const handle = (candidate.name || "you").toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 16) || "you";
-
-  const copyLink = async () => {
-    if (!publicUrl) return;
-    await Clipboard.setStringAsync(publicUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   const shareLink = async () => {
     if (!publicUrl) return;
@@ -197,54 +181,7 @@ export default function CardScreen({ navigation }: Props) {
                 </View>
               </GlassCard>
 
-              {/* 4 — Audit Trail */}
-              <Text style={styles.sectionLabel}>Audit Trail</Text>
-              <Pressable onPress={() => navigation.navigate("Ledger")}>
-                <GlassCard radius={18}>
-                  <View style={styles.auditRow}>
-                    <ShieldCheck size={17} color={ledger && ledger.entry_count > 0 ? colors.verified : colors.slate} />
-                    <Text style={styles.auditText}>
-                      {ledger && ledger.entry_count > 0
-                        ? `${ledger.entry_count} entr${ledger.entry_count === 1 ? "y" : "ies"} · ${shortHash(ledger.root_hash)}`
-                        : "No ledger entries yet"}
-                    </Text>
-                    <ChevronRight size={16} color={colors.slate} />
-                  </View>
-                </GlassCard>
-              </Pressable>
-
-              {/* 5 — Share */}
-              <Text style={styles.sectionLabel}>Share</Text>
-              <View style={styles.shareRow}>
-                <Pressable style={styles.shareOption} onPress={() => navigation.navigate("FairMode")}>
-                  <GlassCard radius={16}>
-                    <View style={styles.shareInner}>
-                      <QrCode size={18} color={colors.ink} />
-                      <Text style={styles.shareLabel}>Show QR</Text>
-                    </View>
-                  </GlassCard>
-                </Pressable>
-                <Pressable style={styles.shareOption} onPress={copyLink} disabled={!publicUrl}>
-                  <GlassCard radius={16}>
-                    <View style={styles.shareInner}>
-                      {copied ? <Check size={18} color={colors.verified} /> : <Link2 size={18} color={colors.ink} />}
-                      <Text style={[styles.shareLabel, copied && { color: colors.verified }]}>
-                        {copied ? "Copied" : "Copy link"}
-                      </Text>
-                    </View>
-                  </GlassCard>
-                </Pressable>
-                <Pressable style={styles.shareOption} onPress={shareLink} disabled={!publicUrl}>
-                  <GlassCard radius={16}>
-                    <View style={styles.shareInner}>
-                      <Share2 size={18} color={colors.ink} />
-                      <Text style={styles.shareLabel}>Share</Text>
-                    </View>
-                  </GlassCard>
-                </Pressable>
-              </View>
-
-              {/* 5b — Saved Company Cards: a folder of employer namecards scanned at a fair
+              {/* Saved Company Cards: a folder of employer namecards scanned at a fair
                   (candidate-side counterpart to the employer's own scan-and-save flow),
                   resolved against the real seeded employer roster. */}
               <View style={styles.sectionHeaderRow}>
@@ -292,13 +229,19 @@ export default function CardScreen({ navigation }: Props) {
                 </View>
               )}
 
-              {/* 6 — Audience & privacy (candidate control over the verified identity) */}
-              <Text style={styles.sectionLabel}>Audience & Privacy</Text>
-              <CardAudience handle={handle} />
-
-              {/* 7 — Distribution (get the verified card out into the world) */}
-              <Text style={styles.sectionLabel}>Distribution</Text>
-              <CardDistribution handle={handle} name={candidate.name} tagline={candidate.field} />
+              {/* Share (combined Share + Distribution — every way the verified card
+                  leaves the app, in one place). Audience & Privacy controls moved to
+                  Settings (candidate-only) — see SettingsScreen.tsx. */}
+              <Text style={styles.sectionLabel}>Share</Text>
+              <CardDistribution
+                handle={handle}
+                name={candidate.name}
+                tagline={candidate.field}
+                onShowQr={() => navigation.navigate("FairMode", { initialMode: "myQr" })}
+                onScan={goScanCompany}
+                onShare={shareLink}
+                linkAvailable={!!publicUrl}
+              />
             </>
           )}
         </ScrollView>
@@ -359,14 +302,6 @@ const styles = StyleSheet.create({
   },
   inlineLinkText: { fontFamily: fonts.sansMedium, fontSize: 13, color: colors.ink },
   chevronFlipped: { transform: [{ rotate: "180deg" }] },
-
-  auditRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 16 },
-  auditText: { flex: 1, fontFamily: fonts.mono, fontSize: 12, color: colors.ink },
-
-  shareRow: { flexDirection: "row", gap: 10 },
-  shareOption: { flex: 1 },
-  shareInner: { alignItems: "center", gap: 7, paddingVertical: 16 },
-  shareLabel: { fontFamily: fonts.sansMedium, fontSize: 12, color: colors.ink },
 
   sectionHeaderRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 10 },
   scanLink: { flexDirection: "row", alignItems: "center", gap: 4 },

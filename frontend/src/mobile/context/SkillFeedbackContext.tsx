@@ -3,7 +3,8 @@
 // (not employer- or university-scoped like Pipeline/InterviewStages) because the whole
 // point is crossing the Employer -> University boundary: any employer can write, any
 // university reads only their own students' feedback via universityName.
-import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, type ReactNode } from "react";
+import { usePersistentState } from "../utils/usePersistentState";
 
 export interface SkillFeedback {
   id: string;
@@ -24,7 +25,7 @@ interface SkillFeedbackContextValue {
 const SkillFeedbackCtx = createContext<SkillFeedbackContextValue | null>(null);
 
 export function SkillFeedbackProvider({ children }: { children: ReactNode }) {
-  const [entries, setEntries] = useState<SkillFeedback[]>([]);
+  const [entries, setEntries] = usePersistentState<SkillFeedback[]>("skill_feedback", []);
 
   const feedbackFor = useCallback(
     (universityName: string) => entries.filter((f) => f.universityName === universityName),

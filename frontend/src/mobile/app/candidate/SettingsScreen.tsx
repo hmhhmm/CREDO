@@ -11,7 +11,7 @@ export default function CandidateSettingsScreen({
   navigation,
   onSwitchRole,
 }: {
-  navigation: { getParent: () => ParentNav };
+  navigation: { getParent: () => ParentNav; navigate: (name: string, params?: object) => void };
   onSwitchRole: () => void;
 }) {
   const { user, logout } = useAuth();
@@ -27,7 +27,11 @@ export default function CandidateSettingsScreen({
   const [openToWork, setOpenToWork] = useState(user?.open_to_work ?? liveCandidate.openToWork);
 
   const parent = navigation.getParent() as ParentNav;
-  const goCardPrivacy = () => parent?.navigate("Card");
+  // Audience & privacy now lives on its own screen in this same stack (see
+  // HomeStack.tsx/CardPrivacyScreen.tsx) rather than deep-linking back to the Card tab —
+  // Card's own page is just the namecard + Share now that Audience/Privacy moved here.
+  const goCardPrivacy = () => navigation.navigate("CardPrivacy");
+  const goCardShare = () => parent?.navigate("Card");
   const goLifeChapter = () => parent?.navigate("Grow", { screen: "LifeChapter" });
 
   const logOut = async () => {
@@ -58,7 +62,7 @@ export default function CandidateSettingsScreen({
           title: "Namecard",
           rows: [
             { icon: <ShieldCheck size={15} color={colors.ink} />, label: "Audience & privacy", onPress: goCardPrivacy },
-            { icon: <Share2 size={15} color={colors.ink} />, label: "Distribution & sharing", onPress: goCardPrivacy },
+            { icon: <Share2 size={15} color={colors.ink} />, label: "Share & distribution", onPress: goCardShare },
           ],
         },
         {

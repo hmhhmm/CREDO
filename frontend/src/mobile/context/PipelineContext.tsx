@@ -6,7 +6,7 @@
 // employerId), and `pipeline` exposes only the logged-in employer's slice — so switching
 // role/logging in as a different employer shows that employer's own Pipeline, not one
 // shared array everyone sees the same view of.
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, type ReactNode } from "react";
 import {
   getPipelineSeedFor,
   pipelineEntryFromCandidate,
@@ -15,6 +15,7 @@ import {
 } from "../data/employerData";
 import { allEmployers } from "../data/generateDataset";
 import { useAuth } from "./AuthContext";
+import { usePersistentState } from "../utils/usePersistentState";
 import type { Candidate } from "../data/types";
 
 interface PipelineContextValue {
@@ -61,11 +62,16 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
   const employerId = user?.role === "employer" ? user.id : null;
 
   // Every employer's entries, together — filtered down to the current employer's slice
-  // below. A ref (not state) tracks which employers have already been seeded this session,
-  // so re-visiting an employer you've logged into before keeps whatever you did to their
-  // Pipeline earlier instead of silently re-seeding over it.
-  const [allEntries, setAllEntries] = useState<PipelineEntry[]>([]);
-  const seededEmployerIds = useRef<Set<string>>(new Set());
+  // below. Persisted to localStorage (usePersistentState) so applications/interview
+  // progress survive a page refresh instead of resetting to the seed data every load — the
+  // same store the employer's Pipeline screen mutates and the candidate's Application
+  // Status screen reads. A ref (seeded from whatever was actually restored, not always
+  // empty like before) tracks which employers have already been seeded this session, so
+  // re-visiting an employer you've logged into before keeps whatever you did to their
+  // Pipeline earlier instead of silently re-seeding over it — and a fresh reload doesn't
+  // re-seed on top of the entries that were just restored from storage either.
+  const [allEntries, setAllEntries] = usePersistentState<PipelineEntry[]>("pipeline_entries", []);
+  const seededEmployerIds = useRef<Set<string>>(new Set(allEntries.map((e) => e.employerId)));
 
   useEffect(() => {
     if (!employerId || seededEmployerIds.current.has(employerId)) return;

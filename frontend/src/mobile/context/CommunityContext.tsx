@@ -2,8 +2,9 @@
 // universities all read and post into the same global timeline; there's no per-role
 // scoping here the way Pipeline/InterviewStages are scoped per employer, because the
 // whole point of a community feed is one shared space everyone sees the same view of).
-import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, type ReactNode } from "react";
 import { allCandidates, allEmployers } from "../data/generateDataset";
+import { usePersistentState } from "../utils/usePersistentState";
 
 export interface CommunityComment {
   id: string;
@@ -102,7 +103,7 @@ function seedPosts(): CommunityPost[] {
 }
 
 export function CommunityProvider({ children }: { children: ReactNode }) {
-  const [posts, setPosts] = useState<CommunityPost[]>(seedPosts);
+  const [posts, setPosts] = usePersistentState<CommunityPost[]>("community_posts", seedPosts());
 
   const createPost = useCallback(
     (author: { id: string; name: string; subtitle: string; role: CommunityPost["authorRole"] }, content: string) => {

@@ -1,30 +1,18 @@
 // Destigmatize the gap — a break becomes an authored, verified *chapter*, not a hole.
 //
-// Past and planned chapters share one timeline. Each carries an intent label, a verified
-// marker (backed by the ledger), and a candidate-controlled disclosure setting the person
-// can cycle right here: show it as a chapter, show a neutral "career break", or hide it.
-import { useState } from "react";
+// Past and planned chapters share one timeline, read from LifeChapterContext (persisted,
+// candidate-authored — not a fixed illustration). Each carries an intent label and a
+// candidate-controlled disclosure setting cyclable right here: show it as a chapter, show a
+// neutral "career break", or hide it. Tapping a chapter itself opens it for editing.
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import { Baby, HeartPulse, Compass, GraduationCap, Eye, EyeOff, ShieldCheck, Users } from "lucide-react-native";
+import { Baby, HeartPulse, Compass, GraduationCap, Sparkles, Eye, EyeOff, ShieldCheck, Users } from "lucide-react-native";
 import GlassCard from "../shared/GlassCard";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
+import { useAuth } from "../../context/AuthContext";
+import { useLifeChapters, type Disclosure, type LifeChapter } from "../../context/LifeChapterContext";
 
-type Disclosure = "chapter" | "break" | "hidden";
-type Kind = "parental" | "health" | "sabbatical" | "education";
-
-interface Chapter {
-  id: string;
-  kind: Kind;
-  title: string;
-  period: string;
-  status: "past" | "planned";
-  verified: boolean;
-  note: string;
-  disclosure: Disclosure;
-}
-
-const KIND_ICON = { parental: Baby, health: HeartPulse, sabbatical: Compass, education: GraduationCap };
+const KIND_ICON = { parental: Baby, health: HeartPulse, sabbatical: Compass, education: GraduationCap, custom: Sparkles };
 
 const DISCLOSURE_META: Record<Disclosure, { label: string; hex: string; Icon: typeof Eye }> = {
   chapter: { label: "Shown as chapter", hex: colors.verified, Icon: Eye },
@@ -32,60 +20,36 @@ const DISCLOSURE_META: Record<Disclosure, { label: string; hex: string; Icon: ty
   hidden: { label: "Hidden", hex: colors.slate, Icon: EyeOff },
 };
 
-const ORDER: Disclosure[] = ["chapter", "break", "hidden"];
+export default function ChapterTimeline({ onEdit }: { onEdit: (chapter: LifeChapter) => void }) {
+  const { user } = useAuth();
+  const { chaptersFor, cycleDisclosure } = useLifeChapters();
+  const chapters = user ? chaptersFor(user.id) : [];
 
-const INITIAL: Chapter[] = [
-  {
-    id: "c1",
-    kind: "health",
-    title: "Health recovery",
-    period: "2024",
-    status: "past",
-    verified: true,
-    note: "Six months out. Kept two skills warm and finished one online course — rest was the point.",
-    disclosure: "chapter",
-  },
-  {
-    id: "c2",
-    kind: "sabbatical",
-    title: "Sabbatical",
-    period: "2026 · Q4",
-    status: "planned",
-    verified: false,
-    note: "Planned 6-month break. Runway and re-entry ramp mapped below.",
-    disclosure: "break",
-  },
-  {
-    id: "c3",
-    kind: "parental",
-    title: "Parental leave",
-    period: "2027",
-    status: "planned",
-    verified: false,
-    note: "Return-to-work timeline that preserves verified momentum.",
-    disclosure: "chapter",
-  },
-];
-
-export default function ChapterTimeline() {
-  const [chapters, setChapters] = useState<Chapter[]>(INITIAL);
-
-  const cycle = (id: string) =>
-    setChapters((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, disclosure: ORDER[(ORDER.indexOf(c.disclosure) + 1) % ORDER.length] } : c))
+  if (chapters.length === 0) {
+    return (
+      <GlassCard radius={18}>
+        <View style={styles.empty}>
+          <Text style={styles.emptyTitle}>No chapters yet</Text>
+          <Text style={styles.emptyBody}>
+            A career doesn't have to be continuous, uninterrupted employment. Use "Plan a chapter" below to author your
+            first one — planned or already behind you.
+          </Text>
+        </View>
+      </GlassCard>
     );
+  }
 
   return (
     <GlassCard radius={18}>
       <View style={styles.wrap}>
-        <Text style={styles.intro}>Your chapters — authored, not explained away. Tap a badge to set who sees each one.</Text>
+        <Text style={styles.intro}>Your chapters — authored, not explained away. Tap a chapter to edit it, or a badge to change who sees it.</Text>
 
         {chapters.map((c, i) => {
           const KindIcon = KIND_ICON[c.kind];
           const d = DISCLOSURE_META[c.disclosure];
           const last = i === chapters.length - 1;
           return (
-            <View key={c.id} style={styles.row}>
+            <Pressable key={c.id} style={styles.row} onPress={() => onEdit(c)}>
               {/* Rail */}
               <View style={styles.rail}>
                 <View style={[styles.node, c.status === "planned" && styles.nodePlanned]}>
@@ -110,14 +74,20 @@ export default function ChapterTimeline() {
                     <Text style={styles.planned}>Planned</Text>
                   )}
                 </View>
-                <Text style={styles.note}>{c.note}</Text>
+                {!!c.note && <Text style={styles.note}>{c.note}</Text>}
 
-                <Pressable style={[styles.badge, { backgroundColor: `${d.hex}14`, borderColor: `${d.hex}59` }]} onPress={() => cycle(c.id)}>
+                <Pressable
+                  style={[styles.badge, { backgroundColor: `${d.hex}14`, borderColor: `${d.hex}59` }]}
+                  onPress={(e?: unknown) => {
+                    (e as { stopPropagation?: () => void } | undefined)?.stopPropagation?.();
+                    cycleDisclosure(c.id);
+                  }}
+                >
                   <d.Icon size={11} color={d.hex} />
                   <Text style={[styles.badgeText, { color: d.hex }]}>{d.label}</Text>
                 </Pressable>
               </View>
-            </View>
+            </Pressable>
           );
         })}
 
@@ -176,4 +146,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(16,25,43,0.03)",
   },
   normalizeText: { flex: 1, fontFamily: fonts.sans, fontSize: 12, color: colors.ink, lineHeight: 17 },
+  empty: { padding: 20, gap: 6, alignItems: "center" },
+  emptyTitle: { fontFamily: fonts.sansSemiBold, fontSize: 14, color: colors.ink },
+  emptyBody: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.slate, textAlign: "center", lineHeight: 18 },
 });

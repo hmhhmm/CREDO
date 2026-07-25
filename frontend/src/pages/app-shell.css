@@ -8,7 +8,17 @@
   flex-direction: column;
   height: 100dvh;
   left: 0;
+  /* The stack navigator (src/native/navigation.jsx) briefly renders two screens in normal
+     flow during the same commit a route is pushed — the incoming screen mounts before its
+     sibling's absoluteFill style commits, doubling this container's content width for one
+     frame. Chrome's scroll anchoring then "corrects" the scroll position to keep whatever
+     was in view in view, and — because this container can be programmatically scrolled even
+     though it never should be by the user — that correction sticks after the width snaps
+     back, permanently shifting everything ~100px left. overflow-anchor: none opts this
+     container out of that heuristic entirely, which is safe here since nothing inside it is
+     ever meant to scroll horizontally in the first place. */
   overflow: hidden;
+  overflow-anchor: none;
   position: fixed;
   top: 0;
   width: 100vw;

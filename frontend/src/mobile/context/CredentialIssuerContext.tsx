@@ -5,7 +5,8 @@
 // university actually did, not just a side-effect of a student happening to have a
 // verified artifact. Global, same pattern as SkillFeedbackContext — University has no
 // backend session to scope this to.
-import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, type ReactNode } from "react";
+import { usePersistentState, setSerializer } from "../utils/usePersistentState";
 
 interface CredentialIssuerContextValue {
   isIssued: (universityId: string, artifactId: string) => boolean;
@@ -19,7 +20,7 @@ function key(universityId: string, artifactId: string) {
 }
 
 export function CredentialIssuerProvider({ children }: { children: ReactNode }) {
-  const [issued, setIssued] = useState<Set<string>>(new Set());
+  const [issued, setIssued] = usePersistentState<Set<string>, string[]>("credential_issued", new Set(), setSerializer());
 
   const isIssued = useCallback(
     (universityId: string, artifactId: string) => issued.has(key(universityId, artifactId)),

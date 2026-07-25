@@ -2,7 +2,8 @@
 // candidate has scanned (Fair Mode), mirroring how the employer side already saves scanned
 // candidates into their Pipeline. Session-only store, candidate-scoped by key (same pattern
 // as SavedJobsContext/CredentialIssuerContext), since there's no backend table for this yet.
-import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, type ReactNode } from "react";
+import { usePersistentState, mapSerializer } from "../utils/usePersistentState";
 
 export interface SavedCompanyCard {
   employerId: string;
@@ -23,7 +24,11 @@ function key(candidateId: string, employerId: string) {
 }
 
 export function SavedCompanyCardsProvider({ children }: { children: ReactNode }) {
-  const [saved, setSaved] = useState<Map<string, SavedCompanyCard>>(new Map());
+  const [saved, setSaved] = usePersistentState<Map<string, SavedCompanyCard>, [string, SavedCompanyCard][]>(
+    "saved_company_cards",
+    new Map(),
+    mapSerializer<SavedCompanyCard>()
+  );
 
   const savedCardsFor = useCallback(
     (candidateId: string) =>

@@ -7,12 +7,15 @@ import { DemoProvider } from "../context/DemoContext";
 import { PipelineProvider } from "../context/PipelineContext";
 import { SavedJobsProvider } from "../context/SavedJobsContext";
 import { SavedCompanyCardsProvider } from "../context/SavedCompanyCardsContext";
+import { SavedCandidateCardsProvider } from "../context/SavedCandidateCardsContext";
 import { InterviewStagesProvider } from "../context/InterviewStagesContext";
 import { SkillFeedbackProvider } from "../context/SkillFeedbackContext";
 import { CredentialIssuerProvider } from "../context/CredentialIssuerContext";
 import { CurriculumActionProvider } from "../context/CurriculumActionContext";
 import { CommunityProvider } from "../context/CommunityContext";
+import { LifeChapterProvider } from "../context/LifeChapterContext";
 import { AuthProvider, useAuth } from "../context/AuthContext";
+import { TabBarVisibilityProvider } from "../context/TabBarVisibilityContext";
 import AuthGate from "../app/auth/AuthGate";
 import UniversityAuthGate from "../app/auth/UniversityAuthGate";
 import IntroScreen from "../app/intro/IntroScreen";
@@ -142,9 +145,15 @@ export default function RootNavigator() {
                       <PipelineProvider>
                         <SavedJobsProvider>
                           <SavedCompanyCardsProvider>
-                            <NavigationContainer>
-                              <RoleStackNavigator />
-                            </NavigationContainer>
+                            <SavedCandidateCardsProvider>
+                              <LifeChapterProvider>
+                                <TabBarVisibilityProvider>
+                                  <NavigationContainer>
+                                    <RoleStackNavigator />
+                                  </NavigationContainer>
+                                </TabBarVisibilityProvider>
+                              </LifeChapterProvider>
+                            </SavedCandidateCardsProvider>
                           </SavedCompanyCardsProvider>
                         </SavedJobsProvider>
                       </PipelineProvider>

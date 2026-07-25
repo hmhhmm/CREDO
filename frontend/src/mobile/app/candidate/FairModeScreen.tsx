@@ -2,38 +2,33 @@ import { useEffect, useState } from "react";
 import { View, Text, Pressable, ActivityIndicator, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import QRCode from "react-native-qrcode-svg";
-import { ScanLine, QrCode as QrCodeIcon, Check, Bookmark, BookmarkCheck, X } from "lucide-react-native";
+import { ScanLine, QrCode as QrCodeIcon, Check, Bookmark, BookmarkCheck, X, AlertCircle } from "lucide-react-native";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useAuth } from "../../context/AuthContext";
 import { useSavedCompanyCards } from "../../context/SavedCompanyCardsContext";
 import { portfolioApi, ApiError } from "../../lib/api";
 import { allEmployers, type Employer } from "../../data/generateDataset";
+import { useQrScanner, parseCredoQrUrl } from "../../utils/useQrScanner";
 import { colors, surface } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
-
-// Candidate-side counterpart to the employer's own Fair Mode scan (see
-// app/employer/FairModeScreen.tsx) — camera scanning needs native permissions and can't be
-// demoed offline, so this simulates a successful scan the same way the employer flow does.
-// Cycles through the real seeded employer roster so repeated scans surface different
-// companies instead of always the same one.
-let scanCursor = 0;
-function nextScannedEmployer(): Employer {
-  const picked = allEmployers[scanCursor % allEmployers.length];
-  scanCursor += 1;
-  return picked;
-}
+import type { CardStackParamList } from "../../navigation/CardStack";
 
 type Mode = "myQr" | "scan";
+type Props = NativeStackScreenProps<CardStackParamList, "FairMode">;
 
-export default function FairModeScreen() {
+export default function FairModeScreen({ route }: Props) {
   const { user } = useAuth();
   const { isCardSaved, saveCard } = useSavedCompanyCards();
-  const [mode, setMode] = useState<Mode>("myQr");
+  const [mode, setMode] = useState<Mode>(route.params?.initialMode ?? "myQr");
   const [publicUrl, setPublicUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [scanned, setScanned] = useState<Employer | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
+
+  const { status, decoded, videoRef, reset } = useQrScanner(mode === "scan" && !scanned);
 
   useEffect(() => {
     if (!user) return;
@@ -48,7 +43,32 @@ export default function FairModeScreen() {
     };
   }, [user]);
 
+  // Decode a real QR frame into a real employer lookup — the camera reads an actual
+  // /company/{id} URL (see the employer's own "My QR" tab), parsed and matched against the
+  // real seeded roster rather than fabricated.
+  useEffect(() => {
+    if (!decoded) return;
+    const parsed = parseCredoQrUrl(decoded);
+    if (!parsed || parsed.kind !== "employer") {
+      setScanError("That QR code isn't a CREDO company card — point the camera at an employer's \"My QR\" screen.");
+      return;
+    }
+    const employer = allEmployers.find((e) => e.id === parsed.id);
+    if (!employer) {
+      setScanError("Couldn't find that company in CREDO's records.");
+      return;
+    }
+    setScanError(null);
+    setScanned(employer);
+  }, [decoded]);
+
   const saved = scanned && user ? isCardSaved(user.id, scanned.id) : false;
+
+  const scanAgain = () => {
+    setScanned(null);
+    setScanError(null);
+    reset();
+  };
 
   return (
     <View style={{ flex: 1 }}>
@@ -99,18 +119,46 @@ export default function FairModeScreen() {
               <>
                 <View style={styles.scannerWrap}>
                   <View style={styles.scanner}>
+                    {status === "scanning" && (
+                      <video
+                        ref={videoRef}
+                        autoPlay
+                        muted
+                        playsInline
+                        style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 28 }}
+                      />
+                    )}
                     <View style={[styles.corner, styles.tl]} />
                     <View style={[styles.corner, styles.tr]} />
                     <View style={[styles.corner, styles.bl]} />
                     <View style={[styles.corner, styles.br]} />
-                    <ScanLine size={44} color="rgba(16,25,43,0.25)" />
+                    {status !== "scanning" && <ScanLine size={44} color="rgba(16,25,43,0.25)" />}
                   </View>
-                  <Text style={styles.scanHint}>Point at an employer&apos;s CREDO QR</Text>
+                  <Text style={styles.scanHint}>
+                    {status === "requesting"
+                      ? "Requesting camera access…"
+                      : status === "scanning"
+                        ? "Point at an employer's CREDO QR"
+                        : status === "denied"
+                          ? "Camera access denied"
+                          : status === "unsupported"
+                            ? "Camera not available in this browser"
+                            : "Point at an employer's CREDO QR"}
+                  </Text>
+                  {scanError && (
+                    <View style={styles.scanErrorRow}>
+                      <AlertCircle size={13} color={colors.alert} />
+                      <Text style={styles.scanErrorText}>{scanError}</Text>
+                    </View>
+                  )}
+                  {(status === "denied" || status === "unsupported") && (
+                    <Text style={styles.scanErrorText}>
+                      {status === "denied"
+                        ? "Allow camera access for this site in your browser settings, then reopen this tab."
+                        : "Try a browser with camera support, like Chrome or Safari on a phone."}
+                    </Text>
+                  )}
                 </View>
-                <Pressable style={styles.scanBtn} onPress={() => setScanned(nextScannedEmployer())}>
-                  <ScanLine size={16} color={colors.parchment} />
-                  <Text style={styles.scanBtnText}>Simulate scan</Text>
-                </Pressable>
               </>
             ) : (
               <View style={styles.resultWrap}>
@@ -146,7 +194,7 @@ export default function FairModeScreen() {
                     <Text style={styles.savedText}>Saved to your folder</Text>
                   </View>
                 )}
-                <Pressable style={styles.resetBtn} onPress={() => setScanned(null)}>
+                <Pressable style={styles.resetBtn} onPress={scanAgain}>
                   <X size={13} color={colors.slate} />
                   <Text style={styles.resetText}>Scan another</Text>
                 </Pressable>
@@ -206,25 +254,16 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(16,25,43,0.04)",
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
   corner: { position: "absolute", width: 30, height: 30, borderColor: colors.gold },
   tl: { top: 12, left: 12, borderTopWidth: 3, borderLeftWidth: 3, borderTopLeftRadius: 12 },
   tr: { top: 12, right: 12, borderTopWidth: 3, borderRightWidth: 3, borderTopRightRadius: 12 },
   bl: { bottom: 12, left: 12, borderBottomWidth: 3, borderLeftWidth: 3, borderBottomLeftRadius: 12 },
   br: { bottom: 12, right: 12, borderBottomWidth: 3, borderRightWidth: 3, borderBottomRightRadius: 12 },
-  scanHint: { fontFamily: fonts.mono, fontSize: 11, color: colors.slate, letterSpacing: 0.5 },
-  scanBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: colors.ink,
-    borderRadius: 16,
-    paddingVertical: 15,
-    paddingHorizontal: 28,
-    marginTop: 28,
-  },
-  scanBtnText: { fontFamily: fonts.sansSemiBold, fontSize: 14, color: colors.parchment },
+  scanHint: { fontFamily: fonts.mono, fontSize: 11, color: colors.slate, letterSpacing: 0.5, textAlign: "center" },
+  scanErrorRow: { flexDirection: "row", alignItems: "flex-start", gap: 6, paddingHorizontal: 16 },
+  scanErrorText: { flex: 1, fontFamily: fonts.sans, fontSize: 11.5, color: colors.alert, lineHeight: 16, textAlign: "center" },
 
   resultWrap: { marginTop: 20, gap: 14, width: "100%" },
   resultBadge: {

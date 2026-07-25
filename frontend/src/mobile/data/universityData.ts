@@ -71,12 +71,63 @@ export interface SkillGap {
   taughtIn: string;
   verifyRate: number; // % of students whose claim in this skill actually verifies
 }
-const GAP_COURSES: Record<string, string> = {
+// Exported for GrowScreen's Targeted Upskilling — the same skill->course map U2's
+// Curriculum Gap Detector already uses on the university side, so a candidate-facing
+// "take this course" suggestion points at a real, specific course code, not an invented one.
+export const GAP_COURSES: Record<string, string> = {
   "Cloud Infrastructure": "CS3040 Distributed Systems",
   "Test-Driven Development": "SE2010 Software Practice",
   "Data Visualisation": "DS2200 Analytics",
   Statistics: "DS2100 Applied Statistics",
   "System Design": "SE3050 Systems Architecture",
+};
+
+// Course-catalog detail for the same codes above — description/credits/format, the way a
+// real university course listing reads. Kept as a separate map (not merged into
+// GAP_COURSES) so U2's Curriculum Gap Detector on the university side, which only ever
+// needs the bare code, is untouched by this candidate-facing content.
+export interface GapCourseDetail {
+  credits: number;
+  format: string;
+  description: string;
+  topics: string[];
+}
+export const GAP_COURSE_DETAILS: Record<string, GapCourseDetail> = {
+  "CS3040 Distributed Systems": {
+    credits: 4,
+    format: "Semester-long, lecture + lab",
+    description:
+      "Covers the principles behind systems that run across many machines: consistency models, replication, consensus (Raft/Paxos), and fault tolerance. Labs build a small distributed key-value store from scratch.",
+    topics: ["Consensus algorithms", "Replication", "CAP theorem", "Distributed storage", "Fault tolerance"],
+  },
+  "SE2010 Software Practice": {
+    credits: 3,
+    format: "Semester-long, project-based",
+    description:
+      "A hands-on course in professional software engineering practice: test-driven development, code review, CI pipelines, and refactoring — taught through building and iterating on a real team project.",
+    topics: ["Unit testing", "TDD workflow", "Code review", "CI/CD", "Refactoring"],
+  },
+  "DS2200 Analytics": {
+    credits: 3,
+    format: "Semester-long, lab-heavy",
+    description:
+      "Teaches how to turn raw data into a clear visual story: chart selection, dashboard design, and the common ways visualizations mislead. Final project builds a dashboard from a real dataset.",
+    topics: ["Chart selection", "Dashboard design", "Tableau", "Data storytelling"],
+  },
+  "DS2100 Applied Statistics": {
+    credits: 4,
+    format: "Semester-long, lecture + tutorial",
+    description:
+      "Core statistical inference for data-driven decisions: probability distributions, hypothesis testing, regression, and confidence intervals, applied throughout to real datasets rather than toy examples.",
+    topics: ["Hypothesis testing", "Regression", "Probability distributions", "Confidence intervals"],
+  },
+  "SE3050 Systems Architecture": {
+    credits: 4,
+    format: "Semester-long, lecture + design studio",
+    description:
+      "How to design software systems that scale: architectural patterns, trade-off analysis, scalability, and reliability engineering, worked through real system-design case studies.",
+    topics: ["Architectural patterns", "Scalability", "Trade-off analysis", "Reliability engineering"],
+  },
 };
 export function getSkillGaps(university: University): SkillGap[] {
   const myStudents = studentsOf(university);

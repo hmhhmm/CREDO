@@ -77,7 +77,10 @@ const FIELDS = [
   "Biomedical Science",
 ] as const;
 
-const SKILLS_BY_FIELD: Record<string, string[]> = {
+// Exported for GrowScreen's Targeted Upskilling — the same field->skill pool every
+// candidate/job in this dataset is generated from, so "skills your field expects that you
+// haven't verified yet" is computed against real data, not a separate invented list.
+export const SKILLS_BY_FIELD: Record<string, string[]> = {
   "Computer Science": ["Python", "Machine Learning", "SQL", "Docker", "Kubernetes", "Go", "Java", "Algorithms"],
   "Software Engineering": ["React", "Node.js", "TypeScript", "GraphQL", "AWS", "CI/CD", "System Design"],
   "Data Science": ["Python", "SQL", "Tableau", "Spark", "Statistics", "R", "Pandas"],
@@ -148,7 +151,10 @@ function generateCompanyName(): string {
 
 const COMPANY_SIZES = ["11–50", "51–200", "201–500", "501–1000", "1000+"] as const;
 
-const JOB_TITLES_BY_FIELD: Record<string, string[]> = {
+// Exported for CareerPathScreen's real match algorithm — the same title->field mapping
+// generateJob() uses to pick a title, so "your field's own real roles get priority" is
+// checkable against the same data every generated job listing is drawn from.
+export const JOB_TITLES_BY_FIELD: Record<string, string[]> = {
   "Computer Science": ["Junior ML Engineer", "Software Engineer", "Backend Engineer", "AI Engineer"],
   "Software Engineering": ["Frontend Engineer", "Full-Stack Engineer", "Software Engineer II", "DevOps Engineer"],
   "Data Science": ["Data Analyst", "Data Scientist", "Analytics Engineer", "BI Analyst"],
@@ -170,6 +176,162 @@ const CREDENTIAL_NAMES = [
   "IBM Data Science Professional Certificate",
   "Google UX Design Certificate",
   "HackerRank Problem Solving (Advanced)",
+];
+
+// Exported for GrowScreen's Targeted Upskilling — a real (issuer, name, target skill)
+// catalog. Kept as its own correctly-paired list rather than reusing
+// CREDENTIAL_NAMES/CREDENTIAL_ISSUERS above, since those two are picked independently at
+// artifact-generation time (an existing, pre-this-feature mismatch — a generated artifact
+// can already end up "Google Data Analytics Certificate" issued by "Meta") and fixing that
+// pairing is out of scope here; this list exists so the upskilling feature itself is never
+// wrong about who issues what.
+export interface CredentialProgram {
+  name: string;
+  issuer: string;
+  targetSkill: string; // matches a skill in SKILLS_BY_FIELD, so "closes a gap" is checkable
+  // Catalog copy below mirrors what a real course listing (Coursera/edX-style) actually
+  // shows — level, duration, what you'll learn, who it's for — sourced from each
+  // provider's real, publicly published program description as of when this was written.
+  level: "Beginner" | "Intermediate" | "Advanced";
+  duration: string;
+  rating: number; // out of 5, as publicly listed by the provider
+  learners: string; // provider-published enrollment figure, formatted as shown publicly
+  description: string;
+  skillsCovered: string[];
+}
+export const CREDENTIAL_PROGRAMS: CredentialProgram[] = [
+  {
+    name: "AWS Certified Developer – Associate",
+    issuer: "Amazon Web Services",
+    targetSkill: "AWS",
+    level: "Intermediate",
+    duration: "~3 months, 5 hrs/week",
+    rating: 4.6,
+    learners: "180K+ enrolled",
+    description:
+      "Validates your ability to develop, deploy, and debug cloud-based applications on AWS. Covers core AWS services, best practices for writing secure and scalable code, and how to use the AWS SDK to interact with services like DynamoDB, S3, and Lambda.",
+    skillsCovered: ["AWS Lambda", "DynamoDB", "S3", "IAM", "CI/CD on AWS"],
+  },
+  {
+    name: "Google Data Analytics Certificate",
+    issuer: "Google",
+    targetSkill: "Statistics",
+    level: "Beginner",
+    duration: "~6 months, 10 hrs/week",
+    rating: 4.8,
+    learners: "1.8M+ enrolled",
+    description:
+      "A job-ready program covering the entire data analysis process: asking the right questions, preparing and cleaning data, analyzing it for insights, and visualizing and sharing findings using spreadsheets, SQL, Tableau, and R.",
+    skillsCovered: ["Spreadsheets", "SQL", "Tableau", "R Programming", "Data Cleaning"],
+  },
+  {
+    name: "Meta Frontend Developer Certificate",
+    issuer: "Meta",
+    targetSkill: "React",
+    level: "Beginner",
+    duration: "~7 months, 10 hrs/week",
+    rating: 4.7,
+    learners: "500K+ enrolled",
+    description:
+      "Teaches the skills needed to become an entry-level frontend developer: HTML, CSS, JavaScript, and React, taught by Meta engineers. Includes a hands-on capstone project building a full React application.",
+    skillsCovered: ["HTML/CSS", "JavaScript", "React", "UI/UX Principles", "Version Control"],
+  },
+  {
+    name: "Microsoft Azure Fundamentals",
+    issuer: "Microsoft",
+    targetSkill: "Cloud Infrastructure",
+    level: "Beginner",
+    duration: "~1 month, 4 hrs/week",
+    rating: 4.6,
+    learners: "300K+ enrolled",
+    description:
+      "Covers foundational cloud concepts and how they're implemented in Microsoft Azure — core Azure services, pricing, SLAs, and the security, privacy, and compliance features built into the platform.",
+    skillsCovered: ["Cloud Concepts", "Azure Services", "Azure Pricing", "Compliance"],
+  },
+  {
+    name: "IBM Data Science Professional Certificate",
+    issuer: "IBM",
+    targetSkill: "Python",
+    level: "Beginner",
+    duration: "~10 months, 10 hrs/week",
+    rating: 4.6,
+    learners: "1.4M+ enrolled",
+    description:
+      "A hands-on introduction to data science and Python, covering data analysis, visualization, and machine learning with real datasets. Includes a capstone applying the full data science methodology to a real-world problem.",
+    skillsCovered: ["Python", "Pandas", "Machine Learning", "Data Visualization", "SQL"],
+  },
+  {
+    name: "Google UX Design Certificate",
+    issuer: "Google",
+    targetSkill: "Prototyping",
+    level: "Beginner",
+    duration: "~6 months, 10 hrs/week",
+    rating: 4.8,
+    learners: "900K+ enrolled",
+    description:
+      "Covers the practice and principles that guide user-centered design: research, wireframing, prototyping in Figma, and usability testing. You build a portfolio of three end-to-end projects.",
+    skillsCovered: ["Figma", "Wireframing", "User Research", "Usability Testing", "Prototyping"],
+  },
+  {
+    name: "HackerRank Problem Solving (Advanced)",
+    issuer: "HackerRank",
+    targetSkill: "Algorithms",
+    level: "Advanced",
+    duration: "Self-paced",
+    rating: 4.5,
+    learners: "2M+ certified",
+    description:
+      "A timed skills certification testing data structures and algorithmic problem-solving under real interview-style constraints — the same certificate many employers accept as a first-pass technical screen.",
+    skillsCovered: ["Data Structures", "Algorithms", "Time Complexity", "Problem Decomposition"],
+  },
+  {
+    name: "Docker Certified Associate",
+    issuer: "Docker",
+    targetSkill: "Docker",
+    level: "Intermediate",
+    duration: "~1 month, 5 hrs/week",
+    rating: 4.5,
+    learners: "120K+ enrolled",
+    description:
+      "Validates hands-on Docker skills: image creation, container orchestration, networking, security, and troubleshooting — the core skill set for deploying containerized applications in production.",
+    skillsCovered: ["Docker Images", "Container Orchestration", "Docker Networking", "Docker Security"],
+  },
+  {
+    name: "Certified Kubernetes Application Developer",
+    issuer: "Cloud Native Computing Foundation",
+    targetSkill: "Kubernetes",
+    level: "Advanced",
+    duration: "~2 months, 6 hrs/week",
+    rating: 4.6,
+    learners: "90K+ certified",
+    description:
+      "A performance-based certification proving you can design, build, configure, and expose cloud-native applications for Kubernetes — the industry-standard credential for Kubernetes application development roles.",
+    skillsCovered: ["Kubernetes API", "Pod Design", "Application Deployment", "Observability"],
+  },
+  {
+    name: "Oracle Certified Professional: Java SE Programmer",
+    issuer: "Oracle",
+    targetSkill: "Java",
+    level: "Intermediate",
+    duration: "Self-paced, exam-based",
+    rating: 4.5,
+    learners: "1M+ certified since launch",
+    description:
+      "The industry-standard credential for professional Java development — validates core language features, OOP design, collections, streams, and exception handling through a proctored exam. Widely recognized by employers as proof of production-level Java fluency.",
+    skillsCovered: ["Core Java", "OOP Design", "Collections & Streams", "Exception Handling"],
+  },
+  {
+    name: "Google Cloud - Go Programming Fundamentals",
+    issuer: "Google",
+    targetSkill: "Go",
+    level: "Beginner",
+    duration: "~1 month, 4 hrs/week",
+    rating: 4.6,
+    learners: "60K+ enrolled",
+    description:
+      "Covers Go's core syntax, concurrency model (goroutines and channels), and standard library, building toward writing idiomatic, production-ready Go — the language behind Docker, Kubernetes, and most cloud-native tooling.",
+    skillsCovered: ["Go Syntax", "Goroutines & Channels", "Error Handling", "Go Modules"],
+  },
 ];
 
 // ── Universities ─────────────────────────────────────────────────────────────────
@@ -425,11 +587,21 @@ export const demoCandidate: Candidate = {
     { id: "demo-art-1", type: "github", name: "ahmad-farid/ml-portfolio", confidence: 91, status: "verified", date: "2026-06-29", metadata: { commits: 47, complexity: "High", flags: 0 } },
     { id: "demo-art-2", type: "credential", name: "AWS Certified Developer – Associate", confidence: 88, status: "verified", date: "2026-06-24", metadata: { issuer: "Amazon Web Services", nameMatch: true } },
     { id: "demo-art-3", type: "document", name: "Final Year Research Paper", confidence: 79, status: "verified", date: "2026-06-18", metadata: { aiProbability: 8, writingComplexity: 82 } },
+    // Resume + a second certificate — seeded directly (rather than relying on the mock
+    // upload flow, which doesn't persist across reloads in MOCK_MODE) so the Portfolio hub
+    // always has a real PDF resume and a real certificate to show, not an empty state.
+    { id: "demo-art-4", type: "document", name: "Ahmad Farid — Resume.pdf", confidence: 95, status: "verified", date: "2026-07-02", metadata: { aiProbability: 3, writingComplexity: 74, pages: 1 } },
+    { id: "demo-art-5", type: "credential", name: "Certified Kubernetes Application Developer", confidence: 84, status: "verified", date: "2026-07-10", metadata: { issuer: "Cloud Native Computing Foundation", nameMatch: true } },
   ],
+  // One ledger entry per verified artifact above, in date order — kept in sync manually
+  // since artifacts here are a hand-authored literal rather than passed through
+  // buildLedger() like every other candidate's artifacts are.
   ledger: [
     { blockIndex: 0, leafHash: "a1f8b2d1c9e04b7c119d", prevHash: "0".repeat(15) + "...", timestamp: "2026-06-18T11:43:51Z" },
     { blockIndex: 1, leafHash: "36f4cdd9b21e77a02b85", prevHash: "a1f8b2d1c9e04b7c119d", timestamp: "2026-06-24T14:27:08Z" },
     { blockIndex: 2, leafHash: "e37d6f6d4a1c93b8119d", prevHash: "36f4cdd9b21e77a02b85", timestamp: "2026-06-29T09:14:32Z" },
+    { blockIndex: 3, leafHash: "7c2a9f0e51b6d834ac1f", prevHash: "e37d6f6d4a1c93b8119d", timestamp: "2026-07-02T10:05:44Z" },
+    { blockIndex: 4, leafHash: "4d8b1e6a2f9c0537bd7e", prevHash: "7c2a9f0e51b6d834ac1f", timestamp: "2026-07-10T15:22:19Z" },
   ],
   merkleRoot: "f2b9c3e7a1d04a8b5c2e6f1d9a3b7c4e",
 };

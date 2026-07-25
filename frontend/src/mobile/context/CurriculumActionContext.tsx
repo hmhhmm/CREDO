@@ -3,7 +3,8 @@
 // ACTIONS map in universityData.ts). That static map still surfaces as a starting
 // suggestion, but logging a real response here is what makes the loop demonstrably close.
 // Global, same pattern as SkillFeedbackContext — University has no backend session.
-import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, type ReactNode } from "react";
+import { usePersistentState } from "../utils/usePersistentState";
 
 export interface LoggedCurriculumAction {
   action: string;
@@ -22,7 +23,7 @@ function key(universityId: string, skill: string) {
 }
 
 export function CurriculumActionProvider({ children }: { children: ReactNode }) {
-  const [entries, setEntries] = useState<Record<string, LoggedCurriculumAction>>({});
+  const [entries, setEntries] = usePersistentState<Record<string, LoggedCurriculumAction>>("curriculum_actions", {});
 
   const actionFor = useCallback(
     (universityId: string, skill: string) => entries[key(universityId, skill)] ?? null,

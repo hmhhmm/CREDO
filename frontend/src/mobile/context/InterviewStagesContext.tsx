@@ -2,9 +2,10 @@
 // round names (Settings can add/rename/reorder/remove). Scoped per employer the same way
 // PipelineContext is: every employer's list lives in one store, seeded lazily from
 // DEFAULT_INTERVIEW_STAGES the first time that employer is seen logged in this session.
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, type ReactNode } from "react";
 import { DEFAULT_INTERVIEW_STAGES, type InterviewStageDef } from "../data/employerData";
 import { useAuth } from "./AuthContext";
+import { usePersistentState } from "../utils/usePersistentState";
 
 interface StageMutationResult {
   ok: boolean;
@@ -30,8 +31,8 @@ export function InterviewStagesProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const employerId = user?.role === "employer" ? user.id : null;
 
-  const [byEmployer, setByEmployer] = useState<Record<string, InterviewStageDef[]>>({});
-  const seededEmployerIds = useRef<Set<string>>(new Set());
+  const [byEmployer, setByEmployer] = usePersistentState<Record<string, InterviewStageDef[]>>("interview_stages", {});
+  const seededEmployerIds = useRef<Set<string>>(new Set(Object.keys(byEmployer)));
 
   useEffect(() => {
     if (!employerId || seededEmployerIds.current.has(employerId)) return;

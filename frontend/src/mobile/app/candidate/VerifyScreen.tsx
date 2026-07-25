@@ -509,8 +509,8 @@ export default function VerifyScreen({ navigation }: { navigation: NonNullable<P
       <SafeAreaView style={styles.container} edges={["top"]}>
         <ScrollView contentContainerStyle={{ padding: 20, gap: 18, paddingBottom: 110 }} showsVerticalScrollIndicator={false}>
           <View>
-            <Text style={styles.heading}>Verify & Build Proof</Text>
-            <Text style={styles.subheading}>Every verified artifact directly increases your ASKC Trust Score.</Text>
+            <Text style={styles.heading}>Portfolio</Text>
+            <Text style={styles.subheading}>Your personal record of verified skills, documents, and credentials.</Text>
           </View>
 
           {loading ? (

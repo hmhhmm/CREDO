@@ -15,6 +15,7 @@ import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import type { LucideIcon } from "lucide-react-native";
 import { colors } from "../theme/colors";
 import { fonts } from "../theme/typography";
+import { useTabBarVisibility } from "../context/TabBarVisibilityContext";
 
 export const DESKTOP_MIN_WIDTH = 900;
 export const RAIL_WIDTH = 232;
@@ -41,6 +42,7 @@ export default function SegmentedTabBar({
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const desktop = width >= DESKTOP_MIN_WIDTH;
+  const { hidden } = useTabBarVisibility();
   const bottom = insets.bottom > 0 ? insets.bottom + 4 : 18;
   const first = Object.values(icons)[0];
   const location = useLocation();
@@ -60,6 +62,8 @@ export default function SegmentedTabBar({
     };
     return { key: route.key, name: route.name, focused, Icon, label, onPress };
   });
+
+  if (hidden) return null;
 
   const centerIndex = centerRoute ? tabs.findIndex((t) => t.name === centerRoute) : -1;
   const center = centerIndex >= 0 ? tabs[centerIndex] : null;

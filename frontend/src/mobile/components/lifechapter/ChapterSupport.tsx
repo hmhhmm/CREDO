@@ -2,25 +2,29 @@
 //
 // When someone is on a break, the persistent Coach should step back on their terms: pick a
 // check-in cadence, and keep-warm is strictly opt-in with an easy off switch. Rest is valid.
-import { useState } from "react";
+// Persisted per-candidate through LifeChapterContext so this setting survives a reload.
 import { View, Text, Pressable, Switch, StyleSheet } from "react-native";
 import { Moon, Bell } from "lucide-react-native";
 import GlassCard from "../shared/GlassCard";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
+import { useAuth } from "../../context/AuthContext";
+import { useLifeChapters, type CheckInCadence } from "../../context/LifeChapterContext";
 
-type Cadence = "quiet" | "monthly" | "active";
-
-const CADENCES: { key: Cadence; label: string; blurb: string }[] = [
+const CADENCES: { key: CheckInCadence; label: string; blurb: string }[] = [
   { key: "quiet", label: "Go quiet", blurb: "No nudges. The Coach waits until you come back." },
   { key: "monthly", label: "Monthly", blurb: "One gentle check-in a month — nothing more." },
   { key: "active", label: "Active", blurb: "Normal cadence — you'd rather stay in the loop." },
 ];
 
 export default function ChapterSupport() {
-  const [onBreak, setOnBreak] = useState(false);
-  const [cadence, setCadence] = useState<Cadence>("monthly");
-  const [keepWarm, setKeepWarm] = useState(false);
+  const { user } = useAuth();
+  const { supportFor, updateSupport } = useLifeChapters();
+  const settings = user ? supportFor(user.id) : { onBreak: false, cadence: "monthly" as CheckInCadence, keepWarm: false };
+
+  const set = (patch: Partial<typeof settings>) => {
+    if (user) updateSupport(user.id, patch);
+  };
 
   return (
     <GlassCard radius={18}>
@@ -28,15 +32,15 @@ export default function ChapterSupport() {
         <View style={styles.head}>
           <Moon size={15} color={colors.ink} />
           <Text style={styles.title}>On a chapter right now?</Text>
-          <Switch value={onBreak} onValueChange={setOnBreak} />
+          <Switch value={settings.onBreak} onValueChange={(v) => set({ onBreak: v })} />
         </View>
         <Text style={styles.sub}>
-          {onBreak
+          {settings.onBreak
             ? "Coach paused on your terms. Enjoy the time — everything's here when you're ready."
             : "Flip this when you step out and the Coach adjusts to your pace."}
         </Text>
 
-        {onBreak && (
+        {settings.onBreak && (
           <>
             <View style={styles.cadenceHead}>
               <Bell size={13} color={colors.slate} />
@@ -44,9 +48,9 @@ export default function ChapterSupport() {
             </View>
             <View style={styles.cadenceList}>
               {CADENCES.map((c) => {
-                const on = c.key === cadence;
+                const on = c.key === settings.cadence;
                 return (
-                  <Pressable key={c.key} style={[styles.cadenceRow, on && styles.cadenceRowOn]} onPress={() => setCadence(c.key)}>
+                  <Pressable key={c.key} style={[styles.cadenceRow, on && styles.cadenceRowOn]} onPress={() => set({ cadence: c.key })}>
                     <View style={[styles.radio, on && styles.radioOn]} />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.cadenceName}>{c.label}</Text>
@@ -62,7 +66,7 @@ export default function ChapterSupport() {
                 <Text style={styles.warmTitle}>Keep-warm mode</Text>
                 <Text style={styles.warmSub}>Optional, low-pressure skill touches. Rest is valid — switch off anytime.</Text>
               </View>
-              <Switch value={keepWarm} onValueChange={setKeepWarm} />
+              <Switch value={settings.keepWarm} onValueChange={(v) => set({ keepWarm: v })} />
             </View>
           </>
         )}

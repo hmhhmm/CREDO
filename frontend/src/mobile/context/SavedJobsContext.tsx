@@ -2,7 +2,8 @@
 // as CredentialIssuerContext (a plain Set, global for the session): scoped by candidateId
 // inside the key so switching which candidate is logged in doesn't leak one person's saves
 // into another's view, without needing a per-candidate backend table that doesn't exist yet.
-import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, type ReactNode } from "react";
+import { usePersistentState, setSerializer } from "../utils/usePersistentState";
 
 interface SavedJobsContextValue {
   isSaved: (candidateId: string, jobId: string) => boolean;
@@ -17,7 +18,7 @@ function key(candidateId: string, jobId: string) {
 }
 
 export function SavedJobsProvider({ children }: { children: ReactNode }) {
-  const [saved, setSaved] = useState<Set<string>>(new Set());
+  const [saved, setSaved] = usePersistentState<Set<string>, string[]>("saved_jobs", new Set(), setSerializer());
 
   const isSaved = useCallback((candidateId: string, jobId: string) => saved.has(key(candidateId, jobId)), [saved]);
 

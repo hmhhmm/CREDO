@@ -29,14 +29,13 @@ type Tab = "matched" | "popular";
 
 export default function JobMatchesScreen({ route }: Props) {
   const { user } = useAuth();
-  const { applyToJob } = usePipeline();
+  const { applyToJob, isInPipelineFor } = usePipeline();
   const { isSaved, toggleSaved } = useSavedJobs();
   const [tab, setTab] = useState<Tab>(route.params?.initialTab ?? "matched");
   const [jobs, setJobs] = useState<JobFeedListing[]>([]);
   const [skills, setSkills] = useState<SkillEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     if (!user) return;
@@ -69,10 +68,19 @@ export default function JobMatchesScreen({ route }: Props) {
       if (!user) return;
       const candidate = allCandidates.find((c) => c.id === user.id);
       if (!candidate) return;
-      const created = applyToJob(candidate, job.employer_id, job.title);
-      if (created) setAppliedIds((prev) => new Set(prev).add(job.id));
+      applyToJob(candidate, job.employer_id, job.title);
     },
     [user, applyToJob]
+  );
+
+  // Real applied state, not a screen-local click flag — reads the same persisted pipeline
+  // store Application Status and the employer's Pipeline both read/write, so "Applied"
+  // survives a reload and reflects an application made from anywhere, not just this screen.
+  // applyToJob dedupes per employer (one application per employer, not per job posting), so
+  // a job reads as applied whenever the candidate has any pipeline entry with that employer.
+  const hasApplied = useCallback(
+    (job: JobFeedListing) => (user ? isInPipelineFor(job.employer_id, user.id) : false),
+    [user, isInPipelineFor]
   );
 
   return (
@@ -102,7 +110,7 @@ export default function JobMatchesScreen({ route }: Props) {
                     key={m.job.id}
                     match={m}
                     saved={user ? isSaved(user.id, m.job.id) : false}
-                    applied={appliedIds.has(m.job.id)}
+                    applied={hasApplied(m.job)}
                     onToggleSave={() => user && toggleSaved(user.id, m.job.id)}
                     onApply={() => handleApply(m.job)}
                   />
@@ -116,7 +124,7 @@ export default function JobMatchesScreen({ route }: Props) {
                   key={m.job.id}
                   match={m}
                   saved={user ? isSaved(user.id, m.job.id) : false}
-                  applied={appliedIds.has(m.job.id)}
+                  applied={hasApplied(m.job)}
                   onToggleSave={() => user && toggleSaved(user.id, m.job.id)}
                   onApply={() => handleApply(m.job)}
                 />

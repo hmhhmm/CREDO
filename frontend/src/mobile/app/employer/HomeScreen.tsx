@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { View, Text, ScrollView, Pressable, ActivityIndicator, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { AlertTriangle, Clock, TrendingUp, Briefcase, MapPin, Check, CalendarClock, Settings } from "lucide-react-native";
+import { AlertTriangle, Clock, TrendingUp, Briefcase, MapPin, Check, CalendarClock, Settings, ArrowRight } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
@@ -212,6 +212,10 @@ export default function EmployerHomeScreen({ navigation }: Props) {
                             )}
                           </View>
                         )}
+
+                        <View style={styles.jobPreviewArrow}>
+                          <ArrowRight size={14} color={colors.ink} />
+                        </View>
                       </View>
                     </GlassCard>
                   </Pressable>
@@ -306,6 +310,15 @@ const styles = StyleSheet.create({
   statusText: { fontFamily: fonts.mono, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.5 },
   skillChip: { flexDirection: "row", alignItems: "center", gap: 4, borderRadius: 100, paddingVertical: 3, paddingHorizontal: 9 },
   skillText: { fontFamily: fonts.mono, fontSize: 10, color: colors.slate },
+  jobPreviewArrow: {
+    alignSelf: "flex-end",
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "rgba(16,25,43,0.06)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
   signalCard: { padding: 18, gap: 6 },
   signalHead: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },

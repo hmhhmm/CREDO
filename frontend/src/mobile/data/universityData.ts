@@ -214,6 +214,37 @@ export function getSkillGapDetail(university: University, skill: string) {
   return { gap, action, cohort, affectedStudents };
 }
 
+// ── ASKC pillar breakdown, cohort-level ─────────────────────────────────────────
+// Same real signals candidate-facing HomeScreen's askcBreakdown.ts derives per-person
+// (SimuHire overall score for Attitude, verified GitHub-artifact confidence for Skills,
+// verified credential+document confidence for Knowledge), averaged here across a cohort
+// instead of one candidate — not a separately invented cohort-level figure. A pillar with
+// no verified signal anywhere in the cohort reads as null ("—"), never a fabricated 0.
+export interface AskcCohortBreakdown {
+  attitude: number | null;
+  skills: number | null;
+  knowledge: number | null;
+}
+function avgOrNull(values: number[]): number | null {
+  return values.length ? Math.round(values.reduce((s, v) => s + v, 0) / values.length) : null;
+}
+export function getAskcBreakdown(students: ReturnType<typeof studentsOf>): AskcCohortBreakdown {
+  const attitude = avgOrNull(
+    students.filter((c) => c.simuHire.completed && c.simuHire.overallScore != null).map((c) => c.simuHire.overallScore!)
+  );
+  const skillConfidences = students.flatMap((c) =>
+    c.artifacts.filter((a) => a.type === "github" && a.status === "verified").map((a) => a.confidence)
+  );
+  const knowledgeConfidences = students.flatMap((c) =>
+    c.artifacts.filter((a) => (a.type === "credential" || a.type === "document") && a.status === "verified").map((a) => a.confidence)
+  );
+  return {
+    attitude,
+    skills: avgOrNull(skillConfidences),
+    knowledge: avgOrNull(knowledgeConfidences),
+  };
+}
+
 // ── U7 Adaptive Readiness + U5 Credential Issuer: per-programme cohorts ──────────
 export interface Cohort {
   programme: string;
@@ -221,6 +252,7 @@ export interface Cohort {
   readiness: number;
   students: number;
   verifiedPct: number; // % with at least one verified artifact
+  askc: AskcCohortBreakdown;
   // U5: whether this programme HAS a verified credential artifact the university could
   // issue — a capability, not an action taken. Whether the university actually issued one
   // lives in CredentialIssuerContext (see getEligibleCredentials below), not here.
@@ -241,6 +273,7 @@ export function getCohorts(university: University): Cohort[] {
       readiness,
       students: students.length,
       verifiedPct,
+      askc: getAskcBreakdown(students),
       eligibleForIssuance: students.some((c) => c.artifacts.some((a) => a.type === "credential" && a.status === "verified")),
     };
   });
@@ -254,7 +287,18 @@ export function getEligibleCredentials(university: University, programme: string
   const subject = programme.replace(/^BSc\s*/, "");
   return studentsOf(university)
     .filter((c) => c.field === subject)
-    .flatMap((c) => c.artifacts.filter((a) => a.type === "credential").map((a) => ({ candidate: c.name, artifact: a })));
+    .flatMap((c) =>
+      c.artifacts.filter((a) => a.type === "credential").map((a) => ({ candidateId: c.id, candidate: c.name, artifact: a }))
+    );
+}
+
+// U5 — every eligible credential across every programme at this university, regardless of
+// field. Used by Partners' co-sign badge (any candidate, not just one programme's roster)
+// and by the Cohorts header's batch-issue action.
+export function getAllEligibleCredentials(university: University) {
+  return studentsOf(university).flatMap((c) =>
+    c.artifacts.filter((a) => a.type === "credential" && a.status === "verified").map((a) => ({ candidateId: c.id, candidate: c.name, artifact: a }))
+  );
 }
 
 export function getCohortDetail(university: University, programme: string) {
@@ -352,6 +396,35 @@ export function getAlumniCheckins(university: University, hires: PipelineEntry[]
   ];
 }
 
+export interface MajorHireBreakdown {
+  major: string;
+  hires: { name: string; employer: string; trustScore: number; hiredOn: string | null }[];
+}
+// Real per-hire detail grouped by major/field — what the "expand for a breakdown by major"
+// ask actually has real data for. No salary or retention figures: PipelineEntry has no
+// jobId to join back to a real Job.salaryMin/salaryMax, and there is no tenure/retention
+// tracking anywhere in this dataset, so neither is fabricated here.
+export function getHiresByMajor(university: University, hires: PipelineEntry[]): MajorHireBreakdown[] {
+  const { hired } = hiredGrads(university, hires);
+  const hiredIds = new Set(hired.map((c) => c.id));
+  const byMajor = new Map<string, MajorHireBreakdown["hires"]>();
+  for (const h of hires) {
+    if (!hiredIds.has(h.candidateId)) continue;
+    const employer = allEmployers.find((e) => e.id === h.employerId);
+    const list = byMajor.get(h.field) ?? [];
+    list.push({
+      name: h.name,
+      employer: employer?.name ?? "an employer",
+      trustScore: h.trustScore,
+      hiredOn: h.decisionAt ? new Date(h.decisionAt).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : null,
+    });
+    byMajor.set(h.field, list);
+  }
+  return Array.from(byMajor.entries())
+    .map(([major, hiresList]) => ({ major, hires: hiresList }))
+    .sort((a, b) => b.hires.length - a.hires.length);
+}
+
 // U10 detail: the real accepted-hire records behind a check-in window, not illustrative
 // copy — each line names the actual employer and role from the real PipelineEntry.
 export function getAlumniDetail(university: University, window: string, hires: PipelineEntry[]) {
@@ -387,7 +460,23 @@ export interface InternshipMatch {
   employer: string;
   role: string;
   matchPct: number;
+  // Real intersection between this specific job's requiredSkills and the candidate's own
+  // verifiedSkills — the actual skills driving this match, not a generic "strong candidate"
+  // claim. Claimed-but-not-verified overlaps are tracked separately since they're a weaker
+  // signal and shouldn't read the same as a verified one.
+  matchedVerifiedSkills: string[];
+  matchedClaimedSkills: string[];
 }
+function matchedSkillsFor(candidate: ReturnType<typeof studentsOf>[number], job: (typeof allJobs)[number]) {
+  const required = job.requiredSkills.map((s) => s.name);
+  const verifiedNames = new Set(candidate.verifiedSkills.filter((s) => s.verified).map((s) => s.name.toLowerCase()));
+  const claimedNames = new Set(candidate.claimedSkills.map((s) => s.toLowerCase()));
+  const matchedVerifiedSkills = required.filter((s) => verifiedNames.has(s.toLowerCase()));
+  const matchedVerifiedLower = new Set(matchedVerifiedSkills.map((s) => s.toLowerCase()));
+  const matchedClaimedSkills = required.filter((s) => claimedNames.has(s.toLowerCase()) && !matchedVerifiedLower.has(s.toLowerCase()));
+  return { matchedVerifiedSkills, matchedClaimedSkills };
+}
+
 // Matches this university's strongest open-to-work students against real open jobs whose
 // field lines up — a genuine (if simplified) match, not 3 invented pairings.
 export function getInternshipMatches(university: University): InternshipMatch[] {
@@ -400,6 +489,7 @@ export function getInternshipMatches(university: University): InternshipMatch[] 
   return candidatesForMatching.map((c, i) => {
     const job = openJobs.find((j) => j.title.toLowerCase().includes(c.field.split(" ")[0].toLowerCase())) ?? openJobs[i % openJobs.length];
     const employer = allEmployers.find((e) => e.id === job.employerId)!;
+    const { matchedVerifiedSkills, matchedClaimedSkills } = matchedSkillsFor(c, job);
     return {
       id: `m${i + 1}`,
       candidateId: c.id,
@@ -410,6 +500,8 @@ export function getInternshipMatches(university: University): InternshipMatch[] 
       employer: employer.name,
       role: job.title,
       matchPct: Math.min(97, 70 + Math.round(c.trustScore * 0.3)),
+      matchedVerifiedSkills,
+      matchedClaimedSkills,
     };
   });
 }

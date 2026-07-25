@@ -343,6 +343,10 @@ export default function PipelineScreen({ navigation }: Props) {
                     {/* E9 Interview Invitation — orthogonal to the stage action above; a
                         candidate can be e.g. "Shortlisted" and mid-way through the round
                         sequence at once. Round names come from Settings, not a fixed enum. */}
+                    {/* Once an employer has made a final call (accepted/rejected), the
+                        interview process is over — status label and actions both disappear,
+                        the decision badge below is the only thing left to show. */}
+                    {!e.decision && (
                     <View style={styles.interviewBlock}>
                       <View style={styles.interviewHead}>
                         <View style={[styles.interviewDot, { backgroundColor: interviewColor }]} />
@@ -412,6 +416,7 @@ export default function PipelineScreen({ navigation }: Props) {
                         )
                       )}
                     </View>
+                    )}
 
                     {/* E-Decision — offered once a candidate is actually in the interview
                         process (any round, not only after the last one), right here on the

@@ -111,7 +111,7 @@ export interface DiscoverCandidate extends Candidate {
   trajectory: string;
 }
 
-function formatMonthYear(isoDate: string): string {
+export function formatMonthYear(isoDate: string): string {
   const d = new Date(isoDate);
   return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 }
@@ -404,20 +404,38 @@ export const STAGE_META: Record<PipelineStage, { label: string; color: string }>
 };
 
 // ── E8 Hire Intelligence Dashboard ───────────────────────────────────────────────
-// Pure local demo data — no backend. Tells one story: hires sourced through verified
-// profiles keep outperforming keyword-matched hires, and the gap is widening quarter
-// over quarter, not a one-off.
-export interface QuarterPerformance {
+// Real, not mock: there is no post-hire performance signal anywhere in the data model
+// (nothing tracks how a hire performs after joining), so this is grounded in the one real
+// signal that does exist — trust score at the moment of hire — rather than a fabricated
+// "90-day review score."
+export interface QuarterTrust {
   quarter: string;
-  verifiedAvg: number; // avg 90-day review score, hires sourced via verified profile
-  keywordAvg: number; // avg 90-day review score, keyword-matched hires
+  avgTrustScore: number;
+  hireCount: number;
 }
-export const performanceByQuarter: QuarterPerformance[] = [
-  { quarter: "Q3 '25", verifiedAvg: 74, keywordAvg: 68 },
-  { quarter: "Q4 '25", verifiedAvg: 79, keywordAvg: 66 },
-  { quarter: "Q1 '26", verifiedAvg: 83, keywordAvg: 65 },
-  { quarter: "Q2 '26", verifiedAvg: 86, keywordAvg: 64 },
-];
+
+function quarterLabel(isoDate: string): string {
+  const d = new Date(isoDate);
+  return `Q${Math.floor(d.getMonth() / 3) + 1} '${String(d.getFullYear()).slice(-2)}`;
+}
+
+// Buckets real accepted hires by the calendar quarter they were hired in, oldest first —
+// the chart and headline both read directly off this, so neither can drift from real data.
+export function trustByQuarter(hires: HireRecord[]): QuarterTrust[] {
+  const byQuarter = new Map<string, { sum: number; count: number; sortKey: string }>();
+  for (const h of hires) {
+    const label = quarterLabel(h.hiredOn);
+    const d = new Date(h.hiredOn);
+    const sortKey = `${d.getFullYear()}-${Math.floor(d.getMonth() / 3)}`;
+    const bucket = byQuarter.get(label) ?? { sum: 0, count: 0, sortKey };
+    bucket.sum += h.trustScoreAtHire;
+    bucket.count += 1;
+    byQuarter.set(label, bucket);
+  }
+  return Array.from(byQuarter.entries())
+    .sort((a, b) => a[1].sortKey.localeCompare(b[1].sortKey))
+    .map(([quarter, { sum, count }]) => ({ quarter, avgTrustScore: Math.round(sum / count), hireCount: count }));
+}
 
 export interface HireRecord {
   id: string;
@@ -425,23 +443,46 @@ export interface HireRecord {
   name: string;
   role: string;
   trustScoreAtHire: number;
-  reviewScore: number; // 90-day review score
-  hiredOn: string;
+  hiredOn: string; // ISO — HireIntelligenceScreen formats it for display
 }
-// Ids must exist in the generated dataset (see generateDataset.ts) — these three are
-// real, strong, SimuHire-completed candidates picked from allCandidates, not placeholders.
-export const recentHires: HireRecord[] = [
-  { id: "h1", candidateId: "khalid-aziz-86", name: "Khalid Aziz", role: "Research Associate", trustScoreAtHire: 83, reviewScore: 91, hiredOn: "Jun 2026" },
-  { id: "h2", candidateId: "liyana-ng-10", name: "Liyana Ng", role: "Financial Analyst", trustScoreAtHire: 83, reviewScore: 87, hiredOn: "May 2026" },
-  { id: "h3", candidateId: "ravi-rashid-81", name: "Ravi Rashid", role: "Data Analyst", trustScoreAtHire: 82, reviewScore: 85, hiredOn: "Apr 2026" },
-];
 
-export const hireIntelligence = {
-  // No separate upliftPercent constant — it's derived in HireIntelligenceScreen from the
-  // latest entry in performanceByQuarter so the headline number can never drift from the
-  // chart directly beneath it.
-  verifiedShareThisQuarter: 71, // % of this quarter's hires sourced via verified profile
-  totalHiredThisQuarter: 7,
-  performanceByQuarter,
-  recentHires,
-};
+// Real, not mock: derives the actual list of a given employer's accepted PipelineContext
+// entries, most recent first. There is no post-hire performance signal anywhere in the data
+// model (nothing tracks how a hire performs after joining), so unlike performanceByQuarter/
+// verifiedShareThisQuarter above — which stay illustrative demo data — this only surfaces
+// what's actually real: who was hired, when, and how verified they were at the time.
+export function hiresFromPipeline(pipeline: PipelineEntry[]): HireRecord[] {
+  return pipeline
+    .filter((p): p is PipelineEntry & { decisionAt: string } => p.decision === "accepted" && !!p.decisionAt)
+    .sort((a, b) => b.decisionAt.localeCompare(a.decisionAt))
+    .map((p) => ({
+      id: p.id,
+      candidateId: p.candidateId,
+      name: p.name,
+      role: p.field,
+      trustScoreAtHire: p.trustScore,
+      hiredOn: p.decisionAt,
+    }));
+}
+
+// Real: the subset of hiresFromPipeline's entries that fall in the current calendar quarter.
+export function hiresThisQuarter(hires: HireRecord[]): HireRecord[] {
+  const now = new Date();
+  const currentQuarter = Math.floor(now.getMonth() / 3);
+  return hires.filter((h) => {
+    const d = new Date(h.hiredOn);
+    return d.getFullYear() === now.getFullYear() && Math.floor(d.getMonth() / 3) === currentQuarter;
+  });
+}
+
+// Real: % of a set of hires that were "verified" at the point of hire — trustScore >= 80,
+// the same "Highly Authentic" threshold confidenceBand.ts uses everywhere else in the app.
+// Every hire in hiresFromPipeline already came through a verified CREDO profile (there's no
+// keyword-only sourcing path in this app), so this reads as "how many were highly verified"
+// rather than "verified vs unverified sourcing."
+export function verifiedShareOf(hires: HireRecord[]): number {
+  if (hires.length === 0) return 0;
+  const verified = hires.filter((h) => h.trustScoreAtHire >= 80).length;
+  return Math.round((verified / hires.length) * 100);
+}
+

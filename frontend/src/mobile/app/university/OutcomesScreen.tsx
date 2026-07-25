@@ -4,6 +4,7 @@ import { Wallet, MessageCircle, ChevronRight } from "lucide-react-native";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import { getOutcomeStats, getAlumniCheckins, getLifelongWallet, type University } from "../../data/universityData";
+import { usePipeline } from "../../context/PipelineContext";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -12,8 +13,10 @@ import type { OutcomesStackParamList } from "../../navigation/OutcomesStack";
 type Props = NativeStackScreenProps<OutcomesStackParamList, "OutcomesMain"> & { university: University };
 
 export default function OutcomesScreen({ university, navigation }: Props) {
-  const outcomeStats = getOutcomeStats(university);
-  const alumniCheckins = getAlumniCheckins(university);
+  const { allAcceptedHires } = usePipeline();
+  const hires = allAcceptedHires();
+  const outcomeStats = getOutcomeStats(university, hires);
+  const alumniCheckins = getAlumniCheckins(university, hires);
   const lifelongWallet = getLifelongWallet(university);
   return (
     <View style={{ flex: 1 }}>
@@ -51,7 +54,8 @@ export default function OutcomesScreen({ university, navigation }: Props) {
             </View>
           </GlassCard>
 
-          {/* U10 — Alumni Career Pulse */}
+          {/* U10 — Alumni Career Pulse: real accepted hires across every employer, not a
+              survey response count. */}
           <Text style={styles.sectionLabel}>Alumni Career Pulse</Text>
           <GlassCard radius={18}>
             <View style={styles.checkinList}>
@@ -66,8 +70,8 @@ export default function OutcomesScreen({ university, navigation }: Props) {
                   </View>
                   <View style={{ flex: 1 }}>
                     <View style={styles.checkinHead}>
-                      <Text style={styles.checkinWindow}>{a.window} check-in</Text>
-                      <Text style={styles.checkinResp}>{a.responded} responses</Text>
+                      <Text style={styles.checkinWindow}>{a.window}</Text>
+                      <Text style={styles.checkinResp}>{a.responded} hired</Text>
                     </View>
                     <Text style={styles.checkinNote}>{a.note}</Text>
                   </View>

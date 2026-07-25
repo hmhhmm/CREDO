@@ -31,6 +31,12 @@ interface PipelineContextValue {
   // this reads from, so a candidate's Application Status is live employer state, not mock
   // preview content.
   pipelineForCandidate: (candidateId: string) => PipelineEntry[];
+  // Cross-employer query for University (U9 Outcome Loop / Hire Intelligence's own
+  // downstream reader) — every accepted decision across every employer, not just the one
+  // currently logged in. Real employer accept actions land here the same way they land in
+  // that employer's own Hire Intelligence screen; University aggregates the same events,
+  // it doesn't get a separately invented hire count.
+  allAcceptedHires: () => PipelineEntry[];
   // Candidate-initiated — "Apply with Smart Namecard" on a job card. employerId is passed
   // explicitly (unlike inviteToInterview, which reads it from the acting employer's own
   // session) because the actor here is the candidate, not an employer. Returns false if an
@@ -99,6 +105,11 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
 
   const pipelineForCandidate = useCallback(
     (candidateId: string) => allEntries.filter((p) => p.candidateId === candidateId),
+    [allEntries]
+  );
+
+  const allAcceptedHires = useCallback(
+    () => allEntries.filter((p) => p.decision === "accepted"),
     [allEntries]
   );
 
@@ -214,6 +225,7 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
         addToPipeline,
         isInPipelineFor,
         pipelineForCandidate,
+        allAcceptedHires,
         applyToJob,
         markViewed,
         reEngage,

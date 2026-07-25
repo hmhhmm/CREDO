@@ -6,7 +6,8 @@
 // UniversityAuthGate/resolveUniversityByEmail) rather than a fixed module-level export —
 // so a real seeded login (e.g. a Taylor's University Career Services account) shows that
 // university's own cohort, not always Universiti Malaya's.
-import { allCandidates, allEmployers, allJobs, demoUniversity, universities, type University } from "./generateDataset";
+import { allCandidates, allEmployers, allJobs, demoUniversity, universities, JOB_TITLES_BY_FIELD, type University } from "./generateDataset";
+import type { PipelineEntry } from "./employerData";
 
 export type { University };
 
@@ -66,10 +67,17 @@ export function getBenchmarkDetail(university: University, dimensionName: string
 }
 
 // ── U2 Curriculum Gap Detector: skills failing verification ─────────────────────
+// Bridge C, the direction the charter names explicitly: "employers can publish anonymised
+// skill-demand signals back to Curriculum Gap Detector (U2)." The candidate skill set U2
+// checks is no longer a hand-picked 5-skill list — it's real `requiredSkills` aggregated
+// from every open job posting across this university's own fields (allJobs, the same
+// listings Job Matches/Discover/Career Path all read), ranked by how often employers are
+// actually asking for each one right now.
 export interface SkillGap {
   skill: string;
   taughtIn: string;
   verifyRate: number; // % of students whose claim in this skill actually verifies
+  demandCount: number; // real open listings in this university's fields requiring this skill
 }
 // Exported for GrowScreen's Targeted Upskilling — the same skill->course map U2's
 // Curriculum Gap Detector already uses on the university side, so a candidate-facing
@@ -129,8 +137,24 @@ export const GAP_COURSE_DETAILS: Record<string, GapCourseDetail> = {
     topics: ["Architectural patterns", "Scalability", "Trade-off analysis", "Reliability engineering"],
   },
 };
+// Real employer demand for a skill, restricted to this university's own fields (job title
+// resolved to a field via JOB_TITLES_BY_FIELD, the same reverse-lookup Career Path
+// Navigator uses) — a count of currently-open listings asking for it, not an invented figure.
+function skillDemandInFields(fields: string[]): Map<string, number> {
+  const fieldTitles = new Set(fields.flatMap((f) => JOB_TITLES_BY_FIELD[f] ?? []));
+  const demand = new Map<string, number>();
+  for (const job of allJobs) {
+    if (job.status !== "open" || !fieldTitles.has(job.title)) continue;
+    for (const rs of job.requiredSkills) demand.set(rs.name, (demand.get(rs.name) ?? 0) + 1);
+  }
+  return demand;
+}
+
 export function getSkillGaps(university: University): SkillGap[] {
   const myStudents = studentsOf(university);
+  const fieldsHere = Array.from(new Set(myStudents.map((c) => c.field)));
+  const demand = skillDemandInFields(fieldsHere);
+
   // A candidate "claims" a skill by listing it in claimedSkills OR verifiedSkills; the
   // gap is how often a claim on that skill actually lands as verified across this cohort.
   const verifyRateFor = (skill: string) => {
@@ -139,11 +163,19 @@ export function getSkillGaps(university: University): SkillGap[] {
     const verified = claimants.filter((c) => c.verifiedSkills.some((v) => v.name === skill)).length;
     return Math.round((verified / claimants.length) * 100);
   };
-  return Object.entries(GAP_COURSES)
-    .map(([skill, taughtIn]) => ({ skill, taughtIn, verifyRate: verifyRateFor(skill) }))
-    .filter((g) => g.verifyRate > 0)
-    .sort((a, b) => a.verifyRate - b.verifyRate)
-    .slice(0, 3);
+
+  return Array.from(demand.entries())
+    .map(([skill, demandCount]) => ({
+      skill,
+      taughtIn: GAP_COURSES[skill] ?? "Not yet mapped to a course",
+      verifyRate: verifyRateFor(skill),
+      demandCount,
+    }))
+    .filter((g) => g.demandCount > 0)
+    // Skills employers actually want, ranked by how poorly this cohort currently verifies
+    // them, ties broken by real demand — the two axes the charter's Bridge C is about.
+    .sort((a, b) => a.verifyRate - b.verifyRate || b.demandCount - a.demandCount)
+    .slice(0, 5);
 }
 
 // ── U9 Outcome Loop (curriculum half): the action taken in response to each gap
@@ -268,6 +300,13 @@ export function getInterventionAlert(cohorts: Cohort[], skillGaps: SkillGap[]): 
 }
 
 // ── U9 Outcome Loop + U10 Alumni Pulse: post-grad tracking ──────────────────────
+// Bridge C, the direction the charter names explicitly: "hire outcomes... flow to Outcome
+// Loop Tracker (U9)." `hires` is every accepted PipelineEntry across every employer
+// (PipelineContext.allAcceptedHires()) — the exact same events Employer's own Hire
+// Intelligence screen reads — joined back to this university's own students via
+// candidateId. A student who hasn't been hired anywhere yet in this session correctly
+// shows as not-yet-placed; there is no synthesized retention/field-match figure standing
+// in for data this dataset doesn't actually have.
 export interface OutcomeStat {
   label: string;
   value: string;
@@ -279,44 +318,52 @@ export interface AlumniCheckin {
   note: string;
 }
 const GRAD_YEARS = new Set(["2024", "2025"]);
-export function getOutcomeStats(university: University): OutcomeStat[] {
+
+function hiredGrads(university: University, hires: PipelineEntry[]) {
   const grads = studentsOf(university).filter((c) => GRAD_YEARS.has(c.year));
-  const placedPct = grads.length ? Math.round((grads.filter((c) => !c.openToWork).length / grads.length) * 100) : 0;
-  return [
-    { label: "Placed in 6mo", value: `${placedPct}%`, hint: "of last cohort" },
-    { label: "Field match", value: "74%", hint: "hired in-field" },
-    { label: "Retention 1yr", value: "91%", hint: "still employed" },
-  ];
+  const hiredIds = new Set(hires.map((h) => h.candidateId));
+  return { grads, hired: grads.filter((c) => hiredIds.has(c.id)) };
 }
-export function getAlumniCheckins(university: University): AlumniCheckin[] {
-  const grads = studentsOf(university).filter((c) => GRAD_YEARS.has(c.year));
-  const placedPct = grads.length ? Math.round((grads.filter((c) => !c.openToWork).length / grads.length) * 100) : 0;
+
+export function getOutcomeStats(university: University, hires: PipelineEntry[]): OutcomeStat[] {
+  const { grads, hired } = hiredGrads(university, hires);
+  const placedPct = grads.length ? Math.round((hired.length / grads.length) * 100) : 0;
+  const avgTrustAtHire = hired.length
+    ? Math.round(hires.filter((h) => hired.some((c) => c.id === h.candidateId)).reduce((s, h) => s + h.trustScore, 0) / hired.length)
+    : 0;
   return [
-    { window: "6 months", responded: Math.max(1, Math.round(grads.length * 0.7)), note: `${placedPct}% placed, mostly in verified-skill roles` },
-    { window: "1 year", responded: Math.max(1, Math.round(grads.length * 0.5)), note: "91% retention; salary tracking above benchmark" },
-    { window: "3 years", responded: Math.max(1, Math.round(grads.length * 0.25)), note: "68% still in-field; 24% moved into leadership" },
+    { label: "Placed", value: `${placedPct}%`, hint: `${hired.length} of ${grads.length} grads` },
+    { label: "Avg Trust at hire", value: hired.length ? String(avgTrustAtHire) : "—", hint: "real accepted offers" },
+    { label: "Total hires", value: String(hired.length), hint: "across all employers" },
   ];
 }
 
-// U10 detail: illustrative anonymised follow-up signals per check-in window.
-const ALUMNI_SIGNALS: Record<string, string[]> = {
-  "6 months": [
-    "Most placements landed within 2 verified-skill matches on Discover",
-    "No reported gap between verified skills and day-one role expectations",
-  ],
-  "1 year": [
-    "Salary tracking 8% above the field-match benchmark for verified hires",
-    "Two re-verified a new certification within their first year",
-  ],
-  "3 years": [
-    "24% moved into leadership — all had re-verified at least one new skill since graduating",
-    "Remaining in-field alumni still show an active Lifelong Wallet",
-  ],
-};
+export function getAlumniCheckins(university: University, hires: PipelineEntry[]): AlumniCheckin[] {
+  const { grads, hired } = hiredGrads(university, hires);
+  const placedPct = grads.length ? Math.round((hired.length / grads.length) * 100) : 0;
+  return [
+    {
+      window: "Placements",
+      responded: hired.length,
+      note: hired.length
+        ? `${placedPct}% of ${grads.length} grads placed — ${hired.map((c) => c.name).slice(0, 3).join(", ")}${hired.length > 3 ? ", …" : ""}`
+        : "No accepted offers yet for this cohort.",
+    },
+  ];
+}
 
-export function getAlumniDetail(university: University, window: string) {
-  const checkin = getAlumniCheckins(university).find((a) => a.window === window) ?? null;
-  const signals = ALUMNI_SIGNALS[window] ?? [];
+// U10 detail: the real accepted-hire records behind a check-in window, not illustrative
+// copy — each line names the actual employer and role from the real PipelineEntry.
+export function getAlumniDetail(university: University, window: string, hires: PipelineEntry[]) {
+  const checkin = getAlumniCheckins(university, hires).find((a) => a.window === window) ?? null;
+  const { hired } = hiredGrads(university, hires);
+  const hiredIds = new Set(hired.map((c) => c.id));
+  const signals = hires
+    .filter((h) => hiredIds.has(h.candidateId))
+    .map((h) => {
+      const employer = allEmployers.find((e) => e.id === h.employerId);
+      return `${h.name} — hired by ${employer?.name ?? "an employer"}${h.decisionAt ? ` (${new Date(h.decisionAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })})` : ""}`;
+    });
   return { checkin, signals };
 }
 

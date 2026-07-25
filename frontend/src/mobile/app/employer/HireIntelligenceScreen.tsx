@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Rect, Line, Text as SvgText, G } from "react-native-svg";
@@ -6,40 +7,48 @@ import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import ScoreRing from "../../components/shared/ScoreRing";
-import { hireIntelligence, type HireRecord, type DiscoverCandidate } from "../../data/employerData";
-import { mockCandidates } from "../../data/mockData";
+import { performanceByQuarter, discoverCandidates, type DiscoverCandidate, type PipelineEntry } from "../../data/employerData";
+import { usePipeline } from "../../context/PipelineContext";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 import type { EmployerHomeStackParamList } from "../../navigation/EmployerHomeStack";
 
 type Props = NativeStackScreenProps<EmployerHomeStackParamList, "HireIntelligence">;
 
-function buildCandidate(hire: HireRecord): DiscoverCandidate {
-  const full = mockCandidates.find((c) => c.id === hire.candidateId);
-  return {
-    ...(full ?? {
-      id: hire.candidateId,
-      name: hire.name,
+// A "hire" is a real accepted decision on this employer's own Pipeline (recordDecision,
+// PipelineContext.tsx) — not a separately maintained static list. hiredOn/reviewScore come
+// from the entry's real decisionAt/hrRating, not invented per-hire copy.
+function formatHiredOn(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+}
+
+function buildCandidate(entry: PipelineEntry): DiscoverCandidate {
+  const full = discoverCandidates.find((c) => c.id === entry.candidateId);
+  const hiredOn = entry.decisionAt ? formatHiredOn(entry.decisionAt) : "recently";
+  return (
+    full ?? {
+      id: entry.candidateId,
+      name: entry.name,
       email: "",
-      field: hire.role,
+      field: entry.field,
       university: "",
       year: "",
       location: "",
-      openToWork: false,
+      openToWork: entry.openToWork,
       avatar: null,
       bio: "",
       linkedinUrl: null,
       githubUrl: null,
-      trustScore: hire.trustScoreAtHire,
+      trustScore: entry.trustScore,
       verifiedSkills: [],
       claimedSkills: [],
       simuHire: { completed: false, shared: false },
       artifacts: [],
       ledger: [],
       merkleRoot: null,
-    }),
-    trajectory: `Hired ${hire.hiredOn} · ${hire.reviewScore}/100 on 90-day review`,
-  };
+      trajectory: `Hired ${hiredOn}`,
+    }
+  );
 }
 
 // Grouped bar chart, hand-rolled on react-native-svg (no charting lib in this stack).
@@ -51,7 +60,7 @@ const BAR_GAP = 6; // between the two bars in a group
 const GROUP_GAP = 28; // between quarters
 const MAX_VALUE = 100;
 
-function PerformanceChart({ data }: { data: typeof hireIntelligence.performanceByQuarter }) {
+function PerformanceChart({ data }: { data: typeof performanceByQuarter }) {
   const groupWidth = BAR_WIDTH * 2 + BAR_GAP;
   const chartWidth = data.length * groupWidth + (data.length - 1) * GROUP_GAP + 24;
   const scale = (CHART_HEIGHT - 24) / MAX_VALUE;
@@ -99,17 +108,37 @@ function PerformanceChart({ data }: { data: typeof hireIntelligence.performanceB
 }
 
 export default function HireIntelligenceScreen({ navigation }: Props) {
-  const { verifiedShareThisQuarter, totalHiredThisQuarter, performanceByQuarter, recentHires } = hireIntelligence;
+  const { pipeline } = usePipeline();
+
+  // Real accepted decisions on THIS employer's own Pipeline (recordDecision), newest first
+  // — not a static 3-record list every employer would otherwise see identically.
+  const recentHires = useMemo(
+    () =>
+      pipeline
+        .filter((e) => e.decision === "accepted")
+        .sort((a, b) => (b.decisionAt ?? "").localeCompare(a.decisionAt ?? "")),
+    [pipeline]
+  );
+  const totalHiredThisQuarter = recentHires.length;
+  // Real signal in place of an invented "sourced via verified profile" split: the share of
+  // real hires who had actually completed SimuHire before being accepted — a genuine
+  // verified-vs-not distinction this dataset can back.
+  const verifiedShareThisQuarter = totalHiredThisQuarter
+    ? Math.round((recentHires.filter((h) => !!h.simuHire).length / totalHiredThisQuarter) * 100)
+    : 0;
 
   // Derived from the same series the chart renders, not a separately maintained constant —
-  // the headline number can never drift from the chart directly beneath it.
+  // the headline number can never drift from the chart directly beneath it. This quarterly
+  // trend is illustrative market context (no per-quarter history exists in this dataset),
+  // shown as a benchmark backdrop for the real hire count/list below it, not as this
+  // employer's own historical figures.
   const latestQuarter = performanceByQuarter[performanceByQuarter.length - 1];
   const upliftPercent = Math.round(
     ((latestQuarter.verifiedAvg - latestQuarter.keywordAvg) / latestQuarter.keywordAvg) * 100
   );
   const firstQuarter = performanceByQuarter[0];
 
-  const openCandidate = (hire: HireRecord) => {
+  const openCandidate = (hire: PipelineEntry) => {
     // HireIntelligenceScreen lives in EmployerHomeStack; CandidateProfile lives in the
     // sibling DiscoverStack — same cross-stack pattern JobDetailScreen uses for "Find
     // candidates".
@@ -139,7 +168,7 @@ export default function HireIntelligenceScreen({ navigation }: Props) {
                 Verified-sourced hires are outperforming keyword-matched hires on 90-day review scores
               </Text>
               <Text style={styles.heroCaption}>
-                {totalHiredThisQuarter} hires · {firstQuarter.quarter}–{latestQuarter.quarter}
+                Market benchmark · {firstQuarter.quarter}–{latestQuarter.quarter}
               </Text>
             </View>
           </GlassCard>
@@ -164,50 +193,64 @@ export default function HireIntelligenceScreen({ navigation }: Props) {
             </View>
           </GlassCard>
 
-          {/* This quarter's sourcing mix */}
+          {/* This quarter's sourcing mix — real hires from this employer's own Pipeline */}
           <Text style={styles.sectionLabel}>This Quarter</Text>
           <GlassCard radius={18}>
             <View style={styles.sourcingCard}>
               <ScoreRing score={verifiedShareThisQuarter} size="md" />
               <View style={{ flex: 1, gap: 4 }}>
-                <Text style={styles.sourcingHeadline}>{totalHiredThisQuarter} hires this quarter</Text>
+                <Text style={styles.sourcingHeadline}>
+                  {totalHiredThisQuarter} hire{totalHiredThisQuarter === 1 ? "" : "s"} this quarter
+                </Text>
                 <Text style={styles.sourcingBody}>
-                  {verifiedShareThisQuarter}% were sourced through verified profiles rather than keyword search —
-                  and they're the ones driving the uplift above.
+                  {totalHiredThisQuarter > 0
+                    ? `${verifiedShareThisQuarter}% had completed SimuHire before you accepted them — real behavioral evidence, not just a resume.`
+                    : "Accept a candidate on your Pipeline and they'll show up here."}
                 </Text>
               </View>
             </View>
           </GlassCard>
 
-          {/* Recent verified hires */}
-          <Text style={styles.sectionLabel}>Recent Verified Hires</Text>
-          <View style={{ gap: 10 }}>
-            {recentHires.map((h) => (
-              <Pressable
-                key={h.id}
-                onPress={() => openCandidate(h)}
-                accessibilityRole="button"
-                accessibilityLabel={`${h.name}, ${h.role}, hired ${h.hiredOn}, 90-day review score ${h.reviewScore}. View profile.`}
-              >
-                <GlassCard radius={16}>
-                  <View style={styles.hireRow}>
-                    <View style={styles.avatar}>
-                      <Text style={styles.avatarText}>{h.name.split(" ").map((n) => n[0]).join("")}</Text>
+          {/* Recent verified hires — every accepted decision on this employer's Pipeline */}
+          <Text style={styles.sectionLabel}>Recent Hires</Text>
+          {recentHires.length === 0 ? (
+            <GlassCard radius={16}>
+              <View style={styles.emptyHires}>
+                <Text style={styles.emptyHiresText}>No hires yet — accept a candidate on Pipeline and they'll appear here.</Text>
+              </View>
+            </GlassCard>
+          ) : (
+            <View style={{ gap: 10 }}>
+              {recentHires.map((h) => (
+                <Pressable
+                  key={h.id}
+                  onPress={() => openCandidate(h)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${h.name}, ${h.field}, Trust Score ${h.trustScore}. View profile.`}
+                >
+                  <GlassCard radius={16}>
+                    <View style={styles.hireRow}>
+                      <View style={styles.avatar}>
+                        <Text style={styles.avatarText}>{h.name.split(" ").map((n) => n[0]).join("")}</Text>
+                      </View>
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <Text style={styles.hireName}>{h.name}</Text>
+                        <Text style={styles.hireMeta}>
+                          {h.field}
+                          {h.decisionAt ? ` · Hired ${formatHiredOn(h.decisionAt)}` : ""}
+                        </Text>
+                      </View>
+                      <View style={styles.hireScores}>
+                        <Text style={styles.hireScoreValue}>{h.trustScore}</Text>
+                        <Text style={styles.hireScoreLabel}>Trust Score</Text>
+                      </View>
+                      <ChevronRight size={16} color={colors.slate} />
                     </View>
-                    <View style={{ flex: 1, gap: 2 }}>
-                      <Text style={styles.hireName}>{h.name}</Text>
-                      <Text style={styles.hireMeta}>{h.role} · Hired {h.hiredOn}</Text>
-                    </View>
-                    <View style={styles.hireScores}>
-                      <Text style={styles.hireScoreValue}>{h.reviewScore}</Text>
-                      <Text style={styles.hireScoreLabel}>90-day score</Text>
-                    </View>
-                    <ChevronRight size={16} color={colors.slate} />
-                  </View>
-                </GlassCard>
-              </Pressable>
-            ))}
-          </View>
+                  </GlassCard>
+                </Pressable>
+              ))}
+            </View>
+          )}
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -252,4 +295,6 @@ const styles = StyleSheet.create({
   hireScores: { alignItems: "flex-end" },
   hireScoreValue: { fontFamily: fonts.displayBold, fontSize: 18, color: colors.verified },
   hireScoreLabel: { fontFamily: fonts.mono, fontSize: 9, color: colors.slate, textTransform: "uppercase", letterSpacing: 0.5 },
+  emptyHires: { padding: 16 },
+  emptyHiresText: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.slate, lineHeight: 18 },
 });

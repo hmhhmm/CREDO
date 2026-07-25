@@ -405,29 +405,6 @@ export const performanceByQuarter: QuarterPerformance[] = [
   { quarter: "Q2 '26", verifiedAvg: 86, keywordAvg: 64 },
 ];
 
-export interface HireRecord {
-  id: string;
-  candidateId: string; // links back to mockCandidates — lets the row drill into a real profile
-  name: string;
-  role: string;
-  trustScoreAtHire: number;
-  reviewScore: number; // 90-day review score
-  hiredOn: string;
-}
-// Ids must exist in the generated dataset (see generateDataset.ts) — these three are
-// real, strong, SimuHire-completed candidates picked from allCandidates, not placeholders.
-export const recentHires: HireRecord[] = [
-  { id: "h1", candidateId: "khalid-aziz-86", name: "Khalid Aziz", role: "Research Associate", trustScoreAtHire: 83, reviewScore: 91, hiredOn: "Jun 2026" },
-  { id: "h2", candidateId: "liyana-ng-10", name: "Liyana Ng", role: "Financial Analyst", trustScoreAtHire: 83, reviewScore: 87, hiredOn: "May 2026" },
-  { id: "h3", candidateId: "ravi-rashid-81", name: "Ravi Rashid", role: "Data Analyst", trustScoreAtHire: 82, reviewScore: 85, hiredOn: "Apr 2026" },
-];
-
-export const hireIntelligence = {
-  // No separate upliftPercent constant — it's derived in HireIntelligenceScreen from the
-  // latest entry in performanceByQuarter so the headline number can never drift from the
-  // chart directly beneath it.
-  verifiedShareThisQuarter: 71, // % of this quarter's hires sourced via verified profile
-  totalHiredThisQuarter: 7,
-  performanceByQuarter,
-  recentHires,
-};
+// Real hires now come from usePipeline()'s accepted decisions (HireIntelligenceScreen),
+// not a static list — see PipelineContext.recordDecision. performanceByQuarter above stays
+// as illustrative market-benchmark context (no per-quarter history exists in this dataset).

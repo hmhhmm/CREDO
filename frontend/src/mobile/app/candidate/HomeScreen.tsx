@@ -129,11 +129,6 @@ export default function HomeScreen({ navigation }: Props) {
   const decidedCount = applications.filter((a) => a.decision).length;
   const inProgressCount = applications.length - decidedCount;
   const mostRecent = applications[0];
-  const statusAccent = mostRecent?.decision === "accepted"
-    ? colors.verified
-    : mostRecent?.decision === "rejected"
-    ? colors.alert
-    : "#2F6E8F";
   const StatusIcon = mostRecent?.decision === "accepted"
     ? ThumbsUp
     : mostRecent?.decision === "rejected"
@@ -321,7 +316,7 @@ export default function HomeScreen({ navigation }: Props) {
                 <>
                   <View style={styles.statusTopRow}>
                     <View style={styles.statusIconRing}>
-                      <StatusIcon size={16} color={statusAccent} />
+                      <StatusIcon size={16} color={colors.parchment} />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.statusHeadline}>

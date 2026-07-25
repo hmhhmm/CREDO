@@ -4,13 +4,15 @@ import { MessageCircle, Sparkles } from "lucide-react-native";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import { getAlumniDetail, type University } from "../../data/universityData";
+import { usePipeline } from "../../context/PipelineContext";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 
 type Props = { university: University; route: { params: { window: string } } };
 
 export default function AlumniDetailScreen({ university, route }: Props) {
-  const { checkin, signals } = getAlumniDetail(university, route.params.window);
+  const { allAcceptedHires } = usePipeline();
+  const { checkin, signals } = getAlumniDetail(university, route.params.window, allAcceptedHires());
 
   if (!checkin) return null;
 
@@ -23,14 +25,14 @@ export default function AlumniDetailScreen({ university, route }: Props) {
             <View style={styles.card}>
               <View style={styles.head}>
                 <MessageCircle size={16} color={colors.ink} />
-                <Text style={styles.window}>{checkin.window} check-in</Text>
+                <Text style={styles.window}>{checkin.window}</Text>
               </View>
-              <Text style={styles.responded}>{checkin.responded} alumni responded</Text>
+              <Text style={styles.responded}>{checkin.responded} hired so far</Text>
               <Text style={styles.note}>{checkin.note}</Text>
             </View>
           </GlassCard>
 
-          <Text style={styles.sectionLabel}>Anonymised follow-up signals</Text>
+          <Text style={styles.sectionLabel}>Real accepted hires</Text>
           <View style={{ gap: 10 }}>
             {signals.map((s, i) => (
               <GlassCard key={i} radius={16}>

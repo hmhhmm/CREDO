@@ -448,9 +448,8 @@ export interface HireRecord {
 
 // Real, not mock: derives the actual list of a given employer's accepted PipelineContext
 // entries, most recent first. There is no post-hire performance signal anywhere in the data
-// model (nothing tracks how a hire performs after joining), so unlike performanceByQuarter/
-// verifiedShareThisQuarter above — which stay illustrative demo data — this only surfaces
-// what's actually real: who was hired, when, and how verified they were at the time.
+// model (nothing tracks how a hire performs after joining), so this only surfaces what's
+// actually real: who was hired, when, and how verified they were at the time.
 export function hiresFromPipeline(pipeline: PipelineEntry[]): HireRecord[] {
   return pipeline
     .filter((p): p is PipelineEntry & { decisionAt: string } => p.decision === "accepted" && !!p.decisionAt)

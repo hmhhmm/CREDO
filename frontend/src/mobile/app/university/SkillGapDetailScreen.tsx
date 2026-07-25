@@ -37,7 +37,9 @@ export default function SkillGapDetailScreen({ university, route }: Props) {
                 <Text style={styles.skill}>{gap.skill}</Text>
               </View>
               <Text style={styles.rate}>{gap.verifyRate}% verify</Text>
-              <Text style={styles.taught}>Taught in {gap.taughtIn}</Text>
+              <Text style={styles.taught}>
+                Taught in {gap.taughtIn} · {gap.demandCount} open listing{gap.demandCount === 1 ? "" : "s"} require it right now
+              </Text>
               <View style={styles.track}>
                 <View style={[styles.fill, { width: `${gap.verifyRate}%`, backgroundColor: colors.alert }]} />
               </View>

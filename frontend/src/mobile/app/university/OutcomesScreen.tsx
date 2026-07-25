@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Wallet, MessageCircle, ChevronRight } from "lucide-react-native";
+import { Wallet, MessageCircle, ChevronRight, ChevronDown, RefreshCw } from "lucide-react-native";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
-import { getOutcomeStats, getAlumniCheckins, getLifelongWallet, type University } from "../../data/universityData";
+import { getOutcomeStats, getAlumniCheckins, getLifelongWallet, getHiresByMajor, type University } from "../../data/universityData";
+import { usePipeline } from "../../context/PipelineContext";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -12,9 +14,14 @@ import type { OutcomesStackParamList } from "../../navigation/OutcomesStack";
 type Props = NativeStackScreenProps<OutcomesStackParamList, "OutcomesMain"> & { university: University };
 
 export default function OutcomesScreen({ university, navigation }: Props) {
-  const outcomeStats = getOutcomeStats(university);
-  const alumniCheckins = getAlumniCheckins(university);
+  const { allAcceptedHires } = usePipeline();
+  const hires = allAcceptedHires();
+  const outcomeStats = getOutcomeStats(university, hires);
+  const alumniCheckins = getAlumniCheckins(university, hires);
   const lifelongWallet = getLifelongWallet(university);
+  const hiresByMajor = getHiresByMajor(university, hires);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+
   return (
     <View style={{ flex: 1 }}>
       <ScreenBackground />
@@ -36,6 +43,15 @@ export default function OutcomesScreen({ university, navigation }: Props) {
             ))}
           </View>
 
+          {/* Bridge C — these are the exact same real accepted-hire numbers above; this
+              banner names where they flow to (U2), it isn't a separate data source. */}
+          <View style={styles.syncBanner}>
+            <RefreshCw size={13} color={colors.terracotta} />
+            <Text style={styles.syncBannerText}>
+              Data syncing active: these outcomes feed Curriculum Gap Detector (U2) for next year's planning.
+            </Text>
+          </View>
+
           {/* U8 — Lifelong Learning Wallet */}
           <GlassCard radius={18}>
             <View style={styles.walletRow}>
@@ -51,29 +67,62 @@ export default function OutcomesScreen({ university, navigation }: Props) {
             </View>
           </GlassCard>
 
-          {/* U10 — Alumni Career Pulse */}
+          {/* U10 — Alumni Career Pulse: real accepted hires across every employer, not a
+              survey response count. Tap the row to drill into the full detail screen; tap
+              the chevron to expand a real per-major breakdown inline. */}
           <Text style={styles.sectionLabel}>Alumni Career Pulse</Text>
           <GlassCard radius={18}>
             <View style={styles.checkinList}>
-              {alumniCheckins.map((a, i) => (
-                <Pressable
-                  key={a.window}
-                  style={[styles.checkin, i > 0 && styles.divider]}
-                  onPress={() => navigation.navigate("AlumniDetail", { window: a.window })}
-                >
-                  <View style={styles.checkinIcon}>
-                    <MessageCircle size={14} color={colors.ink} />
+              {alumniCheckins.map((a, i) => {
+                const isOpen = !!expanded[a.window];
+                return (
+                  <View key={a.window} style={[i > 0 && styles.divider]}>
+                    <Pressable style={styles.checkin} onPress={() => navigation.navigate("AlumniDetail", { window: a.window })}>
+                      <View style={styles.checkinIcon}>
+                        <MessageCircle size={14} color={colors.ink} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <View style={styles.checkinHead}>
+                          <Text style={styles.checkinWindow}>{a.window}</Text>
+                          <Text style={styles.checkinResp}>{a.responded} hired</Text>
+                        </View>
+                        <Text style={styles.checkinNote}>{a.note}</Text>
+                      </View>
+                      <ChevronRight size={16} color={colors.slate} />
+                    </Pressable>
+
+                    {a.responded > 0 && (
+                      <Pressable
+                        style={styles.expandToggle}
+                        onPress={() => setExpanded((prev) => ({ ...prev, [a.window]: !prev[a.window] }))}
+                      >
+                        <View style={isOpen ? styles.chevronOpen : undefined}>
+                          <ChevronDown size={13} color={colors.slate} />
+                        </View>
+                        <Text style={styles.expandToggleText}>{isOpen ? "Hide breakdown by major" : "Breakdown by major"}</Text>
+                      </Pressable>
+                    )}
+
+                    {isOpen && (
+                      <View style={styles.majorBreakdown}>
+                        {hiresByMajor.map((m) => (
+                          <View key={m.major} style={styles.majorGroup}>
+                            <Text style={styles.majorTitle}>
+                              {m.major} ({m.hires.length} hired)
+                            </Text>
+                            {m.hires.map((h, hi) => (
+                              <Text key={hi} style={styles.majorHireLine}>
+                                {h.name} → {h.employer} · Trust {h.trustScore}
+                                {h.hiredOn ? ` · ${h.hiredOn}` : ""}
+                              </Text>
+                            ))}
+                          </View>
+                        ))}
+                      </View>
+                    )}
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <View style={styles.checkinHead}>
-                      <Text style={styles.checkinWindow}>{a.window} check-in</Text>
-                      <Text style={styles.checkinResp}>{a.responded} responses</Text>
-                    </View>
-                    <Text style={styles.checkinNote}>{a.note}</Text>
-                  </View>
-                  <ChevronRight size={16} color={colors.slate} />
-                </Pressable>
-              ))}
+                );
+              })}
             </View>
           </GlassCard>
         </ScrollView>
@@ -100,6 +149,18 @@ const styles = StyleSheet.create({
   walletTitle: { fontFamily: fonts.sansSemiBold, fontSize: 14, color: colors.ink },
   walletBody: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.slate, marginTop: 2, lineHeight: 16 },
 
+  syncBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(193,122,61,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(193,122,61,0.22)",
+    borderRadius: 12,
+    padding: 12,
+  },
+  syncBannerText: { flex: 1, fontFamily: fonts.sans, fontSize: 11.5, color: colors.ink, lineHeight: 16 },
+
   sectionLabel: { fontFamily: fonts.mono, fontSize: 11, textTransform: "uppercase", letterSpacing: 2, color: colors.slate },
   checkinList: { padding: 16 },
   checkin: { flexDirection: "row", alignItems: "flex-start", gap: 12, paddingVertical: 11 },
@@ -109,4 +170,13 @@ const styles = StyleSheet.create({
   checkinWindow: { fontFamily: fonts.sansSemiBold, fontSize: 13, color: colors.ink },
   checkinResp: { fontFamily: fonts.mono, fontSize: 10, color: colors.slate },
   checkinNote: { fontFamily: fonts.sans, fontSize: 12, color: colors.slate, marginTop: 2, lineHeight: 17 },
+
+  expandToggle: { flexDirection: "row", alignItems: "center", gap: 6, paddingBottom: 10, paddingLeft: 42 },
+  chevronOpen: { transform: [{ rotate: "180deg" }] },
+  expandToggleText: { fontFamily: fonts.sansMedium, fontSize: 11.5, color: colors.slate },
+
+  majorBreakdown: { paddingLeft: 42, paddingBottom: 12, gap: 10 },
+  majorGroup: { gap: 3 },
+  majorTitle: { fontFamily: fonts.sansSemiBold, fontSize: 12, color: colors.ink },
+  majorHireLine: { fontFamily: fonts.mono, fontSize: 10.5, color: colors.slate, lineHeight: 15 },
 });

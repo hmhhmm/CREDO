@@ -26,7 +26,9 @@ export default function CurriculumGapScreen({ university, navigation }: Props) {
       <ScreenBackground />
       <SafeAreaView style={styles.container} edges={["bottom"]}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <Text style={styles.subheading}>Skills that are taught but consistently fail verification across this cohort.</Text>
+          <Text style={styles.subheading}>
+            Real employer demand (open listings requiring each skill) crossed with how often this cohort's claims on it actually verify.
+          </Text>
 
           <View style={{ gap: 12 }}>
             {skillGaps.map((g) => {
@@ -44,7 +46,9 @@ export default function CurriculumGapScreen({ university, navigation }: Props) {
                       <Text style={styles.gapRate}>{g.verifyRate}% verify</Text>
                       <ChevronRight size={14} color={colors.slate} />
                     </View>
-                    <Text style={styles.gapTaught}>Taught in {g.taughtIn}</Text>
+                    <Text style={styles.gapTaught}>
+                      Taught in {g.taughtIn} · {g.demandCount} open listing{g.demandCount === 1 ? "" : "s"} want it
+                    </Text>
                     <View style={styles.track}>
                       <View style={[styles.fill, { width: `${g.verifyRate}%`, backgroundColor: colors.alert }]} />
                     </View>

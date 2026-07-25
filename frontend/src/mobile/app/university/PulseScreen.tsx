@@ -1,6 +1,7 @@
+import { useMemo } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { AlertTriangle, TrendingDown, Activity, ChevronRight, Settings, GraduationCap } from "lucide-react-native";
+import { AlertTriangle, TrendingDown, Activity, ChevronRight, Settings, GraduationCap, Radio, ArrowRight } from "lucide-react-native";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import ScoreRing from "../../components/shared/ScoreRing";
@@ -33,6 +34,12 @@ export default function PulseScreen({ university, onOpenSettings, navigation }: 
   const interventionAlert = getInterventionAlert(getCohorts(university), skillGaps);
   const { feedbackFor } = useSkillFeedback();
   const employerFeedback = feedbackFor(university.name);
+
+  // Bridge C, "Employer Skill Signals" — anonymised at this level (no employer/candidate
+  // names, just skill + how many real open listings want it), aggregating the same
+  // demandCount getSkillGaps already computes from allJobs.requiredSkills. Distinct from
+  // Employer Feedback below, which is named, per-hire commentary from a specific employer.
+  const topSignals = useMemo(() => [...skillGaps].sort((a, b) => b.demandCount - a.demandCount).slice(0, 3), [skillGaps]);
 
   // Teaser lines only — the full lists live in their own hub screens now, reached by
   // tapping through. Pulse's job is "is everything OK at a glance," not hosting two
@@ -79,7 +86,38 @@ export default function PulseScreen({ university, onOpenSettings, navigation }: 
               </View>
               <Text style={styles.alertCohort}>{interventionAlert.cohort}</Text>
               <Text style={styles.alertBody}>{interventionAlert.message}</Text>
+              <Pressable style={styles.alertAction} onPress={() => navigation.navigate("CurriculumGapHub")}>
+                <Text style={styles.alertActionText}>Adjust Curriculum (U2)</Text>
+                <ArrowRight size={13} color={colors.alert} />
+              </Pressable>
             </View>
+          )}
+
+          {/* Bridge C — real employer demand signals, anonymised (skill + real open-listing
+              count only, no employer/candidate identity), the direction the charter names:
+              "employers can publish anonymised skill-demand signals back to Curriculum Gap
+              Detector (U2)." */}
+          {topSignals.length > 0 && (
+            <GlassCard radius={18}>
+              <View style={styles.signalsCard}>
+                <View style={styles.signalsHead}>
+                  <Radio size={14} color={colors.terracotta} />
+                  <Text style={styles.signalsTitle}>Employer Skill Signals</Text>
+                  <Text style={styles.signalsTag}>Bridge C</Text>
+                </View>
+                <Text style={styles.signalsSub}>Anonymised demand from real open roles, aggregated across employers.</Text>
+                <View style={{ gap: 8, marginTop: 4 }}>
+                  {topSignals.map((s) => (
+                    <View key={s.skill} style={styles.signalRow}>
+                      <Text style={styles.signalSkill}>{s.skill}</Text>
+                      <Text style={styles.signalCount}>
+                        {s.demandCount} open listing{s.demandCount === 1 ? "" : "s"} · {s.verifyRate}% verify
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            </GlassCard>
           )}
 
           {/* U4 teaser — full Behavioral Benchmark lives in its own hub */}
@@ -174,6 +212,27 @@ const styles = StyleSheet.create({
   alertTag: { fontFamily: fonts.mono, fontSize: 10, textTransform: "uppercase", letterSpacing: 1, color: colors.alert },
   alertCohort: { fontFamily: fonts.sansSemiBold, fontSize: 14, color: colors.ink },
   alertBody: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.slate, lineHeight: 18 },
+  alertAction: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4, alignSelf: "flex-start" },
+  alertActionText: { fontFamily: fonts.sansSemiBold, fontSize: 12.5, color: colors.alert },
+
+  signalsCard: { padding: 16, gap: 4 },
+  signalsHead: { flexDirection: "row", alignItems: "center", gap: 8 },
+  signalsTitle: { flex: 1, fontFamily: fonts.sansSemiBold, fontSize: 14, color: colors.ink },
+  signalsTag: {
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    color: colors.terracotta,
+    backgroundColor: "rgba(193,122,61,0.12)",
+    borderRadius: 100,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+  },
+  signalsSub: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.slate, lineHeight: 16 },
+  signalRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
+  signalSkill: { fontFamily: fonts.sansMedium, fontSize: 12.5, color: colors.ink },
+  signalCount: { fontFamily: fonts.mono, fontSize: 10.5, color: colors.slate },
 
   sectionLabel: { fontFamily: fonts.mono, fontSize: 11, textTransform: "uppercase", letterSpacing: 2, color: colors.slate },
 

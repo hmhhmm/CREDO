@@ -1,12 +1,13 @@
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ArrowRight, Building2, Check, ChevronRight } from "lucide-react-native";
+import { ArrowRight, Building2, Check, ChevronRight, ShieldCheck } from "lucide-react-native";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import { getConfidenceBand } from "../../utils/confidenceBand";
-import { getInternshipMatches, type University, type InternshipMatch } from "../../data/universityData";
+import { getInternshipMatches, getAllEligibleCredentials, type University, type InternshipMatch } from "../../data/universityData";
 import { mockCandidates } from "../../data/mockData";
 import { usePipeline } from "../../context/PipelineContext";
+import { useCredentialIssuer } from "../../context/CredentialIssuerContext";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 import type { DiscoverCandidate } from "../../data/employerData";
@@ -22,7 +23,15 @@ function buildDiscoverCandidate(m: InternshipMatch): DiscoverCandidate {
 
 export default function PartnersScreen({ university, navigation }: Props) {
   const { addToPipeline, isInPipelineFor } = usePipeline();
+  const { isIssued } = useCredentialIssuer();
   const internshipMatches = getInternshipMatches(university);
+  const eligibleCredentials = getAllEligibleCredentials(university);
+
+  // Real institutional co-sign check — true only when this university has actually issued
+  // (CredentialIssuerContext.issueCredential) at least one of this candidate's verified
+  // credential artifacts, same real action Cohorts/CohortDetail's badge reflects.
+  const isCoSigned = (candidateId: string) =>
+    eligibleCredentials.some(({ candidateId: cid, artifact }) => cid === candidateId && isIssued(university.id, artifact.id));
 
   return (
     <View style={{ flex: 1 }}>
@@ -60,6 +69,12 @@ export default function PartnersScreen({ university, navigation }: Props) {
                           <View style={[styles.scorePill, { borderColor: band.hex }]}>
                             <Text style={[styles.scoreText, { color: band.hex }]}>Trust {m.trustScore}</Text>
                           </View>
+                          {isCoSigned(m.candidateId) && (
+                            <View style={styles.coSignChip}>
+                              <ShieldCheck size={10} color={colors.verified} />
+                              <Text style={styles.coSignText}>{university.short} Co-Signed</Text>
+                            </View>
+                          )}
                         </View>
 
                         <ArrowRight size={18} color={colors.gold} />
@@ -73,6 +88,27 @@ export default function PartnersScreen({ university, navigation }: Props) {
                           <Text style={styles.subtext} numberOfLines={2}>{m.role}</Text>
                         </View>
                       </View>
+
+                      {/* Real skill intersection between this job's requiredSkills and the
+                          candidate's own verified/claimed skills — the specific skills
+                          driving this match, not a generic "strong candidate" claim. */}
+                      {(m.matchedVerifiedSkills.length > 0 || m.matchedClaimedSkills.length > 0) && (
+                        <View style={styles.matchChipsWrap}>
+                          {m.matchedVerifiedSkills.length > 0 && (
+                            <View style={styles.matchChip}>
+                              <Check size={10} color={colors.verified} strokeWidth={2.5} />
+                              <Text style={styles.matchChipText}>Verified: {m.matchedVerifiedSkills.join(", ")}</Text>
+                            </View>
+                          )}
+                          {m.matchedClaimedSkills.length > 0 && (
+                            <View style={[styles.matchChip, styles.matchChipClaimed]}>
+                              <Text style={[styles.matchChipText, styles.matchChipTextClaimed]}>
+                                Claimed: {m.matchedClaimedSkills.join(", ")}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                      )}
                     </Pressable>
 
                     {introduced ? (
@@ -131,6 +167,31 @@ const styles = StyleSheet.create({
   subtext: { fontFamily: fonts.sans, fontSize: 10.5, color: colors.slate, textAlign: "center" },
   scorePill: { borderWidth: 1, borderRadius: 100, paddingVertical: 2, paddingHorizontal: 8, marginTop: 2 },
   scoreText: { fontFamily: fonts.mono, fontSize: 10 },
+  coSignChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: "rgba(31,122,92,0.1)",
+    borderRadius: 100,
+    paddingVertical: 2,
+    paddingHorizontal: 7,
+    marginTop: 3,
+  },
+  coSignText: { fontFamily: fonts.mono, fontSize: 9, color: colors.verified },
+
+  matchChipsWrap: { gap: 6, marginTop: 4 },
+  matchChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "rgba(31,122,92,0.08)",
+    borderRadius: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  matchChipClaimed: { backgroundColor: "rgba(16,25,43,0.04)" },
+  matchChipText: { flex: 1, fontFamily: fonts.sans, fontSize: 11, color: colors.verified, lineHeight: 15 },
+  matchChipTextClaimed: { color: colors.slate },
 
   pushBtn: { backgroundColor: colors.ink, borderRadius: 12, paddingVertical: 12, alignItems: "center" },
   pushText: { fontFamily: fonts.sansSemiBold, fontSize: 13, color: colors.parchment },

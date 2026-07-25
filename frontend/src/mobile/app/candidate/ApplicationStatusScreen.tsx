@@ -11,9 +11,10 @@ import { Eye, CalendarCheck, ThumbsUp, ThumbsDown, RefreshCw, Video, ExternalLin
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
 import { usePipeline } from "../../context/PipelineContext";
+import { useInterviewStages } from "../../context/InterviewStagesContext";
 import { useAuth } from "../../context/AuthContext";
 import { allEmployers } from "../../data/generateDataset";
-import { DEFAULT_INTERVIEW_STAGES, type PipelineEntry } from "../../data/employerData";
+import type { PipelineEntry } from "../../data/employerData";
 import { formatInterviewDateTime, formatRelativeTime } from "../../utils/interviewSlots";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
@@ -26,16 +27,6 @@ type Props = NativeStackScreenProps<HomeStackParamList, "ApplicationStatus">;
 // No such SLA field exists on PipelineEntry, so this is stated as CREDO's guarantee, not
 // attributed to the employer.
 const DECISION_WINDOW_DAYS = 5;
-
-// Stage *names* are employer-configured (Settings) and only live in this session's memory
-// for an employer who has actually logged in — this app has no shared backend for stage
-// config. Falling back to the defaults every employer starts from is the honest choice here:
-// currentStageId values always come from this list unless that specific employer edited
-// their stages, which this candidate-facing screen has no way to observe.
-function resolveStageName(stageId: string | null): string | null {
-  if (!stageId) return null;
-  return DEFAULT_INTERVIEW_STAGES.find((s) => s.id === stageId)?.name ?? stageId;
-}
 
 type TrackerStageKey = "applied" | "screening" | "simuhire" | "interview" | "outcome";
 
@@ -101,15 +92,16 @@ function StageTracker({ entry, accent }: { entry: PipelineEntry; accent: string 
 
 function ApplicationCard({
   entry,
+  stageName,
   onPrepareInterview,
   onViewAssessment,
 }: {
   entry: PipelineEntry;
+  stageName: string | null;
   onPrepareInterview: () => void;
   onViewAssessment: () => void;
 }) {
   const employer = allEmployers.find((e) => e.id === entry.employerId);
-  const stageName = resolveStageName(entry.currentStageId);
   const isInvited = entry.currentStageId !== null;
   const isScheduled = !!entry.interviewDate;
   const isCompleted = !!entry.stageCompletedAt;
@@ -230,6 +222,7 @@ function ApplicationCard({
 export default function ApplicationStatusScreen({ navigation }: Props) {
   const { user } = useAuth();
   const { pipelineForCandidate } = usePipeline();
+  const { stagesForEmployer } = useInterviewStages();
 
   const entries = useMemo(
     () => (user ? pipelineForCandidate(user.id) : []),
@@ -256,6 +249,12 @@ export default function ApplicationStatusScreen({ navigation }: Props) {
               <ApplicationCard
                 key={entry.id}
                 entry={entry}
+                stageName={
+                  entry.currentStageId
+                    ? stagesForEmployer(entry.employerId).find((s) => s.id === entry.currentStageId)?.name ??
+                      entry.currentStageId
+                    : null
+                }
                 onPrepareInterview={() => navigation.navigate("SimuHire")}
                 onViewAssessment={() => navigation.navigate("SimuHire")}
               />

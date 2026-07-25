@@ -98,7 +98,7 @@ export default function DiscoverScreen({ route, navigation }: Props) {
   const list = useMemo(
     () =>
       discoverCandidates
-        .filter((c) => !verifiedOnly || c.verifiedSkills.length > 0)
+        .filter((c) => !verifiedOnly || getVerificationCompleteness(c).isFullyVerified)
         .filter((c) =>
           activeSkills.length === 0
             ? true

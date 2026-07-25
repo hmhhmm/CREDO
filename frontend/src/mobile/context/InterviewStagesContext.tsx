@@ -18,6 +18,11 @@ interface InterviewStagesContextValue {
   renameStage: (id: string, name: string) => StageMutationResult;
   removeStage: (id: string) => void;
   moveStage: (id: string, direction: "up" | "down") => void;
+  // Cross-employer query — for callers that aren't logged in as the employer whose stages
+  // they need (the Candidate side reading a specific employer's round names for their own
+  // PipelineEntry). Reads the same byEmployer store `stages` reads from, so a rename in
+  // that employer's Settings is visible here immediately — no separate sync needed.
+  stagesForEmployer: (employerId: string) => InterviewStageDef[];
 }
 
 const InterviewStagesCtx = createContext<InterviewStagesContextValue | null>(null);
@@ -43,6 +48,11 @@ export function InterviewStagesProvider({ children }: { children: ReactNode }) {
   }, [employerId]);
 
   const stages = employerId ? byEmployer[employerId] ?? [] : [];
+
+  const stagesForEmployer = useCallback(
+    (targetEmployerId: string) => byEmployer[targetEmployerId] ?? DEFAULT_INTERVIEW_STAGES,
+    [byEmployer]
+  );
 
   const addStage = useCallback(
     (name: string): StageMutationResult => {
@@ -96,7 +106,9 @@ export function InterviewStagesProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <InterviewStagesCtx.Provider value={{ stages, addStage, renameStage, removeStage, moveStage }}>
+    <InterviewStagesCtx.Provider
+      value={{ stages, addStage, renameStage, removeStage, moveStage, stagesForEmployer }}
+    >
       {children}
     </InterviewStagesCtx.Provider>
   );

@@ -36,6 +36,16 @@ const ROLES = [
   { key: "university", label: "University", body: "Watch it work", icon: Building2 },
 ] as const;
 
+// Shared by TriangleScene's node layout and its connecting-line geometry, so the lines are
+// always computed from the same positions the nodes actually render at (see ICON_RADIUS
+// pull-back math in TriangleScene) instead of separately hand-picked coordinates that can
+// drift out of sync with the node layout.
+const ROLE_POS = [
+  { left: 0, top: 0 },
+  { left: 208, top: 0 },
+  { left: 104, top: 92 },
+] as const;
+
 // Stage 1 of the app's front door — a brief centered-logo entrance (spring scale + fade)
 // before Stage 2's slide carousel below. Internal state rather than a separate navigator
 // route: onGetStarted stays the one contract IntroScreen exposes to RootNavigator, so this
@@ -540,36 +550,52 @@ function TriangleScene() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3, duration: 0.8 }}
         />
-        <svg width="320" height="150" style={{ position: "absolute", top: 30, left: 0 }}>
-          <motion.line
-            x1={56} y1={30} x2={264} y2={30}
-            stroke="rgba(201,166,70,0.55)" strokeWidth={2}
-            initial={{ pathLength: 0, opacity: 0 }}
-            animate={{ pathLength: 1, opacity: 1 }}
-            transition={{ delay: 0.55, duration: 0.5 }}
-          />
-          <motion.line
-            x1={56} y1={30} x2={160} y2={128}
-            stroke="rgba(201,166,70,0.55)" strokeWidth={2}
-            initial={{ pathLength: 0, opacity: 0 }}
-            animate={{ pathLength: 1, opacity: 1 }}
-            transition={{ delay: 0.7, duration: 0.5 }}
-          />
-          <motion.line
-            x1={264} y1={30} x2={160} y2={128}
-            stroke="rgba(201,166,70,0.55)" strokeWidth={2}
-            initial={{ pathLength: 0, opacity: 0 }}
-            animate={{ pathLength: 1, opacity: 1 }}
-            transition={{ delay: 0.85, duration: 0.5 }}
-          />
-        </svg>
+        {/* Lines are drawn between the three icon-box CENTERS, then each end is pulled back
+            along the line by the icon's own radius (32px) so the stroke stops at the box's
+            edge instead of running straight through it — the earlier hand-picked endpoints
+            didn't actually match the icon centers, which is what let the lines cut across
+            the icons. Centers, in the same coordinate space as ROLE_POS below (relative to
+            this 320x200 div): each column is 112 wide with a 64px icon at its top, so a
+            node's icon center is (left + 56, top + 32). */}
+        {(() => {
+          const ICON_RADIUS = 32;
+          const centers = ROLE_POS.map((p) => ({ x: p.left + 56, y: p.top + 32 }));
+          const pullBack = (from: { x: number; y: number }, to: { x: number; y: number }) => {
+            const dx = to.x - from.x;
+            const dy = to.y - from.y;
+            const len = Math.hypot(dx, dy) || 1;
+            const ux = dx / len;
+            const uy = dy / len;
+            return {
+              x1: from.x + ux * ICON_RADIUS,
+              y1: from.y + uy * ICON_RADIUS,
+              x2: to.x - ux * ICON_RADIUS,
+              y2: to.y - uy * ICON_RADIUS,
+            };
+          };
+          const edges = [
+            { ...pullBack(centers[0], centers[1]), delay: 0.55 },
+            { ...pullBack(centers[0], centers[2]), delay: 0.7 },
+            { ...pullBack(centers[1], centers[2]), delay: 0.85 },
+          ];
+          return (
+            <svg width="320" height="200" style={{ position: "absolute", top: 0, left: 0 }}>
+              {edges.map((e, i) => (
+                <motion.line
+                  key={i}
+                  x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2}
+                  stroke="rgba(201,166,70,0.55)" strokeWidth={2}
+                  initial={{ pathLength: 0, opacity: 0 }}
+                  animate={{ pathLength: 1, opacity: 1 }}
+                  transition={{ delay: e.delay, duration: 0.5 }}
+                />
+              ))}
+            </svg>
+          );
+        })()}
 
         {ROLES.map((r, i) => {
-          const pos = [
-            { left: 0, top: 0 },
-            { left: 208, top: 0 },
-            { left: 104, top: 92 },
-          ][i];
+          const pos = ROLE_POS[i];
           return (
             <motion.div
               key={r.key}

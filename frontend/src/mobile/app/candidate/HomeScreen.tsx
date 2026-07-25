@@ -30,7 +30,7 @@ import { deriveAskcBreakdown } from "../../utils/askcBreakdown";
 import { rankJobMatches } from "../../utils/jobMatch";
 import { deriveNextBestAction, type ActionKind } from "../../utils/nextBestAction";
 import { deriveCoSignStatus } from "../../utils/institutionalCoSign";
-import { colors, namecard } from "../../theme/colors";
+import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
 import type { HomeStackParamList } from "../../navigation/HomeStack";
 
@@ -305,44 +305,42 @@ export default function HomeScreen({ navigation }: Props) {
               on this page, not one more cream tile among many. */}
           <Text style={styles.sectionLabel}>Your application status</Text>
           <Pressable onPress={() => navigation.navigate("ApplicationStatus")} accessibilityRole="button">
-            <View style={styles.statusCardShadow}>
-              <View style={styles.statusCard}>
-                {applications.length === 0 ? (
-                  <View style={styles.statusEmptyRow}>
-                    <View style={styles.statusEmptyIcon}>
-                      <Send size={15} color={namecard.gold} />
+            <View style={styles.statusCard}>
+              {applications.length === 0 ? (
+                <View style={styles.statusEmptyRow}>
+                  <View style={styles.statusEmptyIcon}>
+                    <Send size={15} color={colors.parchment} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.statusEmptyTitle}>No applications yet</Text>
+                    <Text style={styles.statusEmptyBody}>Employer activity will show up here as it happens.</Text>
+                  </View>
+                  <ChevronRight size={16} color="rgba(245,237,224,0.5)" />
+                </View>
+              ) : (
+                <>
+                  <View style={styles.statusTopRow}>
+                    <View style={styles.statusIconRing}>
+                      <StatusIcon size={16} color={statusAccent} />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.statusEmptyTitle}>No applications yet</Text>
-                      <Text style={styles.statusEmptyBody}>Employer activity will show up here as it happens.</Text>
+                      <Text style={styles.statusHeadline}>
+                        {inProgressCount > 0
+                          ? `${inProgressCount} application${inProgressCount === 1 ? "" : "s"} in progress`
+                          : "All applications decided"}
+                      </Text>
+                      <Text style={styles.statusSubline} numberOfLines={1}>
+                        {mostRecent.detail}
+                      </Text>
                     </View>
-                    <ChevronRight size={16} color="rgba(245,237,224,0.4)" />
+                    <ChevronRight size={16} color="rgba(245,237,224,0.5)" />
                   </View>
-                ) : (
-                  <>
-                    <View style={styles.statusTopRow}>
-                      <View style={[styles.statusIconRing, { borderColor: statusAccent }]}>
-                        <StatusIcon size={16} color={statusAccent} />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.statusHeadline}>
-                          {inProgressCount > 0
-                            ? `${inProgressCount} application${inProgressCount === 1 ? "" : "s"} in progress`
-                            : "All applications decided"}
-                        </Text>
-                        <Text style={styles.statusSubline} numberOfLines={1}>
-                          {mostRecent.detail}
-                        </Text>
-                      </View>
-                      <ChevronRight size={16} color="rgba(245,237,224,0.4)" />
-                    </View>
-                    <View style={styles.statusCountRow}>
-                      <Text style={styles.statusCountText}>{applications.length} total</Text>
-                      {decidedCount > 0 && <Text style={styles.statusCountText}>· {decidedCount} decided</Text>}
-                    </View>
-                  </>
-                )}
-              </View>
+                  <View style={styles.statusCountRow}>
+                    <Text style={styles.statusCountText}>{applications.length} total</Text>
+                    {decidedCount > 0 && <Text style={styles.statusCountText}>· {decidedCount} decided</Text>}
+                  </View>
+                </>
+              )}
             </View>
           </Pressable>
         </ScrollView>
@@ -531,54 +529,45 @@ const styles = StyleSheet.create({
   emptyJobsCard: { padding: 16 },
   emptyBody: { fontFamily: fonts.sans, fontSize: 12, color: colors.slate },
 
-  // Dark identity-style treatment (same family as the Smart Namecard's dark/gold card) —
-  // visually distinct from every cream GlassCard on this page, signaling "this is the
-  // feature," not one more tile in the scroll.
-  statusCardShadow: {
-    borderRadius: 22,
-    shadowColor: "rgba(16,25,43,0.35)",
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 1,
-    shadowRadius: 20,
-    elevation: 6,
-  },
+  // Same dark-card treatment as the SimuHire quick-launch card above (colors.ink fill, no
+  // border/shadow, parchment/terracotta text) so the two read as one consistent card
+  // family instead of two different dark identities on the same page.
   statusCard: {
-    borderRadius: 22,
-    padding: 18,
+    borderRadius: 18,
+    padding: 16,
     gap: 12,
-    backgroundColor: namecard.bgGradientFrom,
-    borderWidth: 1,
-    borderColor: "rgba(201,166,70,0.25)",
+    backgroundColor: colors.ink,
   },
   statusEmptyRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   statusEmptyIcon: {
-    width: 34,
-    height: 34,
+    width: 36,
+    height: 36,
     borderRadius: 12,
-    backgroundColor: "rgba(201,166,70,0.14)",
+    backgroundColor: "rgba(193,122,61,0.3)",
     alignItems: "center",
     justifyContent: "center",
   },
-  statusEmptyTitle: { fontFamily: fonts.sansSemiBold, fontSize: 14, color: namecard.primary },
-  statusEmptyBody: { fontFamily: fonts.sans, fontSize: 12, color: namecard.body, marginTop: 2 },
+  statusEmptyTitle: { fontFamily: fonts.sansSemiBold, fontSize: 14, color: colors.parchment },
+  statusEmptyBody: { fontFamily: fonts.sans, fontSize: 12, color: "rgba(245,237,224,0.65)", marginTop: 2 },
 
   statusTopRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   statusIconRing: {
-    width: 38,
-    height: 38,
-    borderRadius: 13,
-    borderWidth: 1.5,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: "rgba(193,122,61,0.3)",
+    borderWidth: 0,
     alignItems: "center",
     justifyContent: "center",
   },
-  statusHeadline: { fontFamily: fonts.sansSemiBold, fontSize: 15, color: namecard.primary },
-  statusSubline: { fontFamily: fonts.sans, fontSize: 12, color: namecard.body, marginTop: 2 },
+  statusHeadline: { fontFamily: fonts.sansSemiBold, fontSize: 14, color: colors.parchment },
+  statusSubline: { fontFamily: fonts.sans, fontSize: 11.5, color: "rgba(245,237,224,0.65)", marginTop: 2 },
   statusCountRow: {
     flexDirection: "row",
     gap: 6,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: namecard.divider,
+    borderTopColor: "rgba(245,237,224,0.12)",
   },
-  statusCountText: { fontFamily: fonts.mono, fontSize: 11, color: namecard.footer },
+  statusCountText: { fontFamily: fonts.mono, fontSize: 11, color: "rgba(245,237,224,0.5)" },
 });

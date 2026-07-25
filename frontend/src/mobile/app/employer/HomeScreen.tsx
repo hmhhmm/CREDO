@@ -231,7 +231,7 @@ export default function EmployerHomeScreen({ navigation }: Props) {
               const meta = LEVEL_META[sig.level];
               const isHireIntelligence = sig.feature.startsWith("E8");
               return (
-                <GlassCard key={sig.id} radius={20}>
+                <GlassCard key={sig.id} radius={20} style={isHireIntelligence && styles.signalCardHighlighted}>
                   <Pressable
                     style={styles.signalCard}
                     disabled={!isHireIntelligence}
@@ -246,7 +246,11 @@ export default function EmployerHomeScreen({ navigation }: Props) {
                     <Text style={styles.signalTitle}>{sig.title}</Text>
                     {sig.person && <Text style={styles.signalPerson}>{sig.person}</Text>}
                     <Text style={styles.signalBody}>{sig.body}</Text>
-                    {isHireIntelligence && <Text style={styles.signalLink}>View full dashboard →</Text>}
+                    {isHireIntelligence && (
+                      <View style={styles.signalArrow}>
+                        <ArrowRight size={14} color={colors.ink} />
+                      </View>
+                    )}
                   </Pressable>
                 </GlassCard>
               );
@@ -320,6 +324,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
+  // Distinguishes the one tappable signal card (Hire Intelligence) from the plain,
+  // non-tappable ones around it: a tinted border/background instead of the shared
+  // GlassCard look, plus the corner arrow chip below instead of a text link.
+  signalCardHighlighted: { borderWidth: 1, borderColor: "rgba(47,110,143,0.25)", backgroundColor: "rgba(47,110,143,0.05)" },
   signalCard: { padding: 18, gap: 6 },
   signalHead: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
   signalDot: { width: 24, height: 24, borderRadius: 12, alignItems: "center", justifyContent: "center" },
@@ -327,7 +335,16 @@ const styles = StyleSheet.create({
   signalTitle: { fontFamily: fonts.displayBold, fontSize: 16, color: colors.ink, marginTop: 2 },
   signalPerson: { fontFamily: fonts.sansSemiBold, fontSize: 12, color: colors.ink },
   signalBody: { fontFamily: fonts.sans, fontSize: 12.5, color: colors.slate, lineHeight: 18, marginTop: 2 },
-  signalLink: { fontFamily: fonts.monoMedium, fontSize: 11, color: colors.verified, marginTop: 4 },
+  signalArrow: {
+    alignSelf: "flex-end",
+    marginTop: -4,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "rgba(16,25,43,0.06)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
   settingsLink: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginTop: 2 },
   settingsText: { fontFamily: fonts.mono, fontSize: 12, color: colors.slate },

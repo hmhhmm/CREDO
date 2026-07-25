@@ -1,11 +1,10 @@
 import { useMemo, useState } from "react";
 import { View, Text, ScrollView, Pressable, TextInput, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Send, RefreshCw, Check, CalendarPlus, CalendarCheck, Settings, ThumbsUp, ThumbsDown, X, Sparkles, ChevronRight } from "lucide-react-native";
+import { Send, RefreshCw, Check, CalendarPlus, CalendarCheck, Settings, ThumbsUp, ThumbsDown, X, Sparkles } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
-import { CredoGlass } from "../../components/shared/CredoGlass";
 import { STAGE_META, sortPipelineForAttention, type PipelineEntry } from "../../data/employerData";
 import type { DiscoverCandidate } from "../../data/employerData";
 import { mockCandidates } from "../../data/mockData";
@@ -80,6 +79,7 @@ export default function PipelineScreen({ navigation }: Props) {
         label: s.name,
         count: pipeline.filter((e) => e.currentStageId === s.id).length,
       })),
+      { id: "re_engage", label: "Re-engage", count: pipeline.filter((e) => e.stage === "re_engage").length },
       { id: "decided", label: "Decided", count: pipeline.filter((e) => !!e.decision).length },
     ],
     [pipeline, stages]
@@ -94,6 +94,7 @@ export default function PipelineScreen({ navigation }: Props) {
   const filteredPipeline = useMemo(() => {
     if (activeFilter === "all") return sortedPipeline;
     if (activeFilter === "not_invited") return sortedPipeline.filter((e) => e.currentStageId === null);
+    if (activeFilter === "re_engage") return sortedPipeline.filter((e) => e.stage === "re_engage");
     if (activeFilter === "decided") return sortedPipeline.filter((e) => !!e.decision);
     return sortedPipeline.filter((e) => e.currentStageId === activeFilter);
   }, [sortedPipeline, activeFilter]);
@@ -192,28 +193,23 @@ export default function PipelineScreen({ navigation }: Props) {
           {/* Re-engage suggestion — reads as a quiet AI notification, not a promo card: dark
               glass, a small pulsing "agent" dot instead of a candidate avatar, and an
               AI-generated label so it's clear the copy wasn't written by a human. Deliberately
-              understated — it should sit like a system nudge, not compete with the pipeline.
-              Temporarily disabled (design still being reconsidered) — code kept intact below. */}
-          {false && reEngageSuggestions.length > 0 && (
+              understated — it should sit like a system nudge, not compete with the pipeline. */}
+          {reEngageSuggestions.length > 0 && (
             <View style={{ marginTop: 12 }}>
               {reEngageSuggestions.map((e) => (
-                <Pressable key={`suggest-${e.id}`} style={styles.suggestionShadow} onPress={() => startComposing(e)}>
-                  <CredoGlass variant="identity" borderRadius={13} contentStyle={styles.suggestionCard}>
-                    <View style={styles.suggestionRow}>
-                      <View style={styles.suggestionAgentDot}>
-                        <Sparkles size={10} color={colors.gold} strokeWidth={2} />
-                      </View>
-
-                      <View style={styles.suggestionCopy}>
-                        <Text style={styles.suggestionLabel}>AI Suggestion</Text>
-                        <Text style={styles.suggestionBody} numberOfLines={1}>
-                          <Text style={styles.suggestionName}>{e.name}</Text> is open to work again — consider re-engaging.
-                        </Text>
-                      </View>
-
-                      <ChevronRight size={14} color="rgba(245,237,224,0.5)" strokeWidth={2} />
+                <Pressable key={`suggest-${e.id}`} style={styles.suggestionCard} onPress={() => startComposing(e)}>
+                  <View style={styles.suggestionRow}>
+                    <View style={styles.suggestionAgentDot}>
+                      <Sparkles size={10} color={colors.gold} strokeWidth={2} />
                     </View>
-                  </CredoGlass>
+
+                    <View style={styles.suggestionCopy}>
+                      <Text style={styles.suggestionLabel}>AI Suggestion</Text>
+                      <Text style={styles.suggestionBody} numberOfLines={1}>
+                        <Text style={styles.suggestionName}>{e.name}</Text> is open to work again — consider re-engaging.
+                      </Text>
+                    </View>
+                  </View>
                 </Pressable>
               ))}
             </View>
@@ -347,6 +343,10 @@ export default function PipelineScreen({ navigation }: Props) {
                     {/* E9 Interview Invitation — orthogonal to the stage action above; a
                         candidate can be e.g. "Shortlisted" and mid-way through the round
                         sequence at once. Round names come from Settings, not a fixed enum. */}
+                    {/* Once an employer has made a final call (accepted/rejected), the
+                        interview process is over — status label and actions both disappear,
+                        the decision badge below is the only thing left to show. */}
+                    {!e.decision && (
                     <View style={styles.interviewBlock}>
                       <View style={styles.interviewHead}>
                         <View style={[styles.interviewDot, { backgroundColor: interviewColor }]} />
@@ -416,6 +416,7 @@ export default function PipelineScreen({ navigation }: Props) {
                         )
                       )}
                     </View>
+                    )}
 
                     {/* E-Decision — offered once a candidate is actually in the interview
                         process (any round, not only after the last one), right here on the
@@ -567,14 +568,15 @@ const styles = StyleSheet.create({
 
   summaryRow: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 8 },
 
-  suggestionShadow: {
-    shadowColor: "rgba(16,25,43,0.14)",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 10,
-    elevation: 3,
+  // Same plain bordered/transparent treatment as filterChip below — no fill, no shadow, no
+  // blur, so it reads as part of the page rather than a floating card.
+  suggestionCard: {
+    borderWidth: 1,
+    borderColor: "rgba(16,25,43,0.3)",
+    borderRadius: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
   },
-  suggestionCard: { paddingVertical: 8, paddingHorizontal: 11 },
   suggestionRow: { flexDirection: "row", alignItems: "center", gap: 9 },
   suggestionAgentDot: {
     width: 22,
@@ -594,8 +596,8 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     color: colors.gold,
   },
-  suggestionName: { fontFamily: fonts.sansSemiBold, fontSize: 11.5, color: colors.parchment },
-  suggestionBody: { fontFamily: fonts.sans, fontSize: 11.5, color: "rgba(245,237,224,0.75)", lineHeight: 15 },
+  suggestionName: { fontFamily: fonts.sansSemiBold, fontSize: 11.5, color: colors.ink },
+  suggestionBody: { fontFamily: fonts.sans, fontSize: 11.5, color: colors.slate, lineHeight: 15 },
 
   filterScroll: { marginTop: 12 },
   filterRow: { flexDirection: "row", gap: 8, paddingRight: 4 },

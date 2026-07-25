@@ -87,13 +87,37 @@ export default function DiscoverScreen({ route, navigation }: Props) {
   // the rest of the product treating "verified" and "claimed" as different tiers of trust.
   // With no active filter, every match score is 0 and this collapses to a pure trust-score
   // sort, same as before.
-  const matchScore = (c: DiscoverCandidate) =>
-    activeSkills.reduce((score, sk) => {
+  //
+  // Trajectory bonus: a candidate whose claimed-but-unverified skills cover *multiple* of the
+  // required skills at once is showing real directional intent toward this specific role, not
+  // just one lucky overlap — that's "where someone is heading," which the flat per-skill
+  // weighting above doesn't capture on its own. Reflected in the same trajectory text already
+  // shown on each card (buildTrajectory's "building toward…" line), so the ranking bump has a
+  // visible reason attached, not a silent reorder.
+  const matchScore = (c: DiscoverCandidate) => {
+    let score = 0;
+    let claimedMatches = 0;
+    for (const sk of activeSkills) {
       const skLower = sk.toLowerCase();
-      if (c.verifiedSkills.some((vs) => vs.name.toLowerCase() === skLower)) return score + 2;
-      if ((c.claimedSkills ?? []).some((cs) => cs.toLowerCase() === skLower)) return score + 1;
-      return score;
-    }, 0);
+      if (c.verifiedSkills.some((vs) => vs.name.toLowerCase() === skLower)) {
+        score += 2;
+      } else if ((c.claimedSkills ?? []).some((cs) => cs.toLowerCase() === skLower)) {
+        score += 1;
+        claimedMatches += 1;
+      }
+    }
+    if (claimedMatches >= 2) score += 1;
+    return score;
+  };
+
+  // Momentum tiebreaker — the other half of "where someone is heading": among candidates
+  // tied on match score, whoever verified something more recently ranks first, same as the
+  // "most recently {month}" language buildTrajectory already surfaces on the card. Compared
+  // as a date string against other candidates in this same list, not against wall-clock
+  // "now" — buildTrajectory deliberately avoids that (mock dates would silently age out of
+  // any "recent" window), so this mirrors that choice rather than introducing a new one.
+  const mostRecentVerifiedDate = (c: DiscoverCandidate) =>
+    c.artifacts.filter((a) => a.status === "verified").reduce((latest, a) => (a.date > latest ? a.date : latest), "");
 
   const list = useMemo(
     () =>
@@ -107,7 +131,12 @@ export default function DiscoverScreen({ route, navigation }: Props) {
                 (c.claimedSkills ?? []).some((cs) => cs.toLowerCase() === sk.toLowerCase())
               )
         )
-        .sort((a, b) => matchScore(b) - matchScore(a) || b.trustScore - a.trustScore),
+        .sort(
+          (a, b) =>
+            matchScore(b) - matchScore(a) ||
+            mostRecentVerifiedDate(b).localeCompare(mostRecentVerifiedDate(a)) ||
+            b.trustScore - a.trustScore
+        ),
     [verifiedOnly, activeSkills]
   );
 

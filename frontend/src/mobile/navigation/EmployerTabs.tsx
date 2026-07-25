@@ -41,7 +41,7 @@ export default function EmployerTabs({ onSwitchRole }: { onSwitchRole: () => voi
     <Tab.Navigator
       screenOptions={{ headerShown: false }}
       initialRouteName={initialRouteName}
-      tabBar={(props) => <SegmentedTabBar {...props} icons={ICONS} labels={LABELS} centerRoute="FairMode" basePath={BASE_PATH} />}
+      tabBar={(props) => <SegmentedTabBar {...props} icons={ICONS} labels={LABELS} basePath={BASE_PATH} />}
     >
       <Tab.Screen name="Home">{() => <EmployerHomeStack onSwitchRole={onSwitchRole} />}</Tab.Screen>
       <Tab.Screen name="Discover" component={DiscoverStack} />

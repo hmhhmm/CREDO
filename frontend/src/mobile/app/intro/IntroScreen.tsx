@@ -12,7 +12,13 @@
 import { useEffect, useRef, useState } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView, FALLBACK_TOP_CLEARANCE } from "react-native-safe-area-context";
-import Animated, { useAnimatedStyle, useSharedValue, withTiming, useReducedMotion } from "react-native-reanimated";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+  withSpring,
+  useReducedMotion,
+} from "react-native-reanimated";
 import {
   ArrowRight,
   ArrowDown,
@@ -37,6 +43,59 @@ import { fonts } from "../../theme/typography";
 
 const SLIDE_COUNT = 5;
 
+// Stage 1 of the app's front door — a brief centered-logo entrance (spring scale + fade)
+// before Stage 2's slide carousel below. Internal state rather than a separate navigator
+// route: onGetStarted stays the one contract IntroScreen exposes to RootNavigator, so this
+// doesn't touch the /app/roles URL-mapping logic at all.
+function SplashStage({ onStart }: { onStart: () => void }) {
+  const reduced = useReducedMotion();
+  const scale = useSharedValue(0.85);
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    if (reduced) {
+      scale.value = 1;
+      opacity.value = 1;
+      return;
+    }
+    scale.value = withSpring(1, { damping: 12, stiffness: 120 });
+    opacity.value = withTiming(1, { duration: 500 });
+  }, [reduced, scale, opacity]);
+
+  const logoStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <View style={{ flex: 1 }}>
+      <ScreenBackground />
+      <SafeAreaView style={styles.splashContainer} edges={["top", "bottom"]}>
+        <View style={styles.splashCenter}>
+          <Animated.View style={[styles.splashLogoGroup, logoStyle]}>
+            <View style={styles.splashLogoCircle}>
+              <Text style={styles.splashLogoSymbol}>C</Text>
+            </View>
+            <Text style={styles.splashWordmark}>CREDO</Text>
+            <Text style={styles.splashSub}>CAREER OPERATING SYSTEM</Text>
+          </Animated.View>
+        </View>
+
+        <View style={styles.splashBottom}>
+          <Pressable onPress={onStart} accessibilityRole="button">
+            {({ pressed }) => (
+              <View style={[styles.ctaButton, styles.splashCtaButton, pressed && { opacity: 0.85 }]}>
+                <Text style={styles.ctaButtonText}>Start Journey</Text>
+                <ArrowRight size={16} color={colors.parchment} />
+              </View>
+            )}
+          </Pressable>
+        </View>
+      </SafeAreaView>
+    </View>
+  );
+}
+
 const PILLARS = [
   { key: "knowledge", label: "Knowledge", icon: BookOpen },
   { key: "skills", label: "Skills", icon: Wrench },
@@ -57,6 +116,7 @@ const MATCH_STAGES = [
 ] as const;
 
 export default function IntroScreen({ onGetStarted }: { onGetStarted: () => void }) {
+  const [stage, setStage] = useState<"splash" | "carousel">("splash");
   const [index, setIndex] = useState(0);
   const scrollRef = useRef<any>(null);
 
@@ -80,6 +140,10 @@ export default function IntroScreen({ onGetStarted }: { onGetStarted: () => void
   };
 
   const ctaLabel = ["Next", "Next", "Next", "Next", "Choose your side"][index];
+
+  if (stage === "splash") {
+    return <SplashStage onStart={() => setStage("carousel")} />;
+  }
 
   return (
     <View style={{ flex: 1 }}>
@@ -256,6 +320,29 @@ const styles = StyleSheet.create({
     paddingTop: FALLBACK_TOP_CLEARANCE,
   },
   wordmark: { fontFamily: fonts.displayBold, fontSize: 19, color: colors.ink, letterSpacing: 3 },
+
+  splashContainer: { flex: 1, justifyContent: "space-between", paddingHorizontal: 24 },
+  splashCenter: { flex: 1, alignItems: "center", justifyContent: "center" },
+  splashLogoGroup: { alignItems: "center" },
+  splashLogoCircle: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: colors.ink,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+    shadowColor: colors.ink,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 4,
+  },
+  splashLogoSymbol: { fontFamily: fonts.displayBold, fontSize: 40, color: colors.gold },
+  splashWordmark: { fontFamily: fonts.displayBold, fontSize: 30, letterSpacing: 4, color: colors.ink },
+  splashSub: { fontFamily: fonts.mono, fontSize: 10, letterSpacing: 2, color: colors.gold, marginTop: 6 },
+  splashBottom: { paddingBottom: 32 },
+  splashCtaButton: { justifyContent: "center", paddingVertical: 16, borderRadius: 30 },
   skip: { fontFamily: fonts.mono, fontSize: 12, color: colors.slate, letterSpacing: 0.5 },
 
   slide: {

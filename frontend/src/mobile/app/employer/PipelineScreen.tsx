@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { View, Text, ScrollView, Pressable, TextInput, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Send, RefreshCw, Check, CalendarPlus, CalendarCheck, Settings, ThumbsUp, ThumbsDown, X, Sparkles, GraduationCap } from "lucide-react-native";
+import { Send, RefreshCw, Check, CalendarPlus, CalendarCheck, Settings, ThumbsUp, ThumbsDown, X, Sparkles, GraduationCap, Search } from "lucide-react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
@@ -294,12 +294,21 @@ export default function PipelineScreen({ navigation }: Props) {
                       </View>
                     </View>
 
-                    {/* U6 University Introduction — distinct from attentionReasons below:
-                        this is provenance (how they entered the pipeline), not a resurfacing
-                        signal, so it gets its own badge rather than being folded in. */}
+                    {/* Provenance — how they entered the pipeline (applied directly,
+                        introduced by a university, or found by this employer), distinct from
+                        attentionReasons below (a resurfacing signal), so it gets its own badge
+                        rather than being folded in. sourceKind (not stage) picks the icon,
+                        since a university intro and an employer-sourced SimuHire review can
+                        share the same stage while having different provenance. */}
                     {e.sourceLabel && (
                       <View style={styles.sourceBadge}>
-                        <GraduationCap size={11} color={colors.terracotta} strokeWidth={2.5} />
+                        {e.sourceKind === "applied" ? (
+                          <Send size={11} color={colors.terracotta} strokeWidth={2.5} />
+                        ) : e.sourceKind === "university" ? (
+                          <GraduationCap size={11} color={colors.terracotta} strokeWidth={2.5} />
+                        ) : (
+                          <Search size={11} color={colors.terracotta} strokeWidth={2.5} />
+                        )}
                         <Text style={styles.sourceBadgeText}>{e.sourceLabel}</Text>
                       </View>
                     )}

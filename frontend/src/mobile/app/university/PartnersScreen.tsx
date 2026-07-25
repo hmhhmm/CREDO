@@ -130,6 +130,7 @@ export default function PartnersScreen({ university, navigation }: Props) {
                             openToWork: true, // getInternshipMatches only surfaces openToWork candidates
                             stage: "simuhire_done",
                             detail: `Introduced via ${university.name} Internship Marketplace — matched ${m.matchPct}% for ${m.role} at ${m.employer}`,
+                            sourceKind: "university",
                             sourceLabel: `${university.name} Introduction`,
                             currentStageId: null,
                           })

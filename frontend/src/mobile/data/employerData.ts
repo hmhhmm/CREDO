@@ -192,11 +192,14 @@ export interface PipelineEntry {
   openToWork: boolean; // E8 — resurfacing signal; see sortPipelineForAttention below
   stage: PipelineStage;
   detail: string;
-  // U6 University Introduction — set only when this entry was created via a university's
-  // Partners screen "Introduce to employer" (PartnersScreen.tsx), so the employer's Pipeline
-  // can render a distinct badge instead of the university context only surviving as text
-  // buried inside `detail`. Undefined for every other sourcing path (Discover, direct
-  // application, employer-initiated invite).
+  // Provenance — how this candidate actually entered the pipeline, so the employer's
+  // Pipeline can render a distinct badge instead of that context only surviving as text
+  // buried inside `detail`. sourceKind picks the badge icon (kept separate from `stage`,
+  // since a university introduction and an employer-sourced SimuHire review can share the
+  // same stage — "simuhire_done" — while having different provenance); sourceLabel is the
+  // human-readable text, always naming the specific job/university involved. Both undefined
+  // for the rare case where neither applies.
+  sourceKind?: "applied" | "university" | "sourced";
   sourceLabel?: string;
   simuHire?: {
     type: string;
@@ -305,6 +308,8 @@ export function pipelineEntryFromApplication(c: Candidate, employerId: string, j
     openToWork: c.openToWork,
     stage: "applied",
     detail: `Applied for ${jobTitle} via Smart Namecard`,
+    sourceKind: "applied",
+    sourceLabel: `Applied · ${jobTitle}`,
     currentStageId: null,
     appliedAt: new Date().toISOString(),
   };
@@ -326,6 +331,8 @@ export function getPipelineSeedFor(employer: Employer): PipelineEntry[] {
       openToWork: withSimuHire[0].openToWork,
       stage: "simuhire_done",
       detail: `SimuHire ${withSimuHire[0].simuHire.type} · ${withSimuHire[0].simuHire.overallScore}/100 — report ready to review`,
+      sourceKind: "sourced",
+      sourceLabel: `SimuHire Review · ${demoJobs[0]?.title ?? "Open Role"}`,
       simuHire: {
         type: withSimuHire[0].simuHire.type!,
         overallScore: withSimuHire[0].simuHire.overallScore!,
@@ -343,6 +350,8 @@ export function getPipelineSeedFor(employer: Employer): PipelineEntry[] {
       openToWork: withSimuHire[1].openToWork,
       stage: "simuhire_done",
       detail: `SimuHire ${withSimuHire[1].simuHire.type} · ${withSimuHire[1].simuHire.overallScore}/100 — report ready to review`,
+      sourceKind: "sourced",
+      sourceLabel: `SimuHire Review · ${demoJobs[1]?.title ?? demoJobs[0]?.title ?? "Open Role"}`,
       simuHire: {
         type: withSimuHire[1].simuHire.type!,
         overallScore: withSimuHire[1].simuHire.overallScore!,
@@ -360,6 +369,8 @@ export function getPipelineSeedFor(employer: Employer): PipelineEntry[] {
       openToWork: shortlistCandidate.openToWork,
       stage: "shortlisted",
       detail: `Shortlisted for ${demoJobs[0]?.title ?? "an open role"} — verified ${shortlistCandidate.verifiedSkills[0]?.name ?? "skills"}`,
+      sourceKind: "sourced",
+      sourceLabel: `Shortlisted · ${demoJobs[0]?.title ?? "Open Role"}`,
       currentStageId: DEFAULT_INTERVIEW_STAGES[1].id, // "1st Round" — scheduled, mid-funnel
       // Real ISO datetime, set to today at 10am — every employer sees at least one
       // same-day interview on login, so Home's "Today's Interviews" section (E4) always
@@ -381,6 +392,8 @@ export function getPipelineSeedFor(employer: Employer): PipelineEntry[] {
       openToWork: reEngageCandidate.openToWork,
       stage: "re_engage",
       detail: "Said no in March — timing may have changed, worth a light touch",
+      sourceKind: "sourced",
+      sourceLabel: `Previously considered · ${demoJobs[0]?.title ?? "Open Role"}`,
       currentStageId: null,
     },
   ];

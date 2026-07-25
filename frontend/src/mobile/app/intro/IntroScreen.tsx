@@ -190,11 +190,20 @@ function SlideScene({ index, onDragAdvance }: { index: number; onDragAdvance: (i
 function LandingScene() {
   return (
     <View style={styles.slide}>
+      {/* Restrained two-tone ambient glow (same spirit as ScreenBackground's light pools)
+          instead of a single saturated gold blob, which read as a flat yellow wash over
+          the whole page rather than ambient light. */}
       <motion.div
-        style={{ position: "absolute", width: 340, height: 340, borderRadius: 170, backgroundColor: "rgba(201,166,70,0.4)", filter: "blur(65px)" }}
+        style={{ position: "absolute", width: 300, height: 300, borderRadius: 150, backgroundColor: "rgba(16,25,43,0.05)", filter: "blur(70px)" }}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: [0, 1, 0.85, 1], scale: [0.9, 1, 0.96, 1] }}
+        transition={{ duration: 3, ease: "easeInOut", repeat: Infinity, repeatType: "mirror" }}
+      />
+      <motion.div
+        style={{ position: "absolute", width: 180, height: 180, borderRadius: 90, backgroundColor: "rgba(201,166,70,0.16)", filter: "blur(50px)" }}
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: [0, 1, 0.8, 1], scale: [0.9, 1, 0.97, 1] }}
-        transition={{ duration: 2.6, ease: "easeInOut", repeat: Infinity, repeatType: "mirror" }}
+        transition={{ duration: 2.6, ease: "easeInOut", repeat: Infinity, repeatType: "mirror", delay: 0.2 }}
       />
       <motion.div
         initial={{ opacity: 0, scale: 0.6 }}
@@ -217,17 +226,17 @@ function LandingScene() {
           <ShieldCheck size={38} color={colors.verified} strokeWidth={1.75} />
         </View>
       </motion.div>
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.4 }}>
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.4 }} style={{ width: "100%", textAlign: "center" }}>
         <View style={styles.eyebrowRow}>
           <Text style={styles.eyebrow}>Your lifetime career OS</Text>
         </View>
       </motion.div>
-      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28, duration: 0.45 }}>
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28, duration: 0.45 }} style={{ width: "100%", textAlign: "center" }}>
         <Text style={styles.headline}>
           Built on <Text style={styles.headlineGold}>verified proof.</Text>
         </Text>
       </motion.div>
-      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.45 }}>
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.45 }} style={{ width: "100%", textAlign: "center" }}>
         <Text style={styles.subtext}>Not a job board. A system that stays with you.</Text>
       </motion.div>
     </View>
@@ -259,12 +268,12 @@ function ProofScene() {
 
   return (
     <View style={styles.slide}>
-      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} style={{ width: "100%", textAlign: "center" }}>
         <Text style={styles.headline}>
           Proof beats <Text style={styles.headlineGold}>claims.</Text>
         </Text>
       </motion.div>
-      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.4 }}>
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.4 }} style={{ width: "100%", textAlign: "center" }}>
         <Text style={styles.subtext}>A fabricated résumé reads identical to an honest one — until it's checked.</Text>
       </motion.div>
 
@@ -340,10 +349,10 @@ function ProofScene() {
 function TransparencyScene() {
   return (
     <View style={styles.slide}>
-      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} style={{ width: "100%", textAlign: "center" }}>
         <Text style={styles.headline}>Know where{"\n"}you stand.</Text>
       </motion.div>
-      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.4 }}>
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.4 }} style={{ width: "100%", textAlign: "center" }}>
         <Text style={styles.subtext}>Matching and re-engagement happen in the open, not a black box.</Text>
       </motion.div>
 
@@ -452,10 +461,10 @@ function CoachScene() {
 
   return (
     <View style={styles.slide}>
-      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} style={{ width: "100%", textAlign: "center" }}>
         <Text style={styles.headline}>Learn while{"\n"}you apply.</Text>
       </motion.div>
-      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.4 }}>
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.4 }} style={{ width: "100%", textAlign: "center" }}>
         <Text style={styles.subtext}>An AI coach and a practice interview, not just a submit button.</Text>
       </motion.div>
 
@@ -517,10 +526,10 @@ function CoachScene() {
 function TriangleScene() {
   return (
     <View style={styles.slide}>
-      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} style={{ width: "100%", textAlign: "center" }}>
         <Text style={styles.headline}>Built for whoever{"\n"}needs the truth.</Text>
       </motion.div>
-      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.4 }}>
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.4 }} style={{ width: "100%", textAlign: "center" }}>
         <Text style={styles.subtext}>One platform, three sides of the same problem.</Text>
       </motion.div>
 
@@ -614,8 +623,8 @@ const styles = StyleSheet.create({
   splashContainer: { flex: 1, justifyContent: "space-between", paddingHorizontal: 24 },
   splashCenter: { flex: 1, alignItems: "center", justifyContent: "center" },
   splashLogoGroup: { alignItems: "center" },
-  splashWordmark: { fontFamily: fonts.displayBold, fontSize: 56, letterSpacing: 6, color: colors.ink },
-  splashSub: { fontFamily: fonts.mono, fontSize: 12, letterSpacing: 3, color: colors.gold, marginTop: 10 },
+  splashWordmark: { fontFamily: fonts.displayBold, fontSize: 38, letterSpacing: 5, color: colors.ink },
+  splashSub: { fontFamily: fonts.mono, fontSize: 11, letterSpacing: 2.5, color: colors.gold, marginTop: 8 },
   splashBottom: { paddingBottom: 32 },
   splashCtaButton: { justifyContent: "center", paddingVertical: 16, borderRadius: 30 },
 
@@ -630,7 +639,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
 
-  eyebrowRow: { flexDirection: "row", alignItems: "center", gap: 7 },
+  eyebrowRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
   eyebrow: { fontFamily: fonts.mono, fontSize: 10.5, textTransform: "uppercase", letterSpacing: 2, color: colors.slate },
 
   headline: {

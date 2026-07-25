@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
   modeTabText: { fontFamily: fonts.sansSemiBold, fontSize: 12, color: colors.slate },
   modeTabTextActive: { color: colors.parchment },
 
-  qrWrap: { flex: 1, alignItems: "center", justifyContent: "center" },
+  qrWrap: { alignItems: "center", marginTop: 32 },
   qrCard: {
     padding: 24,
     backgroundColor: "#fff",

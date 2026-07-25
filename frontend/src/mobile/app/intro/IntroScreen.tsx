@@ -17,7 +17,7 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView, FALLBACK_TOP_CLEARANCE } from "react-native-safe-area-context";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming, withSpring, useReducedMotion } from "react-native-reanimated";
 import { motion, AnimatePresence, useReducedMotion as useFramerReducedMotion } from "framer-motion";
-import { ArrowRight, ShieldCheck, GraduationCap, Briefcase, Building2, FileX, Check } from "lucide-react-native";
+import { ArrowRight, ShieldCheck, GraduationCap, Briefcase, Building2, FileX, Check, Sparkles } from "lucide-react-native";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import { colors } from "../../theme/colors";
 import { fonts } from "../../theme/typography";
@@ -104,12 +104,19 @@ export default function IntroScreen({ onGetStarted }: { onGetStarted: () => void
       <ScreenBackground />
       <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
         <View style={styles.topRow}>
-          <Text style={styles.wordmark}>CREDO</Text>
-          {index < SLIDE_COUNT - 1 && (
-            <Pressable onPress={onGetStarted} accessibilityRole="button">
-              <Text style={styles.skip}>Skip</Text>
-            </Pressable>
-          )}
+          <View style={styles.topRowSide} />
+          <View style={styles.topRowCenter}>
+            <Text style={styles.wordmark}>CREDO</Text>
+          </View>
+          <View style={[styles.topRowSide, styles.topRowSideRight]}>
+            {index < SLIDE_COUNT - 1 && (
+              <Pressable onPress={onGetStarted} accessibilityRole="button" hitSlop={8}>
+                <View style={styles.skipPill}>
+                  <Text style={styles.skip}>Skip</Text>
+                </View>
+              </Pressable>
+            )}
+          </View>
         </View>
 
         <View style={styles.viewport}>
@@ -184,23 +191,43 @@ function LandingScene() {
   return (
     <View style={styles.slide}>
       <motion.div
-        style={{ position: "absolute", width: 260, height: 260, borderRadius: 130, backgroundColor: "rgba(201,166,70,0.38)", filter: "blur(55px)" }}
+        style={{ position: "absolute", width: 340, height: 340, borderRadius: 170, backgroundColor: "rgba(201,166,70,0.4)", filter: "blur(65px)" }}
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: [0, 1, 0.8, 1], scale: [0.9, 1, 0.97, 1] }}
         transition={{ duration: 2.6, ease: "easeInOut", repeat: Infinity, repeatType: "mirror" }}
       />
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.4 }}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.6 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.55, type: "spring", stiffness: 180, damping: 16 }}
+        style={{ position: "relative", width: 108, height: 108, marginBottom: 6 }}
+      >
+        <svg width="108" height="108" style={{ position: "absolute", top: 0, left: 0 }}>
+          <circle cx={54} cy={54} r={48} fill="none" stroke="rgba(201,166,70,0.25)" strokeWidth={2} />
+          <motion.circle
+            cx={54} cy={54} r={48} fill="none" stroke={colors.gold} strokeWidth={3}
+            strokeLinecap="round" strokeDasharray={2 * Math.PI * 48}
+            initial={{ strokeDashoffset: 2 * Math.PI * 48 }}
+            animate={{ strokeDashoffset: 2 * Math.PI * 48 * 0.22 }}
+            transition={{ delay: 0.3, duration: 1.1, ease: "easeInOut" }}
+            transform="rotate(-90 54 54)"
+          />
+        </svg>
+        <View style={styles.landingRingCenter}>
+          <ShieldCheck size={38} color={colors.verified} strokeWidth={1.75} />
+        </View>
+      </motion.div>
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15, duration: 0.4 }}>
         <View style={styles.eyebrowRow}>
-          <ShieldCheck size={13} color={colors.verified} />
           <Text style={styles.eyebrow}>Your lifetime career OS</Text>
         </View>
       </motion.div>
-      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22, duration: 0.45 }}>
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28, duration: 0.45 }}>
         <Text style={styles.headline}>
           Built on <Text style={styles.headlineGold}>verified proof.</Text>
         </Text>
       </motion.div>
-      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.34, duration: 0.45 }}>
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.45 }}>
         <Text style={styles.subtext}>Not a job board. A system that stays with you.</Text>
       </motion.div>
     </View>
@@ -241,14 +268,14 @@ function ProofScene() {
         <Text style={styles.subtext}>A fabricated résumé reads identical to an honest one — until it's checked.</Text>
       </motion.div>
 
-      <div style={{ marginTop: 22, position: "relative", width: 220, height: 140 }}>
+      <div style={{ marginTop: 26, position: "relative", width: 280, height: 190 }}>
         <motion.div
-          style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10 }}
+          style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12 }}
           initial={{ opacity: 1, scale: 1 }}
           animate={{ opacity: 0, scale: 0.85 }}
           transition={{ delay: 0.55, duration: 0.4 }}
         >
-          <FileX size={40} color={colors.slate} />
+          <FileX size={52} color={colors.slate} />
           <Text style={styles.ghostLabel}>Unverified résumé</Text>
         </motion.div>
 
@@ -260,7 +287,7 @@ function ProofScene() {
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            gap: 10,
+            gap: 12,
           }}
           initial={{ opacity: 0, scale: 0.7 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -268,11 +295,11 @@ function ProofScene() {
         >
           <div
             style={{
-              width: 64,
-              height: 64,
-              borderRadius: 20,
+              width: 84,
+              height: 84,
+              borderRadius: 26,
               backgroundColor: "rgba(31,122,92,0.1)",
-              border: `1.5px solid ${colors.verified}`,
+              border: `2px solid ${colors.verified}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -284,10 +311,24 @@ function ProofScene() {
               transition={{ delay: 0.95, duration: 0.4 }}
               style={{ display: "flex" }}
             >
-              <Check size={30} color={colors.verified} strokeWidth={3} />
+              <Check size={40} color={colors.verified} strokeWidth={3} />
             </motion.div>
           </div>
           <Text style={styles.proofCount}>{count}% verified</Text>
+
+          <motion.div
+            style={{ display: "flex", gap: 8, marginTop: 2 }}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1.15, duration: 0.4 }}
+          >
+            {["GitHub", "Credential", "Document"].map((src) => (
+              <div key={src} style={{ display: "flex", alignItems: "center", gap: 4, backgroundColor: "rgba(31,122,92,0.08)", borderRadius: 100, padding: "4px 10px" }}>
+                <Check size={9} color={colors.verified} strokeWidth={3} />
+                <span style={{ fontFamily: fonts.mono, fontSize: 10, color: colors.verified }}>{src}</span>
+              </div>
+            ))}
+          </motion.div>
         </motion.div>
       </div>
     </View>
@@ -306,26 +347,42 @@ function TransparencyScene() {
         <Text style={styles.subtext}>Matching and re-engagement happen in the open, not a black box.</Text>
       </motion.div>
 
-      <div style={{ marginTop: 26, width: 280, position: "relative" }}>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2, duration: 0.4 }}
+        style={{ marginTop: 4 }}
+      >
+        <View style={styles.liveBadge}>
+          <motion.div
+            style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.verified }}
+            animate={{ opacity: [1, 0.3, 1] }}
+            transition={{ duration: 1.4, repeat: Infinity }}
+          />
+          <Text style={styles.liveBadgeText}>Live status — updated moments ago</Text>
+        </View>
+      </motion.div>
+
+      <div style={{ marginTop: 22, width: 320, position: "relative" }}>
         <div
           style={{
             position: "absolute",
-            top: 15,
-            left: 16,
-            right: 16,
-            height: 2,
+            top: 21,
+            left: 20,
+            right: 20,
+            height: 3,
             backgroundColor: "rgba(16,25,43,0.1)",
-            borderRadius: 1,
+            borderRadius: 1.5,
           }}
         />
         <motion.div
           style={{
             position: "absolute",
-            top: 15,
-            left: 16,
-            height: 2,
+            top: 21,
+            left: 20,
+            height: 3,
             backgroundColor: colors.verified,
-            borderRadius: 1,
+            borderRadius: 1.5,
           }}
           initial={{ width: 0 }}
           animate={{ width: "50%" }}
@@ -334,25 +391,34 @@ function TransparencyScene() {
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           {MATCH_STAGES.map((s, i) => {
             const done = i < 2;
+            const active = i === 2;
             return (
-              <div key={s.key} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, width: 88 }}>
+              <div key={s.key} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10, width: 100 }}>
                 <motion.div
                   style={{
-                    width: 30,
-                    height: 30,
-                    borderRadius: 15,
+                    width: 42,
+                    height: 42,
+                    borderRadius: 21,
                     backgroundColor: done ? colors.verified : colors.parchment,
-                    border: done ? "none" : `1.5px solid rgba(16,25,43,0.15)`,
+                    border: done ? "none" : `2px solid rgba(16,25,43,0.15)`,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     zIndex: 1,
+                    boxShadow: done ? "0 4px 10px rgba(31,122,92,0.25)" : "none",
                   }}
                   initial={{ scale: 0.5, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ delay: 0.25 + i * 0.22, duration: 0.35, type: "spring", stiffness: 260, damping: 18 }}
                 >
-                  {done && <Check size={14} color={colors.parchment} strokeWidth={3} />}
+                  {done && <Check size={18} color={colors.parchment} strokeWidth={3} />}
+                  {active && (
+                    <motion.div
+                      style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.gold }}
+                      animate={{ opacity: [1, 0.3, 1] }}
+                      transition={{ duration: 1, repeat: Infinity }}
+                    />
+                  )}
                 </motion.div>
                 <Text style={[styles.stageLabel, !done && styles.stageLabelMuted]}>{s.label}</Text>
               </div>
@@ -394,22 +460,40 @@ function CoachScene() {
       </motion.div>
 
       <motion.div
-        initial={{ opacity: 0, y: 16, scale: 0.96 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ delay: 0.3, duration: 0.4 }}
+        initial={{ opacity: 0, scale: 0 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.24, duration: 0.4, type: "spring", stiffness: 220, damping: 16 }}
         style={{
-          marginTop: 22,
-          width: 280,
-          backgroundColor: colors.parchment,
+          marginTop: 26,
+          width: 56,
+          height: 56,
           borderRadius: 18,
-          borderTopLeftRadius: 4,
-          padding: 16,
-          boxShadow: "0 8px 20px rgba(16,25,43,0.08)",
-          border: "1px solid rgba(201,166,70,0.25)",
+          backgroundColor: colors.ink,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-          <span style={{ fontFamily: fonts.mono, fontSize: 10.5, letterSpacing: 1.5, textTransform: "uppercase", color: colors.gold }}>
+        <Sparkles size={26} color={colors.gold} />
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 16, scale: 0.96 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ delay: 0.4, duration: 0.4 }}
+        style={{
+          marginTop: 10,
+          width: 320,
+          backgroundColor: colors.parchment,
+          borderRadius: 20,
+          borderTopLeftRadius: 4,
+          padding: 20,
+          boxShadow: "0 10px 26px rgba(16,25,43,0.1)",
+          border: "1px solid rgba(201,166,70,0.28)",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
+          <span style={{ fontFamily: fonts.mono, fontSize: 11, letterSpacing: 1.5, textTransform: "uppercase", color: colors.gold }}>
             AI Career Coach
           </span>
         </div>
@@ -440,25 +524,31 @@ function TriangleScene() {
         <Text style={styles.subtext}>One platform, three sides of the same problem.</Text>
       </motion.div>
 
-      <div style={{ marginTop: 24, position: "relative", width: 260, height: 96 }}>
-        <svg width="260" height="96" style={{ position: "absolute", top: 0, left: 0 }}>
+      <div style={{ marginTop: 30, position: "relative", width: 320, height: 200 }}>
+        <motion.div
+          style={{ position: "absolute", top: 30, left: 60, width: 200, height: 200, borderRadius: 100, backgroundColor: "rgba(201,166,70,0.22)", filter: "blur(45px)" }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3, duration: 0.8 }}
+        />
+        <svg width="320" height="150" style={{ position: "absolute", top: 30, left: 0 }}>
           <motion.line
-            x1={46} y1={20} x2={214} y2={20}
-            stroke="rgba(201,166,70,0.5)" strokeWidth={1.5}
+            x1={56} y1={30} x2={264} y2={30}
+            stroke="rgba(201,166,70,0.55)" strokeWidth={2}
             initial={{ pathLength: 0, opacity: 0 }}
             animate={{ pathLength: 1, opacity: 1 }}
             transition={{ delay: 0.55, duration: 0.5 }}
           />
           <motion.line
-            x1={46} y1={20} x2={130} y2={86}
-            stroke="rgba(201,166,70,0.5)" strokeWidth={1.5}
+            x1={56} y1={30} x2={160} y2={128}
+            stroke="rgba(201,166,70,0.55)" strokeWidth={2}
             initial={{ pathLength: 0, opacity: 0 }}
             animate={{ pathLength: 1, opacity: 1 }}
             transition={{ delay: 0.7, duration: 0.5 }}
           />
           <motion.line
-            x1={214} y1={20} x2={130} y2={86}
-            stroke="rgba(201,166,70,0.5)" strokeWidth={1.5}
+            x1={264} y1={30} x2={160} y2={128}
+            stroke="rgba(201,166,70,0.55)" strokeWidth={2}
             initial={{ pathLength: 0, opacity: 0 }}
             animate={{ pathLength: 1, opacity: 1 }}
             transition={{ delay: 0.85, duration: 0.5 }}
@@ -468,19 +558,19 @@ function TriangleScene() {
         {ROLES.map((r, i) => {
           const pos = [
             { left: 0, top: 0 },
-            { left: 168, top: 0 },
-            { left: 84, top: 60 },
+            { left: 208, top: 0 },
+            { left: 104, top: 92 },
           ][i];
           return (
             <motion.div
               key={r.key}
-              style={{ position: "absolute", ...pos, display: "flex", flexDirection: "column", alignItems: "center", gap: 4, width: 92 }}
+              style={{ position: "absolute", ...pos, display: "flex", flexDirection: "column", alignItems: "center", gap: 6, width: 112 }}
               initial={{ opacity: 0, y: -10, scale: 0.7 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ delay: 0.15 + i * 0.14, duration: 0.4, type: "spring", stiffness: 240, damping: 18 }}
             >
               <View style={styles.roleChipIcon}>
-                <r.icon size={20} color={colors.ink} />
+                <r.icon size={26} color={colors.ink} />
               </View>
               <Text style={styles.roleChipLabel}>{r.label}</Text>
               <Text style={styles.roleChipBody}>{r.body}</Text>
@@ -496,8 +586,8 @@ const styles = StyleSheet.create({
   topRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     paddingHorizontal: 22,
+    paddingBottom: 6,
     // SafeAreaView's edges=["top"] only reserves real device notch space (env(safe-area-
     // inset-top)) — that's 0 in a plain browser tab / most emulators, which is why this
     // sat flush against the very top edge. FALLBACK_TOP_CLEARANCE gives the header the
@@ -505,14 +595,27 @@ const styles = StyleSheet.create({
     // notched device — same constant the native-stack header shim uses.
     paddingTop: FALLBACK_TOP_CLEARANCE,
   },
-  wordmark: { fontFamily: fonts.displayBold, fontSize: 19, color: colors.ink, letterSpacing: 3 },
-  skip: { fontFamily: fonts.mono, fontSize: 12, color: colors.slate, letterSpacing: 0.5 },
+  // Equal-width flanking spacers pin the wordmark to the true row center regardless of its
+  // own width or Skip's presence — the right spacer hosts Skip, the left is an empty
+  // same-width twin so the center slot's flex:1 stays balanced on both sides.
+  topRowSide: { width: 64 },
+  topRowSideRight: { alignItems: "flex-end" },
+  topRowCenter: { flex: 1, alignItems: "center" },
+  wordmark: { fontFamily: fonts.displayBold, fontSize: 24, color: colors.ink, letterSpacing: 4 },
+  skipPill: {
+    borderWidth: 1,
+    borderColor: "rgba(16,25,43,0.14)",
+    borderRadius: 100,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+  },
+  skip: { fontFamily: fonts.mono, fontSize: 11.5, color: colors.slate, letterSpacing: 0.5 },
 
   splashContainer: { flex: 1, justifyContent: "space-between", paddingHorizontal: 24 },
   splashCenter: { flex: 1, alignItems: "center", justifyContent: "center" },
   splashLogoGroup: { alignItems: "center" },
-  splashWordmark: { fontFamily: fonts.displayBold, fontSize: 30, letterSpacing: 4, color: colors.ink },
-  splashSub: { fontFamily: fonts.mono, fontSize: 10, letterSpacing: 2, color: colors.gold, marginTop: 6 },
+  splashWordmark: { fontFamily: fonts.displayBold, fontSize: 56, letterSpacing: 6, color: colors.ink },
+  splashSub: { fontFamily: fonts.mono, fontSize: 12, letterSpacing: 3, color: colors.gold, marginTop: 10 },
   splashBottom: { paddingBottom: 32 },
   splashCtaButton: { justifyContent: "center", paddingVertical: 16, borderRadius: 30 },
 
@@ -548,24 +651,45 @@ const styles = StyleSheet.create({
     maxWidth: 340,
   },
 
-  ghostLabel: { fontFamily: fonts.mono, fontSize: 11, color: colors.slate },
-  proofCount: { fontFamily: fonts.sansSemiBold, fontSize: 14, color: colors.verified },
+  landingRingCenter: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: 108,
+    height: 108,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
-  stageLabel: { fontFamily: fonts.sansMedium, fontSize: 10.5, color: colors.ink, textAlign: "center", lineHeight: 14 },
+  ghostLabel: { fontFamily: fonts.mono, fontSize: 12, color: colors.slate },
+  proofCount: { fontFamily: fonts.sansSemiBold, fontSize: 16, color: colors.verified },
+
+  liveBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    backgroundColor: "rgba(31,122,92,0.08)",
+    borderRadius: 100,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  liveBadgeText: { fontFamily: fonts.mono, fontSize: 10.5, color: colors.verified, letterSpacing: 0.3 },
+
+  stageLabel: { fontFamily: fonts.sansMedium, fontSize: 11.5, color: colors.ink, textAlign: "center", lineHeight: 15 },
   stageLabelMuted: { color: colors.slate },
 
-  coachQuote: { fontFamily: fonts.sans, fontSize: 13, fontStyle: "italic", lineHeight: 19, color: colors.ink },
+  coachQuote: { fontFamily: fonts.sans, fontSize: 14.5, fontStyle: "italic", lineHeight: 21, color: colors.ink },
 
   roleChipIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
+    width: 64,
+    height: 64,
+    borderRadius: 20,
     backgroundColor: "rgba(16,25,43,0.06)",
     alignItems: "center",
     justifyContent: "center",
   },
-  roleChipLabel: { fontFamily: fonts.sansSemiBold, fontSize: 12.5, color: colors.ink },
-  roleChipBody: { fontFamily: fonts.sans, fontSize: 10.5, color: colors.slate, textAlign: "center", lineHeight: 14 },
+  roleChipLabel: { fontFamily: fonts.sansSemiBold, fontSize: 13.5, color: colors.ink },
+  roleChipBody: { fontFamily: fonts.sans, fontSize: 11, color: colors.slate, textAlign: "center", lineHeight: 15 },
 
   bottomBar: {
     paddingHorizontal: 24,

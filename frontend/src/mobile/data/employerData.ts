@@ -192,6 +192,12 @@ export interface PipelineEntry {
   openToWork: boolean; // E8 — resurfacing signal; see sortPipelineForAttention below
   stage: PipelineStage;
   detail: string;
+  // U6 University Introduction — set only when this entry was created via a university's
+  // Partners screen "Introduce to employer" (PartnersScreen.tsx), so the employer's Pipeline
+  // can render a distinct badge instead of the university context only surviving as text
+  // buried inside `detail`. Undefined for every other sourcing path (Discover, direct
+  // application, employer-initiated invite).
+  sourceLabel?: string;
   simuHire?: {
     type: string;
     overallScore: number;

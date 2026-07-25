@@ -164,7 +164,7 @@ export default function PipelineScreen({ navigation }: Props) {
       <SafeAreaView style={styles.container} edges={["top"]}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.headingRow}>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={styles.heading}>Pipeline</Text>
               <Text style={styles.subheading}>SimuHire reviews, interviews & re-engagement — behavioral evidence before the first interview.</Text>
             </View>

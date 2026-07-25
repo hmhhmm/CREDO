@@ -110,6 +110,15 @@ export default function DiscoverScreen({ route, navigation }: Props) {
     return score;
   };
 
+  // Momentum tiebreaker — the other half of "where someone is heading": among candidates
+  // tied on match score, whoever verified something more recently ranks first, same as the
+  // "most recently {month}" language buildTrajectory already surfaces on the card. Compared
+  // as a date string against other candidates in this same list, not against wall-clock
+  // "now" — buildTrajectory deliberately avoids that (mock dates would silently age out of
+  // any "recent" window), so this mirrors that choice rather than introducing a new one.
+  const mostRecentVerifiedDate = (c: DiscoverCandidate) =>
+    c.artifacts.filter((a) => a.status === "verified").reduce((latest, a) => (a.date > latest ? a.date : latest), "");
+
   const list = useMemo(
     () =>
       discoverCandidates
@@ -122,7 +131,12 @@ export default function DiscoverScreen({ route, navigation }: Props) {
                 (c.claimedSkills ?? []).some((cs) => cs.toLowerCase() === sk.toLowerCase())
               )
         )
-        .sort((a, b) => matchScore(b) - matchScore(a) || b.trustScore - a.trustScore),
+        .sort(
+          (a, b) =>
+            matchScore(b) - matchScore(a) ||
+            mostRecentVerifiedDate(b).localeCompare(mostRecentVerifiedDate(a)) ||
+            b.trustScore - a.trustScore
+        ),
     [verifiedOnly, activeSkills]
   );
 

@@ -28,57 +28,92 @@ type Props = NativeStackScreenProps<HomeStackParamList, "ApplicationStatus">;
 // attributed to the employer.
 const DECISION_WINDOW_DAYS = 5;
 
-type TrackerStageKey = "applied" | "screening" | "simuhire" | "interview" | "outcome";
-
-function trackerStatus(entry: PipelineEntry): { active: TrackerStageKey; reachedSimuHire: boolean } {
-  if (entry.decision) return { active: "outcome", reachedSimuHire: !!entry.simuHire };
-  if (entry.currentStageId) return { active: "interview", reachedSimuHire: !!entry.simuHire };
-  if (entry.simuHire) return { active: "simuhire", reachedSimuHire: true };
-  if (entry.hrViewedAt) return { active: "screening", reachedSimuHire: false };
-  return { active: "applied", reachedSimuHire: false };
-}
+type TrackerStageKey = "applied" | "screening" | "interview" | "outcome";
+type DotState = "done" | "terminal" | "pending";
 
 const TRACKER_STAGES: { key: TrackerStageKey; label: string }[] = [
   { key: "applied", label: "Applied" },
   { key: "screening", label: "Screening" },
-  { key: "simuhire", label: "SimuHire" },
   { key: "interview", label: "Interview" },
   { key: "outcome", label: "Outcome" },
 ];
 
-function StageTracker({ entry, accent }: { entry: PipelineEntry; accent: string }) {
-  const { active } = trackerStatus(entry);
-  const activeIndex = TRACKER_STAGES.findIndex((s) => s.key === active);
+// Per-stage state, not a single linear "how far along" index — so a stage that was actually
+// skipped never gets falsely marked complete just because a later one was reached.
+//   - Accepted: every stage reads as done (green) — the whole path succeeded.
+//   - Rejected before ever being invited to interview: the rejection is a Screening-stage
+//     outcome, not an Outcome-stage one — Screening is the (red) terminal dot, Interview and
+//     Outcome never happened and stay pending, not falsely marked reached.
+//   - Rejected after being invited: Applied/Screening/Interview all genuinely happened (done),
+//     Outcome is the (red) terminal dot.
+//   - No decision yet: stages reached so far are "done," the first one not yet reached is
+//     the active (in-progress) stage.
+function stageStates(entry: PipelineEntry): Record<TrackerStageKey, DotState> {
+  if (entry.decision === "accepted") {
+    return { applied: "done", screening: "done", interview: "done", outcome: "done" };
+  }
+  if (entry.decision === "rejected") {
+    if (entry.currentStageId === null) {
+      return { applied: "done", screening: "terminal", interview: "pending", outcome: "pending" };
+    }
+    return { applied: "done", screening: "done", interview: "done", outcome: "terminal" };
+  }
+  const screeningReached = !!entry.hrViewedAt;
+  const interviewReached = entry.currentStageId !== null;
+  return {
+    applied: "done",
+    screening: screeningReached ? "done" : "pending",
+    interview: interviewReached ? "done" : "pending",
+    outcome: "pending",
+  };
+}
 
+function StageTracker({ entry, accent }: { entry: PipelineEntry; accent: string }) {
+  const states = stageStates(entry);
+  // Only meaningful while nothing's been decided yet — the first pending stage is what's
+  // currently in progress. Once decided, every dot is either done or genuinely skipped, so
+  // nothing gets the "in progress" highlight anymore.
+  const activeKey: TrackerStageKey | null = entry.decision
+    ? null
+    : TRACKER_STAGES.find((s) => states[s.key] === "pending")?.key ?? null;
+
+  // One color for the whole reached portion of the line — accent is already verified/alert/
+  // terracotta depending on decision, so accepted reads as an unbroken green line, rejected
+  // as an unbroken red line (dots and connectors both), and in-progress as terracotta. Only
+  // pending (unreached/skipped) stages stay neutral.
   return (
     <View style={styles.tracker}>
       <View style={styles.trackerRow}>
         {TRACKER_STAGES.map((s, i) => {
-          const done = i < activeIndex || (i === activeIndex && active === "outcome");
-          const isActive = i === activeIndex && active !== "outcome";
+          const reached = states[s.key] !== "pending";
+          const isActive = s.key === activeKey;
+          const next = TRACKER_STAGES[i + 1];
+          // A connector only reads as "traveled" if both stages it joins actually happened —
+          // a skipped stage keeps the line neutral, showing the real gap.
+          const connectorTraveled = reached && !!next && states[next.key] !== "pending";
           return (
             <View key={s.key} style={styles.trackerNode}>
               <View
                 style={[
                   styles.trackerDot,
-                  done && { backgroundColor: accent, borderColor: accent },
+                  reached && { backgroundColor: accent, borderColor: accent },
                   isActive && { borderColor: accent },
                 ]}
               />
               {i < TRACKER_STAGES.length - 1 && (
-                <View style={[styles.trackerConnector, i < activeIndex && { backgroundColor: accent }]} />
+                <View style={[styles.trackerConnector, connectorTraveled && { backgroundColor: accent }]} />
               )}
             </View>
           );
         })}
       </View>
       <View style={styles.trackerLabelRow}>
-        {TRACKER_STAGES.map((s, i) => (
+        {TRACKER_STAGES.map((s) => (
           <Text
             key={s.key}
             style={[
               styles.trackerLabel,
-              i === activeIndex && active !== "outcome" && { color: colors.ink, fontFamily: fonts.sansSemiBold },
+              s.key === activeKey && { color: colors.ink, fontFamily: fonts.sansSemiBold },
             ]}
             numberOfLines={1}
           >

@@ -246,28 +246,6 @@ export interface HRComment {
   date: string;
 }
 
-// Picks a deterministic, varied slice of the real roster to seed each employer's pipeline
-// with — one candidate per stage type, chosen by real attributes (SimuHire completion,
-// trust score) rather than 4 fixed ids that would break the moment the roster regenerates.
-// Only ~42% of the full 121-candidate roster has completed SimuHire (the rest are early-
-// stage "explorers" — expected, not a bug); withSimuHire is the pool the simuhire_done
-// entries below actually draw from. These picks are the same across every employer (the
-// selection formula is deterministic, not employer-specific) — what makes each employer's
-// Pipeline actually theirs is employerId-scoped storage in PipelineContext, not different
-// seed candidates.
-const withSimuHire = allCandidates.filter((c) => c.simuHire.completed);
-// Each pick explicitly excludes everyone already chosen — without this, two of the four
-// seed slots can resolve to the same real person (seen live: shortlistCandidate's old
-// predicate never referenced its own loop variable, so it always fell through to the same
-// fallback index as reEngageCandidate's unconstrained find(), seeding one candidate twice
-// into the same employer's Pipeline under two different stages).
-const seedPickedIds = new Set([withSimuHire[0]?.id, withSimuHire[1]?.id]);
-const shortlistCandidate =
-  allCandidates.find((c) => c.trustScore >= 70 && !seedPickedIds.has(c.id)) ?? allCandidates[2];
-seedPickedIds.add(shortlistCandidate.id);
-const reEngageCandidate =
-  allCandidates.find((c) => !c.openToWork && !seedPickedIds.has(c.id)) ?? allCandidates[3];
-
 // Builds a fresh PipelineEntry from any candidate not already in the pipeline — used when
 // "Invite to Interview" is pressed from a profile the employer reached via Discover/Fair
 // Mode rather than one already tracked in Pipeline. id is employerId-prefixed so the same
@@ -293,6 +271,25 @@ export function pipelineEntryFromCandidate(c: Candidate, employerId: string): Pi
   };
 }
 
+// E6 Re-Engagement — builds a fresh re_engage-stage entry from a real candidate the employer
+// hasn't already got a pipeline entry for, used only when the AI suggestion banner is acted
+// on (PipelineScreen). The entry doesn't exist until that press — the banner itself suggests
+// straight from the candidate pool, not from a pre-existing PipelineEntry.
+export function reEngageEntryFromCandidate(c: Candidate, employerId: string): PipelineEntry {
+  return {
+    id: `${employerId}-p-${c.id}`,
+    employerId,
+    candidateId: c.id,
+    name: c.name,
+    field: c.field,
+    trustScore: c.trustScore,
+    openToWork: c.openToWork,
+    stage: "re_engage",
+    detail: "Said no previously — now open to work again, worth a light touch",
+    currentStageId: null,
+  };
+}
+
 // Candidate-initiated application — "Apply with Smart Namecard" on a job card. Distinct
 // from pipelineEntryFromCandidate (an employer sourcing someone): here the candidate is the
 // actor, currentStageId stays null (not yet reviewed by the employer), and detail names the
@@ -313,90 +310,6 @@ export function pipelineEntryFromApplication(c: Candidate, employerId: string, j
     currentStageId: null,
     appliedAt: new Date().toISOString(),
   };
-}
-
-// Called once per employer, the first time they're seen logged in this session (see
-// PipelineContext) — not a module-level constant, since every employer needs their own
-// entries with their own employerId, not one shared array.
-export function getPipelineSeedFor(employer: Employer): PipelineEntry[] {
-  const demoJobs = allJobs.filter((j) => j.employerId === employer.id);
-  return [
-    {
-      id: `${employer.id}-p1`,
-      employerId: employer.id,
-      candidateId: withSimuHire[0].id,
-      name: withSimuHire[0].name,
-      field: withSimuHire[0].field,
-      trustScore: withSimuHire[0].trustScore,
-      openToWork: withSimuHire[0].openToWork,
-      stage: "simuhire_done",
-      detail: `SimuHire ${withSimuHire[0].simuHire.type} · ${withSimuHire[0].simuHire.overallScore}/100 — report ready to review`,
-      sourceKind: "sourced",
-      sourceLabel: `SimuHire Review · ${demoJobs[0]?.title ?? "Open Role"}`,
-      simuHire: {
-        type: withSimuHire[0].simuHire.type!,
-        overallScore: withSimuHire[0].simuHire.overallScore!,
-        dimensions: withSimuHire[0].simuHire.dimensions!,
-      },
-      currentStageId: DEFAULT_INTERVIEW_STAGES[0].id, // "Invitation Sent"
-    },
-    {
-      id: `${employer.id}-p2`,
-      employerId: employer.id,
-      candidateId: withSimuHire[1].id,
-      name: withSimuHire[1].name,
-      field: withSimuHire[1].field,
-      trustScore: withSimuHire[1].trustScore,
-      openToWork: withSimuHire[1].openToWork,
-      stage: "simuhire_done",
-      detail: `SimuHire ${withSimuHire[1].simuHire.type} · ${withSimuHire[1].simuHire.overallScore}/100 — report ready to review`,
-      sourceKind: "sourced",
-      sourceLabel: `SimuHire Review · ${demoJobs[1]?.title ?? demoJobs[0]?.title ?? "Open Role"}`,
-      simuHire: {
-        type: withSimuHire[1].simuHire.type!,
-        overallScore: withSimuHire[1].simuHire.overallScore!,
-        dimensions: withSimuHire[1].simuHire.dimensions!,
-      },
-      currentStageId: null,
-    },
-    {
-      id: `${employer.id}-p3`,
-      employerId: employer.id,
-      candidateId: shortlistCandidate.id,
-      name: shortlistCandidate.name,
-      field: shortlistCandidate.field,
-      trustScore: shortlistCandidate.trustScore,
-      openToWork: shortlistCandidate.openToWork,
-      stage: "shortlisted",
-      detail: `Shortlisted for ${demoJobs[0]?.title ?? "an open role"} — verified ${shortlistCandidate.verifiedSkills[0]?.name ?? "skills"}`,
-      sourceKind: "sourced",
-      sourceLabel: `Shortlisted · ${demoJobs[0]?.title ?? "Open Role"}`,
-      currentStageId: DEFAULT_INTERVIEW_STAGES[1].id, // "1st Round" — scheduled, mid-funnel
-      // Real ISO datetime, set to today at 10am — every employer sees at least one
-      // same-day interview on login, so Home's "Today's Interviews" section (E4) always
-      // has something real to show without requiring manual scheduling first.
-      interviewDate: (() => {
-        const d = new Date();
-        d.setHours(10, 0, 0, 0);
-        return d.toISOString();
-      })(),
-      meetingLink: `https://meet.credo.app/${employer.id}-p3`,
-    },
-    {
-      id: `${employer.id}-p4`,
-      employerId: employer.id,
-      candidateId: reEngageCandidate.id,
-      name: reEngageCandidate.name,
-      field: reEngageCandidate.field,
-      trustScore: reEngageCandidate.trustScore,
-      openToWork: reEngageCandidate.openToWork,
-      stage: "re_engage",
-      detail: "Said no in March — timing may have changed, worth a light touch",
-      sourceKind: "sourced",
-      sourceLabel: `Previously considered · ${demoJobs[0]?.title ?? "Open Role"}`,
-      currentStageId: null,
-    },
-  ];
 }
 
 // E8 — resurfaces candidates who deserve a second look instead of leaving them wherever

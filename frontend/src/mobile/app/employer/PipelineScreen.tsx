@@ -5,10 +5,11 @@ import { Send, RefreshCw, Check, CalendarPlus, CalendarCheck, Settings, ThumbsUp
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../components/shared/ScreenBackground";
 import GlassCard from "../../components/shared/GlassCard";
-import { STAGE_META, sortPipelineForAttention, type PipelineEntry } from "../../data/employerData";
-import type { DiscoverCandidate } from "../../data/employerData";
+import { STAGE_META, sortPipelineForAttention, reEngageEntryFromCandidate, discoverCandidates } from "../../data/employerData";
+import type { PipelineEntry, DiscoverCandidate } from "../../data/employerData";
 import { mockCandidates } from "../../data/mockData";
 import { usePipeline } from "../../context/PipelineContext";
+import { useAuth } from "../../context/AuthContext";
 import { useInterviewStages } from "../../context/InterviewStagesContext";
 import { getUpcomingInterviewSlots, formatInterviewDateTime } from "../../utils/interviewSlots";
 import { defaultAcceptMessage, defaultRejectMessage } from "../../utils/decisionMessages";
@@ -54,8 +55,20 @@ function buildLightTouchMessage(entry: PipelineEntry): string {
 }
 
 export default function PipelineScreen({ navigation }: Props) {
-  const { pipeline, reEngage, markInterviewInvited, scheduleInterview, advanceStage, completeInterview, recordDecision, markViewed } =
+  const {
+    pipeline,
+    reEngage,
+    addToPipeline,
+    markInterviewInvited,
+    scheduleInterview,
+    advanceStage,
+    completeInterview,
+    recordDecision,
+    markViewed,
+  } =
     usePipeline();
+  const { user } = useAuth();
+  const employerId = user?.role === "employer" ? user.id : null;
   const { stages } = useInterviewStages();
   const [composingId, setComposingId] = useState<string | null>(null);
   const [draftMessage, setDraftMessage] = useState("");
@@ -85,21 +98,42 @@ export default function PipelineScreen({ navigation }: Props) {
     ],
     [pipeline, stages]
   );
-  // AI-style suggestion — candidates who became open to work again and haven't been
-  // re-engaged yet. Capped at 1 so it reads as a single pointed nudge, not a list.
-  const reEngageSuggestions = useMemo(
-    () => pipeline.filter((e) => e.stage === "re_engage" && !e.decision && !e.lastTouchedAt).slice(0, 1),
-    [pipeline]
+  // AI-style suggestion — always visible, not conditional on anything already being in
+  // Pipeline. Picked straight from the real candidate pool (discoverCandidates), not from an
+  // existing PipelineEntry: any real openToWork candidate not already in this employer's
+  // Pipeline is a legitimate "said no before, worth trying again" suggestion. Recomputes
+  // (and reshuffles) whenever the set of candidates already in Pipeline changes — which is
+  // exactly what happens once the current suggestion is acted on, since addToPipeline then
+  // excludes them from the pool and a new one surfaces.
+  const pipelineCandidateIds = useMemo(() => new Set(pipeline.map((e) => e.candidateId)), [pipeline]);
+  const suggestedCandidate = useMemo(() => {
+    const pool = discoverCandidates.filter((c) => c.openToWork && !pipelineCandidateIds.has(c.id));
+    if (pool.length === 0) return null;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }, [pipelineCandidateIds]);
+
+  // Untouched re-engage candidates live only in the suggestion card above until it's acted
+  // on — showing the same candidate as both a banner and a full card underneath would be a
+  // redundant duplicate. Pressing the banner sets composingId, which is what actually brings
+  // the card into this list (in compose mode); sending the touch (lastTouchedAt) keeps it
+  // there afterward. The dedicated "Re-engage" filter is the one exception — it's the
+  // deliberate place to browse the whole re_engage stage, touched or not.
+  const visiblePipeline = useMemo(
+    () =>
+      sortedPipeline.filter(
+        (e) => activeFilter === "re_engage" || e.stage !== "re_engage" || !!e.lastTouchedAt || composingId === e.id
+      ),
+    [sortedPipeline, activeFilter, composingId]
   );
 
   const filteredPipeline = useMemo(() => {
-    if (activeFilter === "all") return sortedPipeline;
-    if (activeFilter === "not_invited") return sortedPipeline.filter((e) => e.currentStageId === null);
-    if (activeFilter === "re_engage") return sortedPipeline.filter((e) => e.stage === "re_engage");
-    if (activeFilter === "introduced") return sortedPipeline.filter((e) => !!e.sourceLabel);
-    if (activeFilter === "decided") return sortedPipeline.filter((e) => !!e.decision);
-    return sortedPipeline.filter((e) => e.currentStageId === activeFilter);
-  }, [sortedPipeline, activeFilter]);
+    if (activeFilter === "all") return visiblePipeline;
+    if (activeFilter === "not_invited") return visiblePipeline.filter((e) => e.currentStageId === null);
+    if (activeFilter === "re_engage") return visiblePipeline.filter((e) => e.stage === "re_engage");
+    if (activeFilter === "introduced") return visiblePipeline.filter((e) => !!e.sourceLabel);
+    if (activeFilter === "decided") return visiblePipeline.filter((e) => !!e.decision);
+    return visiblePipeline.filter((e) => e.currentStageId === activeFilter);
+  }, [visiblePipeline, activeFilter]);
   const [decidingId, setDecidingId] = useState<string | null>(null);
   const [decidingAs, setDecidingAs] = useState<"accepted" | "rejected" | null>(null);
   const [decisionDraft, setDecisionDraft] = useState("");
@@ -125,6 +159,17 @@ export default function PipelineScreen({ navigation }: Props) {
   const startComposing = (entry: PipelineEntry) => {
     setComposingId(entry.id);
     setDraftMessage(buildLightTouchMessage(entry));
+  };
+
+  // The suggestion banner points at a real candidate who isn't in Pipeline yet — pressing it
+  // is what actually creates the re_engage entry (via addToPipeline), then opens compose on
+  // it straight away. The freshly-built entry is used directly rather than reading it back
+  // out of `pipeline` (that state update hasn't landed yet on this render).
+  const actOnSuggestion = () => {
+    if (!suggestedCandidate || !employerId) return;
+    const entry = reEngageEntryFromCandidate(suggestedCandidate, employerId);
+    addToPipeline(entry);
+    startComposing(entry);
   };
 
   const cancelComposing = () => {
@@ -192,28 +237,27 @@ export default function PipelineScreen({ navigation }: Props) {
             </View>
           )}
 
-          {/* Re-engage suggestion — reads as a quiet AI notification, not a promo card: dark
-              glass, a small pulsing "agent" dot instead of a candidate avatar, and an
-              AI-generated label so it's clear the copy wasn't written by a human. Deliberately
-              understated — it should sit like a system nudge, not compete with the pipeline. */}
-          {reEngageSuggestions.length > 0 && (
+          {/* Re-engage suggestion — always visible (not conditional on anything already being
+              in Pipeline), reads as a quiet AI notification rather than a promo card: a small
+              pulsing "agent" dot instead of a candidate avatar, and an AI-generated label so
+              it's clear the copy wasn't written by a human. Deliberately understated — it
+              should sit like a system nudge, not compete with the pipeline. */}
+          {suggestedCandidate && (
             <View style={{ marginTop: 12 }}>
-              {reEngageSuggestions.map((e) => (
-                <Pressable key={`suggest-${e.id}`} style={styles.suggestionCard} onPress={() => startComposing(e)}>
-                  <View style={styles.suggestionRow}>
-                    <View style={styles.suggestionAgentDot}>
-                      <Sparkles size={10} color={colors.gold} strokeWidth={2} />
-                    </View>
-
-                    <View style={styles.suggestionCopy}>
-                      <Text style={styles.suggestionLabel}>AI Suggestion</Text>
-                      <Text style={styles.suggestionBody} numberOfLines={1}>
-                        <Text style={styles.suggestionName}>{e.name}</Text> is open to work again — consider re-engaging.
-                      </Text>
-                    </View>
+              <Pressable style={styles.suggestionCard} onPress={actOnSuggestion}>
+                <View style={styles.suggestionRow}>
+                  <View style={styles.suggestionAgentDot}>
+                    <Sparkles size={10} color={colors.gold} strokeWidth={2} />
                   </View>
-                </Pressable>
-              ))}
+
+                  <View style={styles.suggestionCopy}>
+                    <Text style={styles.suggestionLabel}>AI Suggestion</Text>
+                    <Text style={styles.suggestionBody} numberOfLines={1}>
+                      <Text style={styles.suggestionName}>{suggestedCandidate.name}</Text> said no before — now open to work again, consider re-engaging.
+                    </Text>
+                  </View>
+                </View>
+              </Pressable>
             </View>
           )}
 
@@ -439,9 +483,10 @@ export default function PipelineScreen({ navigation }: Props) {
                     </View>
                     )}
 
-                    {/* E-Decision — offered once a candidate is actually in the interview
-                        process (any round, not only after the last one), right here on the
-                        card so an employer never has to open a profile just to decide. */}
+                    {/* E-Decision — offered at any point, not gated behind an interview
+                        invite: some candidates fail a profile check before ever being invited
+                        and should be reject-able right away, right here on the card so an
+                        employer never has to open a profile just to decide. */}
                     {e.decision ? (
                       <View
                         style={[
@@ -458,7 +503,9 @@ export default function PipelineScreen({ navigation }: Props) {
                           {e.decision === "accepted" ? "✓ Accepted" : "✕ Rejected"}
                         </Text>
                       </View>
-                    ) : e.currentStageId !== null ? (
+                    ) : null}
+
+                    {!e.decision ? (
                       decidingId === e.id ? (
                         <View style={{ gap: 8, marginTop: 8 }}>
                           <GlassCard radius={14}>

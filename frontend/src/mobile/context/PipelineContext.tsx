@@ -6,14 +6,8 @@
 // employerId), and `pipeline` exposes only the logged-in employer's slice — so switching
 // role/logging in as a different employer shows that employer's own Pipeline, not one
 // shared array everyone sees the same view of.
-import { createContext, useCallback, useContext, useEffect, useRef, type ReactNode } from "react";
-import {
-  getPipelineSeedFor,
-  pipelineEntryFromCandidate,
-  pipelineEntryFromApplication,
-  type PipelineEntry,
-} from "../data/employerData";
-import { allEmployers } from "../data/generateDataset";
+import { createContext, useCallback, useContext, type ReactNode } from "react";
+import { pipelineEntryFromCandidate, pipelineEntryFromApplication, type PipelineEntry } from "../data/employerData";
 import { useAuth } from "./AuthContext";
 import { usePersistentState } from "../utils/usePersistentState";
 import type { Candidate } from "../data/types";
@@ -69,23 +63,11 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
 
   // Every employer's entries, together — filtered down to the current employer's slice
   // below. Persisted to localStorage (usePersistentState) so applications/interview
-  // progress survive a page refresh instead of resetting to the seed data every load — the
-  // same store the employer's Pipeline screen mutates and the candidate's Application
-  // Status screen reads. A ref (seeded from whatever was actually restored, not always
-  // empty like before) tracks which employers have already been seeded this session, so
-  // re-visiting an employer you've logged into before keeps whatever you did to their
-  // Pipeline earlier instead of silently re-seeding over it — and a fresh reload doesn't
-  // re-seed on top of the entries that were just restored from storage either.
+  // progress survive a page refresh — the same store the employer's Pipeline screen mutates
+  // and the candidate's Application Status screen reads. No seed data: every employer starts
+  // with an empty Pipeline, and every entry that ever appears is a real action (a candidate
+  // applying, an employer inviting/sourcing someone, or a university introduction).
   const [allEntries, setAllEntries] = usePersistentState<PipelineEntry[]>("pipeline_entries", []);
-  const seededEmployerIds = useRef<Set<string>>(new Set(allEntries.map((e) => e.employerId)));
-
-  useEffect(() => {
-    if (!employerId || seededEmployerIds.current.has(employerId)) return;
-    const employer = allEmployers.find((e) => e.id === employerId);
-    if (!employer) return;
-    seededEmployerIds.current.add(employerId);
-    setAllEntries((prev) => [...getPipelineSeedFor(employer), ...prev]);
-  }, [employerId]);
 
   const pipeline = employerId ? allEntries.filter((p) => p.employerId === employerId) : [];
 
